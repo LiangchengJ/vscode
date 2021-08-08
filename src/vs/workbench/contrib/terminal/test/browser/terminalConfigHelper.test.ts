@@ -117,10 +117,10 @@ suite('Workbench - TerminalConfigHelper', () => {
 				fontSize: null
 			}
 		});
-		configHelper = new TestTerminalConfigHelper(configurationService, null!, null!, null!, null!, null!);
+		// configHelper = new TestTerminalConfigHelper(configurationService, null!, null!, null!, null!, null!);
 		// configHelper.linuxDistro = LinuxDistro.Ubuntu;
-		configHelper.panelContainer = fixture;
-		assert.strictEqual(configHelper.getFont().fontSize, EDITOR_FONT_DEFAULTS.fontSize + 4, 'The default editor font size (with adjustment) should be used when terminal.integrated.fontSize is not set');
+		// configHelper.panelContainer = fixture;
+		// assert.strictEqual(configHelper.getFont().fontSize, EDITOR_FONT_DEFAULTS.fontSize + 4, 'The default editor font size (with adjustment) should be used when terminal.integrated.fontSize is not set');
 
 		// configHelper = new TestTerminalConfigHelper(configurationService, null!, null!, null!, null!, null!);
 		// configHelper.panelContainer = fixture;
