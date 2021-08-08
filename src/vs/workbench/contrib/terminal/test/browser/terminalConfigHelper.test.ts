@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import { TerminalConfigHelper } from 'vs/workbench/contrib/terminal/browser/terminalConfigHelper';
-import { EDITOR_FONT_DEFAULTS } from 'vs/editor/common/config/editorOptions';
+// import { EDITOR_FONT_DEFAULTS } from 'vs/editor/common/config/editorOptions';
 import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
 import { LinuxDistro } from 'vs/workbench/contrib/terminal/browser/terminal';
 
@@ -120,7 +120,7 @@ suite('Workbench - TerminalConfigHelper', () => {
 		// configHelper = new TestTerminalConfigHelper(configurationService, null!, null!, null!, null!, null!);
 		// configHelper.linuxDistro = LinuxDistro.Ubuntu;
 		// configHelper.panelContainer = fixture;
-		// assert.strictEqual(configHelper.getFont().fontSize, EDITOR_FONT_DEFAULTS.fontSize + 4, 'The default editor font size (with adjustment) should be used when terminal.integrated.fontSize is not set');
+		// assert.strictEqual(configHelper.getFont().fontSize, EDITOR_FONT_DEFAULTS.fontSize + 2, 'The default editor font size (with adjustment) should be used when terminal.integrated.fontSize is not set');
 
 		// configHelper = new TestTerminalConfigHelper(configurationService, null!, null!, null!, null!, null!);
 		// configHelper.panelContainer = fixture;
