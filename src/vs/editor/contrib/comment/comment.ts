@@ -139,7 +139,7 @@ class BlockCommentAction extends EditorAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Shift | KeyMod.Alt | KeyCode.KEY_A,
-				linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_A },
+				// linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_A },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {

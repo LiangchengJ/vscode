@@ -3868,20 +3868,20 @@ class EditorWrappingInfoComputer extends ComputedEditorOption<EditorOption.wrapp
 
 //#endregion
 
-const DEFAULT_WINDOWS_FONT_FAMILY = 'Consolas, \'Courier New\', monospace';
-const DEFAULT_MAC_FONT_FAMILY = 'Menlo, Monaco, \'Courier New\', monospace';
-const DEFAULT_LINUX_FONT_FAMILY = '\'Droid Sans Mono\', \'monospace\', monospace, \'Droid Sans Fallback\'';
+// const DEFAULT_WINDOWS_FONT_FAMILY = 'Consolas, \'Courier New\', monospace';
+// const DEFAULT_MAC_FONT_FAMILY = 'Menlo, Monaco, \'Courier New\', monospace';
+// const DEFAULT_LINUX_FONT_FAMILY = '\'Droid Sans Mono\', \'monospace\', monospace, \'Droid Sans Fallback\'';
 
 /**
  * @internal
  */
 export const EDITOR_FONT_DEFAULTS = {
 	fontFamily: (
-		platform.isMacintosh ? DEFAULT_MAC_FONT_FAMILY : (platform.isLinux ? DEFAULT_LINUX_FONT_FAMILY : DEFAULT_WINDOWS_FONT_FAMILY)
+		'Menlo, Consolas, \'Dejavu Sans Mono\', \'Ubuntu Mono\', \'monospace\''
 	),
 	fontWeight: 'normal',
 	fontSize: (
-		platform.isMacintosh ? 12 : 14
+		platform.isWeb ? 16.5 : platform.isMacintosh ? 15.4 : 14
 	),
 	lineHeight: 0,
 	letterSpacing: 0,
@@ -4310,7 +4310,7 @@ export const EditorOptions = {
 	fontSize: register(new EditorFontSize()),
 	fontWeight: register(new EditorFontWeight()),
 	formatOnPaste: register(new EditorBooleanOption(
-		EditorOption.formatOnPaste, 'formatOnPaste', false,
+		EditorOption.formatOnPaste, 'formatOnPaste', true,
 		{ description: nls.localize('formatOnPaste', "Controls whether the editor should automatically format the pasted content. A formatter must be available and the formatter should be able to format a range in a document.") }
 	)),
 	formatOnType: register(new EditorBooleanOption(

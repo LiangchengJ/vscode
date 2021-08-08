@@ -82,7 +82,7 @@ class CopyLinesUpAction extends AbstractCopyLinesAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Alt | KeyMod.Shift | KeyCode.UpArrow,
-				linux: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.UpArrow },
+				// linux: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.UpArrow },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {
@@ -105,7 +105,7 @@ class CopyLinesDownAction extends AbstractCopyLinesAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Alt | KeyMod.Shift | KeyCode.DownArrow,
-				linux: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.DownArrow },
+				// linux: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.DownArrow },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {
@@ -196,7 +196,7 @@ class MoveLinesUpAction extends AbstractMoveLinesAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Alt | KeyCode.UpArrow,
-				linux: { primary: KeyMod.Alt | KeyCode.UpArrow },
+				// linux: { primary: KeyMod.Alt | KeyCode.UpArrow },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {
@@ -219,7 +219,7 @@ class MoveLinesDownAction extends AbstractMoveLinesAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Alt | KeyCode.DownArrow,
-				linux: { primary: KeyMod.Alt | KeyCode.DownArrow },
+				// linux: { primary: KeyMod.Alt | KeyCode.DownArrow },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {
