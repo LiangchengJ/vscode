@@ -973,7 +973,7 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 	}
 
 	private get accountsVisibilityPreference(): boolean {
-		return this.storageService.getBoolean(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, StorageScope.GLOBAL, true);
+		return this.storageService.getBoolean(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, StorageScope.GLOBAL, false);
 	}
 
 	private set accountsVisibilityPreference(value: boolean) {
