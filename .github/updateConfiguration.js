@@ -11,7 +11,6 @@ const outputFileName = "product.json";
 const product = require(`../${outputFileName}`);
 
 /**
- *
  * @param {string} name
  */
 const replaceName = (name) => {
@@ -1188,7 +1187,7 @@ product["builtInExtensions"] = [
     clientOnly: true,
   },
 ];
-// product["commit"] = "379476f0e13988d90fab105c5c19e7abc8b1dea8";
+product["commit"] = `${getCommitHash()}`;
 product["date"] = new Date().toJSON();
 // product["checksums"] = {
 //   "vs/base/parts/sandbox/electron-browser/preload.js": "rYhd6WoCwHBbUKpB/33MNw",
@@ -1208,3 +1207,11 @@ writeStream.write(JSON.stringify(product));
 writeStream.end();
 
 console.log(`Generate "${outputFileName}" successfully!`);
+
+function getCommitHash() {
+  const execSync = require("child_process").execSync;
+  return execSync("git log -1 --format='%H'")
+    .toString()
+    .replace(/\r/g, "")
+    .replace(/\n/g, "");
+}
