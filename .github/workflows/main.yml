@@ -71,7 +71,10 @@ jobs:
         run: yarn gulp vscode-linux-${{ matrix.arch }}-min
 
       - name: Package
-        run: cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
+        run: |
+          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
+          cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
+          mv tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -80,7 +83,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ../VSCode-linux*.tar.xz
+            VSCode-linux*.tar.xz
 
   darwin:
     name: macOS
@@ -134,7 +137,10 @@ jobs:
         run: yarn gulp vscode-darwin-${{ matrix.arch }}-min
 
       - name: Package
-        run: cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
+        run: |
+          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
+          cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
+          mv VSCode-darwin-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -143,7 +149,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ../VSCode-darwin*.tar.xz
+            VSCode-darwin*.tar.xz
 
   windows:
     name: Windows
@@ -214,6 +220,7 @@ jobs:
         run: |
           cmd.exe /c '"C:\Program Files\Git\usr\bin\realpath.exe" . > "%USERPROFILE%\rpath"'
           cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && mv ../VSCode-win32-${{ matrix.arch }}.tar.xz ./"'
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -222,4 +229,4 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ../VSCode-win32*.tar.xz
+            VSCode-win32*.tar.xz
