@@ -74,7 +74,7 @@ jobs:
         run: |
           echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
           cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
-          mv tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
+          mv VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -83,9 +83,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            VSCode-linux*.tar.xz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ./VSCode*.tar.xz
 
   darwin:
     name: macOS
@@ -151,9 +149,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            VSCode-darwin*.tar.xz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ./VSCode*.tar.xz
 
   windows:
     name: Windows
@@ -233,6 +229,6 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            VSCode-win32*.tar.xz
+            ./VSCode*.tar.xz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
