@@ -84,6 +84,8 @@ jobs:
           prerelease: true
           files: |
             VSCode-linux*.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   darwin:
     name: macOS
@@ -150,6 +152,8 @@ jobs:
           prerelease: true
           files: |
             VSCode-darwin*.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   windows:
     name: Windows
@@ -230,3 +234,5 @@ jobs:
           prerelease: true
           files: |
             VSCode-win32*.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
