@@ -10,155 +10,151 @@ on:
   #   branches: [ feature ]
 
 jobs:
-  # linux:
-  #   name: Linux
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  #   strategy:
-  #     matrix:
-  #       arch: [x64]
+    strategy:
+      matrix:
+        arch: [x64]
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Setup Build Environment
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
-  #         sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
-  #         sudo chmod +x /etc/init.d/xvfb
-  #         sudo update-rc.d xvfb defaults
-  #         sudo service xvfb start
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
 
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: 14
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
 
-  #     - name: Compute node modules cache key
-  #       id: nodeModulesCacheKey
-  #       run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
-  #     - name: Cache node modules
-  #       id: cacheNodeModules
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: "**/node_modules"
-  #         key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
-  #         restore-keys: ${{ runner.os }}-cacheNodeModules14-
-  #     - name: Get yarn cache directory path
-  #       id: yarnCacheDirPath
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       run: echo "::set-output name=dir::$(yarn cache dir)"
-  #     - name: Cache yarn directory
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: ${{ steps.yarnCacheDirPath.outputs.dir }}
-  #         key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
-  #         restore-keys: ${{ runner.os }}-yarnCacheDir-
-  #     - name: Execute yarn
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       env:
-  #         PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-  #         ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-  #       run: yarn --frozen-lockfile --network-timeout 180000
+      - name: Compute node modules cache key
+        id: nodeModulesCacheKey
+        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
+      - name: Cache node modules
+        id: cacheNodeModules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+      - name: Get yarn cache directory path
+        id: yarnCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Cache yarn directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-yarnCacheDir-
+      - name: Execute yarn
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 180000
 
-  #     - name: Update Product
-  #       run: node ./.github/updateProduct.js
+      - name: Update Product
+        run: node ./.github/updateProduct.js
 
-  #     - name: Build
-  #       run: yarn gulp vscode-linux-${{ matrix.arch }}-min
+      - name: Build
+        run: yarn gulp vscode-linux-${{ matrix.arch }}-min
 
-  #     - name: Package
-  #       run: |
-  #         echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
-  #         cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
-  #         mv VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
-  #         realpath "$(cat ~/rpath)/VSCode-linux-${{ matrix.arch }}.tar.xz"
-  #         cd "$(cat ~/rpath)"
+      - name: Package
+        run: |
+          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
+          cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
+          mv VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
+          realpath "$(cat ~/rpath)/VSCode-linux-${{ matrix.arch }}.tar.xz"
+          cd "$(cat ~/rpath)"
 
-  #     - name: Release
-  #       uses: softprops/action-gh-release@v1
-  #       with:
-  #         name: dev_test_linux
-  #         tag_name: dev_test_linux
-  #         prerelease: true
-  #         files: |
-  #           VSCode-linux-${{ matrix.arch }}.tar.xz
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test
+          tag_name: dev_test
+          prerelease: true
+          files: |
+            VSCode-linux-${{ matrix.arch }}.tar.xz
 
-  # darwin:
-  #   name: macOS
-  #   runs-on: macos-latest
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  darwin:
+    name: macOS
+    runs-on: macos-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  #   strategy:
-  #     matrix:
-  #       arch: [x64]
+    strategy:
+      matrix:
+        arch: [x64]
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: 14
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
 
-  #     - name: Compute node modules cache key
-  #       id: nodeModulesCacheKey
-  #       run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
-  #     - name: Cache node modules
-  #       id: cacheNodeModules
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: "**/node_modules"
-  #         key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
-  #         restore-keys: ${{ runner.os }}-cacheNodeModules14-
-  #     - name: Get yarn cache directory path
-  #       id: yarnCacheDirPath
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       run: echo "::set-output name=dir::$(yarn cache dir)"
-  #     - name: Cache yarn directory
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: ${{ steps.yarnCacheDirPath.outputs.dir }}
-  #         key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
-  #         restore-keys: ${{ runner.os }}-yarnCacheDir-
-  #     - name: Execute yarn
-  #       if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-  #       env:
-  #         PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-  #         ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-  #       run: yarn --frozen-lockfile --network-timeout 180000
+      - name: Compute node modules cache key
+        id: nodeModulesCacheKey
+        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
+      - name: Cache node modules
+        id: cacheNodeModules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+      - name: Get yarn cache directory path
+        id: yarnCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Cache yarn directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-yarnCacheDir-
+      - name: Execute yarn
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 180000
 
-  #     - name: Update Product
-  #       run: node ./.github/updateProduct.js
+      - name: Update Product
+        run: node ./.github/updateProduct.js
 
-  #     - name: Build
-  #       run: yarn gulp vscode-darwin-${{ matrix.arch }}-min
+      - name: Build
+        run: yarn gulp vscode-darwin-${{ matrix.arch }}-min
 
-  #     - name: Package
-  #       run: |
-  #         echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
-  #         cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
-  #         mv VSCode-darwin-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
-  #         realpath() { [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"; }
-  #         realpath "$(cat ~/rpath)/VSCode-darwin-${{ matrix.arch }}.tar.xz"
-  #         cd "$(cat ~/rpath)"
+      - name: Package
+        run: |
+          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
+          cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
+          mv VSCode-darwin-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
+          realpath() { [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"; }
+          realpath "$(cat ~/rpath)/VSCode-darwin-${{ matrix.arch }}.tar.xz"
+          cd "$(cat ~/rpath)"
 
-  #     - name: Release
-  #       uses: softprops/action-gh-release@v1
-  #       with:
-  #         name: dev_test_macos
-  #         tag_name: dev_test_macos
-  #         prerelease: true
-  #         files: |
-  #           VSCode-darwin-${{ matrix.arch }}.tar.xz
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test
+          tag_name: dev_test
+          prerelease: true
+          files: |
+            VSCode-darwin-${{ matrix.arch }}.tar.xz
 
   windows:
     name: Windows
@@ -235,10 +231,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_windows
-          tag_name: dev_test_windows
+          name: dev_test
+          tag_name: dev_test
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
