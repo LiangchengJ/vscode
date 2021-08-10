@@ -79,13 +79,15 @@ jobs:
           cd "$(cat ~/rpath)"
 
       - name: Release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_linux
+          tag_name: dev_test_linux
           prerelease: true
           files: |
-            ./*.tar.xz
+            VSCode-linux-${{ matrix.arch }}.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   darwin:
     name: macOS
@@ -148,13 +150,15 @@ jobs:
           cd "$(cat ~/rpath)"
 
       - name: Release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_macos
+          tag_name: dev_test_macos
           prerelease: true
           files: |
-            ./*.tar.xz
+            VSCode-darwin-${{ matrix.arch }}.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   windows:
     name: Windows
@@ -226,13 +230,15 @@ jobs:
           cmd.exe /c '"C:\Program Files\Git\usr\bin\realpath.exe" . > "%USERPROFILE%\rpath"'
           cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
           cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && mv ../VSCode-win32-${{ matrix.arch }}.tar.xz ./"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && realpath VSCode-win32-${{ matrix.arch }}.tar.xz "'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && realpath VSCode-win32-${{ matrix.arch }}.tar.xz"'
 
       - name: Release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_windows
+          tag_name: dev_test_windows
           prerelease: true
           files: |
-            ./*.tar.xz
+            VSCode-win32-${{ matrix.arch }}.tar.xz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
