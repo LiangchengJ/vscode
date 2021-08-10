@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [x64]
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -64,7 +64,7 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
         run: yarn --frozen-lockfile --network-timeout 180000
 
-      - name: Update Product
+      - name: Update Configurations
         run: node ./.github/updateProduct.js
 
       - name: Build
@@ -81,8 +81,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_part1
+          tag_name: dev_test_part1
           prerelease: true
           files: |
             VSCode-linux-${{ matrix.arch }}.tar.xz
@@ -95,7 +95,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [x64]
+        arch: [x64, arm64]
 
     steps:
       - uses: actions/checkout@v2
@@ -132,7 +132,7 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
         run: yarn --frozen-lockfile --network-timeout 180000
 
-      - name: Update Product
+      - name: Update Configurations
         run: node ./.github/updateProduct.js
 
       - name: Build
@@ -150,8 +150,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_part1
+          tag_name: dev_test_part1
           prerelease: true
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
@@ -165,7 +165,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [x64]
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -215,8 +215,10 @@ jobs:
           mkdir -Force .build/node_modules_cache
           7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
 
-      - name: Update Product
-        run: node ./.github/updateProduct.js
+      - name: Update Configurations
+        run: |
+          node ./.github/updateProduct.js
+          node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build
         run: yarn gulp vscode-win32-${{ matrix.arch }}-min
@@ -231,8 +233,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test
-          tag_name: dev_test
+          name: dev_test_part1
+          tag_name: dev_test_part1
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
