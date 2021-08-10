@@ -75,6 +75,8 @@ jobs:
           echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
           cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
           mv VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
+          realpath "$(cat ~/rpath)/VSCode-linux-${{ matrix.arch }}.tar.xz"
+          cd "$(cat ~/rpath)"
 
       - name: Release
         uses: softprops/action-gh-release@master
@@ -83,7 +85,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ./VSCode*.tar.xz
+            ./*.tar.xz
 
   darwin:
     name: macOS
@@ -141,6 +143,9 @@ jobs:
           echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
           cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
           mv VSCode-darwin-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
+          realpath() { [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"; }
+          realpath "$(cat ~/rpath)/VSCode-darwin-${{ matrix.arch }}.tar.xz"
+          cd "$(cat ~/rpath)"
 
       - name: Release
         uses: softprops/action-gh-release@master
@@ -149,7 +154,7 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ./VSCode*.tar.xz
+            ./*.tar.xz
 
   windows:
     name: Windows
@@ -221,6 +226,7 @@ jobs:
           cmd.exe /c '"C:\Program Files\Git\usr\bin\realpath.exe" . > "%USERPROFILE%\rpath"'
           cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
           cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && mv ../VSCode-win32-${{ matrix.arch }}.tar.xz ./"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && realpath VSCode-win32-${{ matrix.arch }}.tar.xz "'
 
       - name: Release
         uses: softprops/action-gh-release@master
@@ -229,4 +235,4 @@ jobs:
           tag_name: dev_test
           prerelease: true
           files: |
-            ./VSCode*.tar.xz
+            ./*.tar.xz
