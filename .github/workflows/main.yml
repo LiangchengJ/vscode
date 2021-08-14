@@ -81,8 +81,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part1
-          tag_name: dev_test_part1
+          name: dev_test_part2
+          tag_name: dev_test_part2
           prerelease: true
           files: |
             VSCode-linux-${{ matrix.arch }}.tar.xz
@@ -150,8 +150,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part1
-          tag_name: dev_test_part1
+          name: dev_test_part2
+          tag_name: dev_test_part2
           prerelease: true
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
@@ -217,24 +217,32 @@ jobs:
 
       - name: Update Configurations
         run: |
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
+          node .\.github\updateProduct.js
+          node .\.github\updateWin32VisualElementsManifest.js
 
-      - name: Build
-        run: yarn gulp vscode-win32-${{ matrix.arch }}-min
-
-      - name: Package
+      - name: Build and Package
         run: |
-          cmd.exe /c '"C:\Program Files\Git\usr\bin\realpath.exe" . > "%USERPROFILE%\rpath"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && mv ../VSCode-win32-${{ matrix.arch }}.tar.xz ./"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd $(cat ~/rpath) && realpath VSCode-win32-${{ matrix.arch }}.tar.xz"'
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
+          mv ..\VSCode-win32-${{ matrix.arch }}.tar.xz .
+          cmd.exe /c 'cd .. && 7z a VSCode-win32-${{ matrix.arch }}.zip VSCode-win32-${{ matrix.arch }} -r -mx9'
+          mv ..\VSCode-win32-${{ matrix.arch }}.zip .
+          yarn gulp vscode-win32-${{ matrix.arch }}-code-helper
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -o resources\win32\code.ico https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
+          yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
+          mv .build\win32-${{ matrix.arch }}\user-setup\VSCodeSetup.exe VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+          yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
+          mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part1
-          tag_name: dev_test_part1
+          name: dev_test_part2
+          tag_name: dev_test_part2
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
+            VSCode-win32-${{ matrix.arch }}.zip
+            VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
