@@ -143,7 +143,8 @@ jobs:
 
       - name: Generate SHA512 checksum file
         run: |
-          sha512sum VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+          npm install -g checksum
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
