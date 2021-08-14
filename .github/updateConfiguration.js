@@ -19,10 +19,13 @@ const replaceName = (name) => {
 
 product["nameShort"] = replaceName(product["nameShort"]);
 product["nameLong"] = replaceName(product["nameLong"]);
+// product["win32MutexName"] = "vscode";
+// product["win32RegValueName"] = "VSCode";
 product["win32ShellNameShort"] = replaceName(product["win32ShellNameShort"]);
 product["serverDataFolderName"] = `${product["dataFolderName"]}-server`;
 product["webviewContentExternalBaseUrlTemplate"] = undefined;
 // "https://{{uuid}}.vscode-webview.net/{{quality}}/{{commit}}/out/vs/workbench/contrib/webview/browser/pre/";
+product["urlProtocol"] = "vscode";
 product["quality"] = "stable";
 product["extensionsGallery"] = {
   serviceUrl: "https://marketplace.visualstudio.com/_apis/public/gallery",
