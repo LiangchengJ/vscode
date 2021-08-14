@@ -67,25 +67,25 @@ jobs:
       - name: Update Configurations
         run: node ./.github/updateProduct.js
 
-      - name: Build
-        run: yarn gulp vscode-linux-${{ matrix.arch }}-min
-
-      - name: Package
+      - name: Build and Package
         run: |
-          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
-          cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}
-          mv VSCode-linux-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
-          realpath "$(cat ~/rpath)/VSCode-linux-${{ matrix.arch }}.tar.xz"
-          cd "$(cat ~/rpath)"
+          yarn gulp vscode-linux-${{ matrix.arch }}-min
+          bash -c "cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}"
+          mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
+
+      - name: Generate SHA512 checksum file
+        run: |
+          sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part2
-          tag_name: dev_test_part2
+          name: dev_test_part3
+          tag_name: dev_test_part3
           prerelease: true
           files: |
             VSCode-linux-${{ matrix.arch }}.tar.xz
+            VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
 
   darwin:
     name: macOS
@@ -135,26 +135,25 @@ jobs:
       - name: Update Configurations
         run: node ./.github/updateProduct.js
 
-      - name: Build
-        run: yarn gulp vscode-darwin-${{ matrix.arch }}-min
-
-      - name: Package
+      - name: Build and Package
         run: |
-          echo "$(cd "$(dirname .)"; pwd)" > ~/rpath
-          cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}
-          mv VSCode-darwin-${{ matrix.arch }}.tar.xz "$(cat ~/rpath)"
-          realpath() { [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"; }
-          realpath "$(cat ~/rpath)/VSCode-darwin-${{ matrix.arch }}.tar.xz"
-          cd "$(cat ~/rpath)"
+          yarn gulp vscode-darwin-${{ matrix.arch }}-min
+          bash -c "cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}"
+          mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
+
+      - name: Generate SHA512 checksum file
+        run: |
+          sha512sum VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part2
-          tag_name: dev_test_part2
+          name: dev_test_part3
+          tag_name: dev_test_part3
           prerelease: true
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
+            VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
 
   windows:
     name: Windows
@@ -235,14 +234,25 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
           mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
 
+      - name: Generate SHA512 checksum file
+        run: |
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.tar.xz | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.tar.xz.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.zip | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.zip.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeUserSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeSystemSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512"'
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part2
-          tag_name: dev_test_part2
+          name: dev_test_part3
+          tag_name: dev_test_part3
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
+            VSCode-win32-${{ matrix.arch }}.tar.xz.sha512
             VSCode-win32-${{ matrix.arch }}.zip
+            VSCode-win32-${{ matrix.arch }}.zip.sha512
             VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+            VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512
             VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
+            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512
