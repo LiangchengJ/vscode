@@ -4,7 +4,7 @@
 # by the VSCode team. In the meantime
 # you can easily make your own using this recipe like this on a Debian/Ubuntu system:
 # wget -c "https://github.com/AppImage/pkg2appimage/raw/master/pkg2appimage"
-# bash -ex pkg2appimage CodeOSS
+# bash -ex pkg2appimage CodeOSS-Recipe
 
 app: CodeOSS
 
