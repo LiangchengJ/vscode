@@ -76,7 +76,7 @@ jobs:
           mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
 
       - name: Build and Package rpm and deb
-        if: ${{ matrix.arch }} != ia32
+        if: ${{ matrix.arch != ia32 }}
         run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
           mv .build/linux/rpm/*/*.rpm VSCode-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
@@ -84,7 +84,7 @@ jobs:
           cp .build/linux/deb/*/deb/*.deb VSCode-linux-${{ matrix.arch }}.deb
 
       - name: Package AppImage for arch x64
-        if: ${{ matrix.arch }} == x64
+        if: ${{ matrix.arch == x64 }}
         run: |
           curl -fsSL https://deno.land/x/install/install.sh | sh
           export DENO_INSTALL="/home/$(whoami)/.deno"
