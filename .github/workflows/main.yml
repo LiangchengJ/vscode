@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      APP_IMAGE_NAME: VSCode-linux-x64.AppImage
 
     strategy:
       matrix:
@@ -31,6 +32,7 @@ jobs:
           sudo chmod +x /etc/init.d/xvfb
           sudo update-rc.d xvfb defaults
           sudo service xvfb start
+          sudo apt-get install -y fakeroot rpm
 
       - uses: actions/setup-node@v2
         with:
@@ -72,20 +74,48 @@ jobs:
           yarn gulp vscode-linux-${{ matrix.arch }}-min
           bash -c "cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}"
           mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          mv .build/linux/rpm/*/*.rpm VSCode-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
+          cp .build/linux/deb/*/deb/*.deb VSCode-linux-${{ matrix.arch }}.deb
+
+      - name: Build AppImage for arch x64
+        if: ${{ matrix.arch }} == x64
+        run: |
+          curl -fsSL https://deno.land/x/install/install.sh | sh
+          export DENO_INSTALL="/home/$(whoami)/.deno"
+          export PATH="$DENO_INSTALL/bin:$PATH"
+          deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > file_server.log 2>&1 &
+          mv .build/linux/deb/*/deb/*.deb .
+          export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
+          wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
+          chmod +x ./pkg2appimage-*.AppImage
+          ./pkg2appimage-*.AppImage .github/CodeOSS-Recipe.yml
+          mv out/*.AppImage ${{ env.APP_IMAGE_NAME }}
 
       - name: Generate SHA512 checksum file
         run: |
           sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
+          sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
+          [ -f ${{ env.APP_IMAGE_NAME }} ] && sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part3
-          tag_name: dev_test_part3
+          name: dev_test_part4
+          tag_name: dev_test_part4
           prerelease: true
           files: |
             VSCode-linux-${{ matrix.arch }}.tar.xz
             VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-linux-${{ matrix.arch }}*.rpm
+            VSCode-linux-${{ matrix.arch }}*.rpm.sha512
+            VSCode-linux-${{ matrix.arch }}.deb
+            VSCode-linux-${{ matrix.arch }}.deb.sha512
+            ${{ env.APP_IMAGE_NAME }}
+            ${{ env.APP_IMAGE_NAME }}.sha512
+
 
   darwin:
     name: macOS
@@ -149,8 +179,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part3
-          tag_name: dev_test_part3
+          name: dev_test_part4
+          tag_name: dev_test_part4
           prerelease: true
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
@@ -245,8 +275,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part3
-          tag_name: dev_test_part3
+          name: dev_test_part4
+          tag_name: dev_test_part4
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
