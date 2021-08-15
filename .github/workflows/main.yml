@@ -69,17 +69,21 @@ jobs:
       - name: Update Configurations
         run: node ./.github/updateProduct.js
 
-      - name: Build and Package
+      - name: Build and Package xz
         run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-min
           bash -c "cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}"
           mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
+
+      - name: Build and Package rpm and deb
+        if: ${{ matrix.arch }} != ia32
+        run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
           mv .build/linux/rpm/*/*.rpm VSCode-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
           yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
           cp .build/linux/deb/*/deb/*.deb VSCode-linux-${{ matrix.arch }}.deb
 
-      - name: Build AppImage for arch x64
+      - name: Package AppImage for arch x64
         if: ${{ matrix.arch }} == x64
         run: |
           curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -96,23 +100,23 @@ jobs:
       - name: Generate SHA512 checksum file
         run: |
           sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
-          sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
-          sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
-          [ -f ${{ env.APP_IMAGE_NAME }} ] && sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
+          [ -f *.rpm ] && sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          [ -f *.deb ] && sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
+          [ -f *.AppImage ] && sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part4
-          tag_name: dev_test_part4
+          name: dev_test_part5
+          tag_name: dev_test_part5
           prerelease: true
           files: |
             VSCode-linux-${{ matrix.arch }}.tar.xz
             VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
             VSCode-linux-${{ matrix.arch }}*.rpm
             VSCode-linux-${{ matrix.arch }}*.rpm.sha512
-            VSCode-linux-${{ matrix.arch }}.deb
-            VSCode-linux-${{ matrix.arch }}.deb.sha512
+            VSCode-linux-*.deb
+            VSCode-linux-*.deb.sha512
             ${{ env.APP_IMAGE_NAME }}
             ${{ env.APP_IMAGE_NAME }}.sha512
 
@@ -179,8 +183,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part4
-          tag_name: dev_test_part4
+          name: dev_test_part5
+          tag_name: dev_test_part5
           prerelease: true
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
@@ -275,8 +279,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part4
-          tag_name: dev_test_part4
+          name: dev_test_part5
+          tag_name: dev_test_part5
           prerelease: true
           files: |
             VSCode-win32-${{ matrix.arch }}.tar.xz
