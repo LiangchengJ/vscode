@@ -97,12 +97,20 @@ jobs:
           ./pkg2appimage-*.AppImage .github/CodeOSS-Recipe.yml
           mv out/*.AppImage ${{ env.APP_IMAGE_NAME }}
 
-      - name: Generate SHA512 checksum file
+      - name: Generate SHA512 checksum file for xz
         run: |
           sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
-          [ -f *.rpm ] && sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
-          [ -f *.deb ] && sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
-          [ -f *.AppImage ] && sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
+
+      - name: Generate SHA512 checksum file for rpm and deb
+        if: ${{ matrix.arch != 'ia32' }}
+        run: |
+          sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
+
+      - name: Generate SHA512 checksum file for AppImage
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
+          sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
