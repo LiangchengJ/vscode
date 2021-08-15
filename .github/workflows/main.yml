@@ -86,12 +86,10 @@ jobs:
       - name: Package AppImage for arch x64
         if: ${{ matrix.arch == 'x64' }}
         run: |
-          curl -fsSL https://deno.land/x/install/install.sh | sh && export DENO_INSTALL="/home/$(whoami)/.deno" && export GITHUB_PATH="$DENO_INSTALL/bin:$GITHUB_PATH" && \
-          deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > file_server.log 2>&1 &
-          cat file_server.log
+          curl -fsSL https://deno.land/x/install/install.sh | sh && export DENO_INSTALL="/home/$(whoami)/.deno" && export GITHUB_PATH="$DENO_INSTALL/bin:$GITHUB_PATH"
+          (deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > file_server.log 2>&1 &) && cat file_server.log
           mv .build/linux/deb/*/deb/*.deb .
-          export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
-          echo $DOWNLOAD_URL
+          export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
           wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
           chmod +x ./pkg2appimage-*.AppImage
           ./pkg2appimage-*.AppImage .github/CodeOSS-Recipe.yml
