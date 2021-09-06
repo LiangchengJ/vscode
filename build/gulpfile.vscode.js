@@ -282,7 +282,7 @@ function packageTask(platform, arch, sourceFolderName, destinationFolderName, op
 			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }));
 		} else if (platform === 'darwin') {
 			const shortcut = gulp.src('resources/darwin/bin/code.sh')
-				.pipe(rename('bin/code'));
+				.pipe(rename(`bin/${product.applicationName}`));
 
 			all = es.merge(all, shortcut);
 		}
@@ -490,7 +490,7 @@ const generateVSCodeConfigurationTask = task.define('generate-vscode-configurati
 		const arch = process.env['VSCODE_ARCH'];
 		const appRoot = path.join(buildDir, `VSCode-darwin-${arch}`);
 		const appName = process.env.VSCODE_QUALITY === 'insider' ? 'Visual\\ Studio\\ Code\\ -\\ Insiders.app' : 'Visual\\ Studio\\ Code.app';
-		const appPath = path.join(appRoot, appName, 'Contents', 'Resources', 'app', 'bin', 'code');
+		const appPath = path.join(appRoot, appName, 'Contents', 'Resources', 'app', 'bin', product.applicationName);
 		const codeProc = cp.exec(
 			`${appPath} --export-default-configuration='${allConfigDetailsPath}' --wait --user-data-dir='${userDataDir}' --extensions-dir='${extensionsDir}'`,
 			(err, stdout, stderr) => {
