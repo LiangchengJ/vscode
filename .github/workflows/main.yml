@@ -184,6 +184,10 @@ jobs:
           mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
           bash -c "cd .. && zip -r -9 -o VSCode-darwin-${{ matrix.arch }}.zip VSCode-darwin-${{ matrix.arch }}"
           mv ../VSCode-darwin-${{ matrix.arch }}.zip .
+
+      - name: Package DMG for arch x64
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
           bash -c "cd .. && npx create-dmg 'VSCode-darwin-${{ matrix.arch }}/$(node -p "require('./product.json').nameLong").app' ."
           mv ../*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
 
@@ -192,6 +196,10 @@ jobs:
           npm install -g checksum
           checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
           checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.zip.sha512
+
+      - name: Generate SHA512 checksum file for DMG
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
           checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.dmg | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
       - name: Release
