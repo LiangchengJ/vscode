@@ -188,8 +188,10 @@ jobs:
       - name: Package DMG for arch x64
         if: ${{ matrix.arch == 'x64' }}
         run: |
-          bash -c "cd .. && npx create-dmg 'VSCode-darwin-${{ matrix.arch }}/$(node -p "require('./product.json').nameLong").app' ."
-          mv ../*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
+          npm install -g create-dmg
+          NAME_LONG=`node -p "require('./product.json').nameLong"`
+          bash -c "cd ../VSCode-darwin-${{ matrix.arch }} && create-dmg '${NAME_LONG}.app'"
+          mv ../VSCode-darwin-${{ matrix.arch }}/*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
 
       - name: Generate SHA512 checksum file
         run: |
