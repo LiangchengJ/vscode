@@ -182,11 +182,17 @@ jobs:
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
           bash -c "cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}"
           mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && zip -r -9 -o VSCode-darwin-${{ matrix.arch }}.zip VSCode-darwin-${{ matrix.arch }}"
+          mv ../VSCode-darwin-${{ matrix.arch }}.zip .
+          bash -c "cd .. && npx create-dmg 'VSCode-darwin-${{ matrix.arch }}/$(node -p "require('./product.json').nameLong").app' ."
+          mv ../*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
 
       - name: Generate SHA512 checksum file
         run: |
           npm install -g checksum
           checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.zip.sha512
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.dmg | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -197,6 +203,10 @@ jobs:
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
             VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-darwin-${{ matrix.arch }}.zip
+            VSCode-darwin-${{ matrix.arch }}.zip.sha512
+            VSCode-darwin-${{ matrix.arch }}.dmg
+            VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
   windows:
     name: Windows
