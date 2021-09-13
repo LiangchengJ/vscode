@@ -66,6 +66,7 @@ export class LocalTerminalService extends Disposable implements ILocalTerminalSe
 		this._localPtyService.onProcessOverrideDimensions(e => this._ptys.get(e.id)?.handleOverrideDimensions(e.event));
 		this._localPtyService.onProcessResolvedShellLaunchConfig(e => this._ptys.get(e.id)?.handleResolvedShellLaunchConfig(e.event));
 		this._localPtyService.onProcessDidChangeHasChildProcesses(e => this._ptys.get(e.id)?.handleDidChangeHasChildProcesses(e.event));
+		this._localPtyService.onDidChangeProperty(e => this._ptys.get(e.id)?.handleDidChangeProperty(e.property));
 		this._localPtyService.onProcessReplay(e => this._ptys.get(e.id)?.handleReplay(e.event));
 		this._localPtyService.onProcessOrphanQuestion(e => this._ptys.get(e.id)?.handleOrphanQuestion());
 		this._localPtyService.onDidRequestDetach(e => this._onDidRequestDetach.fire(e));
@@ -146,9 +147,9 @@ export class LocalTerminalService extends Disposable implements ILocalTerminalSe
 		await this._localPtyService.updateIcon(id, icon, color);
 	}
 
-	async createProcess(shellLaunchConfig: IShellLaunchConfig, cwd: string, cols: number, rows: number, env: IProcessEnvironment, windowsEnableConpty: boolean, shouldPersist: boolean): Promise<ITerminalChildProcess> {
+	async createProcess(shellLaunchConfig: IShellLaunchConfig, cwd: string, cols: number, rows: number, unicodeVersion: '6' | '11', env: IProcessEnvironment, windowsEnableConpty: boolean, shouldPersist: boolean): Promise<ITerminalChildProcess> {
 		const executableEnv = await this._shellEnvironmentService.getShellEnv();
-		const id = await this._localPtyService.createProcess(shellLaunchConfig, cwd, cols, rows, env, executableEnv, windowsEnableConpty, shouldPersist, this._getWorkspaceId(), this._getWorkspaceName());
+		const id = await this._localPtyService.createProcess(shellLaunchConfig, cwd, cols, rows, unicodeVersion, env, executableEnv, windowsEnableConpty, shouldPersist, this._getWorkspaceId(), this._getWorkspaceName());
 		const pty = this._instantiationService.createInstance(LocalPty, id, shouldPersist);
 		this._ptys.set(id, pty);
 		return pty;

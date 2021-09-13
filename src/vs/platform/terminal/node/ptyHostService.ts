@@ -15,7 +15,7 @@ import { ILogService } from 'vs/platform/log/common/log';
 import { LogLevelChannelClient } from 'vs/platform/log/common/logIpc';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { RequestStore } from 'vs/platform/terminal/common/requestStore';
-import { HeartbeatConstants, IHeartbeatService, IProcessDataEvent, IPtyService, IReconnectConstants, IRequestResolveVariablesEvent, IShellLaunchConfig, ITerminalDimensionsOverride, ITerminalLaunchError, ITerminalProfile, ITerminalsLayoutInfo, TerminalIcon, TerminalIpcChannels, TerminalShellType, TitleEventSource } from 'vs/platform/terminal/common/terminal';
+import { HeartbeatConstants, IHeartbeatService, IProcessDataEvent, IPtyService, IReconnectConstants, IRequestResolveVariablesEvent, IShellLaunchConfig, ITerminalDimensionsOverride, ITerminalLaunchError, ITerminalProfile, ITerminalsLayoutInfo, TerminalIcon, TerminalIpcChannels, ITerminalProperty, TerminalShellType, TitleEventSource } from 'vs/platform/terminal/common/terminal';
 import { registerTerminalPlatformConfiguration } from 'vs/platform/terminal/common/terminalPlatformConfiguration';
 import { IGetTerminalLayoutInfoArgs, IProcessDetails, IPtyHostProcessReplayEvent, ISetTerminalLayoutInfoArgs } from 'vs/platform/terminal/common/terminalProcess';
 import { detectAvailableProfiles } from 'vs/platform/terminal/node/terminalProfiles';
@@ -83,6 +83,8 @@ export class PtyHostService extends Disposable implements IPtyService {
 	readonly onDidRequestDetach = this._onDidRequestDetach.event;
 	private readonly _onProcessDidChangeHasChildProcesses = this._register(new Emitter<{ id: number, event: boolean }>());
 	readonly onProcessDidChangeHasChildProcesses = this._onProcessDidChangeHasChildProcesses.event;
+	private readonly _onDidChangeProperty = this._register(new Emitter<{ id: number, property: ITerminalProperty<any> }>());
+	readonly onDidChangeProperty = this._onDidChangeProperty.event;
 
 	constructor(
 		private readonly _reconnectConstants: IReconnectConstants,
@@ -166,6 +168,7 @@ export class PtyHostService extends Disposable implements IPtyService {
 		this._register(proxy.onProcessOverrideDimensions(e => this._onProcessOverrideDimensions.fire(e)));
 		this._register(proxy.onProcessResolvedShellLaunchConfig(e => this._onProcessResolvedShellLaunchConfig.fire(e)));
 		this._register(proxy.onProcessDidChangeHasChildProcesses(e => this._onProcessDidChangeHasChildProcesses.fire(e)));
+		this._register(proxy.onDidChangeProperty(e => this._onDidChangeProperty.fire(e)));
 		this._register(proxy.onProcessReplay(e => this._onProcessReplay.fire(e)));
 		this._register(proxy.onProcessOrphanQuestion(e => this._onProcessOrphanQuestion.fire(e)));
 		this._register(proxy.onDidRequestDetach(e => this._onDidRequestDetach.fire(e)));
@@ -178,9 +181,9 @@ export class PtyHostService extends Disposable implements IPtyService {
 		super.dispose();
 	}
 
-	async createProcess(shellLaunchConfig: IShellLaunchConfig, cwd: string, cols: number, rows: number, env: IProcessEnvironment, executableEnv: IProcessEnvironment, windowsEnableConpty: boolean, shouldPersist: boolean, workspaceId: string, workspaceName: string): Promise<number> {
+	async createProcess(shellLaunchConfig: IShellLaunchConfig, cwd: string, cols: number, rows: number, unicodeVersion: '6' | '11', env: IProcessEnvironment, executableEnv: IProcessEnvironment, windowsEnableConpty: boolean, shouldPersist: boolean, workspaceId: string, workspaceName: string): Promise<number> {
 		const timeout = setTimeout(() => this._handleUnresponsiveCreateProcess(), HeartbeatConstants.CreateProcessTimeout);
-		const id = await this._proxy.createProcess(shellLaunchConfig, cwd, cols, rows, env, executableEnv, windowsEnableConpty, shouldPersist, workspaceId, workspaceName);
+		const id = await this._proxy.createProcess(shellLaunchConfig, cwd, cols, rows, unicodeVersion, env, executableEnv, windowsEnableConpty, shouldPersist, workspaceId, workspaceName);
 		clearTimeout(timeout);
 		lastPtyId = Math.max(lastPtyId, id);
 		return id;
@@ -220,6 +223,9 @@ export class PtyHostService extends Disposable implements IPtyService {
 	}
 	acknowledgeDataEvent(id: number, charCount: number): Promise<void> {
 		return this._proxy.acknowledgeDataEvent(id, charCount);
+	}
+	setUnicodeVersion(id: number, version: '6' | '11'): Promise<void> {
+		return this._proxy.setUnicodeVersion(id, version);
 	}
 	getInitialCwd(id: number): Promise<string> {
 		return this._proxy.getInitialCwd(id);

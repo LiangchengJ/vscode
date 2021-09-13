@@ -7,8 +7,9 @@ import { Emitter } from 'vs/base/common/event';
 import { URI } from 'vs/base/common/uri';
 import { IEditorModel } from 'vs/platform/editor/common/editor';
 import { firstOrDefault } from 'vs/base/common/arrays';
-import { IEditorInput, EditorInputCapabilities, Verbosity, GroupIdentifier, ISaveOptions, IRevertOptions, IMoveResult, IEditorDescriptor, IEditorPane, IUntypedEditorInput, EditorResourceAccessor, AbstractEditorInput, isEditorInput } from 'vs/workbench/common/editor';
+import { IEditorInput, EditorInputCapabilities, Verbosity, GroupIdentifier, ISaveOptions, IRevertOptions, IMoveResult, IEditorDescriptor, IEditorPane, IUntypedEditorInput, EditorResourceAccessor, AbstractEditorInput, isEditorInput, IEditorIdentifier } from 'vs/workbench/common/editor';
 import { isEqual } from 'vs/base/common/resources';
+import { ConfirmResult } from 'vs/platform/dialogs/common/dialogs';
 
 /**
  * Editor inputs are lightweight objects that can be passed to the workbench API to open inside the editor part.
@@ -70,11 +71,6 @@ export abstract class EditorInput extends AbstractEditorInput implements IEditor
 		return this.getTitle(Verbosity.SHORT);
 	}
 
-	/**
-	* Returns a descriptor suitable for telemetry events.
-	*
-	* Subclasses should extend if they can contribute.
-	*/
 	getTelemetryDescriptor(): { [key: string]: unknown } {
 		/* __GDPR__FRAGMENT__
 			"EditorTelemetryDescriptor" : {
@@ -96,6 +92,8 @@ export abstract class EditorInput extends AbstractEditorInput implements IEditor
 		return null;
 	}
 
+	confirm?(editors?: ReadonlyArray<IEditorIdentifier>): Promise<ConfirmResult>;
+
 	async save(group: GroupIdentifier, options?: ISaveOptions): Promise<IEditorInput | undefined> {
 		return this;
 	}
@@ -106,7 +104,7 @@ export abstract class EditorInput extends AbstractEditorInput implements IEditor
 
 	async revert(group: GroupIdentifier, options?: IRevertOptions): Promise<void> { }
 
-	rename(group: GroupIdentifier, target: URI): IMoveResult | undefined {
+	async rename(group: GroupIdentifier, target: URI): Promise<IMoveResult | undefined> {
 		return undefined;
 	}
 

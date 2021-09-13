@@ -134,6 +134,17 @@ export const enum GroupsOrder {
 	GRID_APPEARANCE
 }
 
+export interface IEditorSideGroup {
+
+	/**
+	 * Open an editor in this group.
+	 *
+	 * @returns a promise that resolves around an IEditor instance unless
+	 * the call failed, or the editor was not opened as active editor.
+	 */
+	openEditor(editor: IEditorInput, options?: IEditorOptions): Promise<IEditorPane | undefined>;
+}
+
 export interface IEditorGroupsService {
 
 	readonly _serviceBrand: undefined;
@@ -175,6 +186,11 @@ export interface IEditorGroupsService {
 	readonly onDidChangeGroupIndex: Event<IEditorGroup>;
 
 	/**
+	 * An event for when the locked state of a group changes.
+	 */
+	readonly onDidChangeGroupLocked: Event<IEditorGroup>;
+
+	/**
 	 * The size of the editor groups area.
 	 */
 	readonly contentDimension: IDimension;
@@ -183,6 +199,12 @@ export interface IEditorGroupsService {
 	 * An active group is the default location for new editors to open.
 	 */
 	readonly activeGroup: IEditorGroup;
+
+	/**
+	 * A side group allows a subset of methods on a group that is either
+	 * created to the side or picked if already there.
+	 */
+	readonly sideGroup: IEditorSideGroup;
 
 	/**
 	 * All groups that are currently visible in the editor area in the
@@ -199,6 +221,12 @@ export interface IEditorGroupsService {
 	 * The current layout orientation of the root group.
 	 */
 	readonly orientation: GroupOrientation;
+
+	/**
+	 * A property that indicates when groups have been created
+	 * and are ready to be used.
+	 */
+	readonly isReady: boolean;
 
 	/**
 	 * A promise that resolves when groups have been created
@@ -371,6 +399,7 @@ export const enum GroupChangeKind {
 	/* Group Changes */
 	GROUP_ACTIVE,
 	GROUP_INDEX,
+	GROUP_LOCKED,
 
 	/* Editor Changes */
 	EDITOR_OPEN,
@@ -479,6 +508,16 @@ export interface IEditorGroup {
 	readonly isEmpty: boolean;
 
 	/**
+	 * Whether this editor group is locked or not. Locked editor groups
+	 * will only be considered for editors to open in when the group is
+	 * explicitly provided for the editor.
+	 *
+	 * Note: editor group locking only applies when more than one group
+	 * is opened.
+	 */
+	readonly isLocked: boolean;
+
+	/**
 	 * The number of sticky editors in this group.
 	 */
 	readonly stickyCount: number;
@@ -567,11 +606,23 @@ export interface IEditorGroup {
 	moveEditor(editor: IEditorInput, target: IEditorGroup, options?: IEditorOptions): void;
 
 	/**
+	 * Move editors from this group either within this group or to another group.
+	 */
+	moveEditors(editors: IEditorInputWithOptions[], target: IEditorGroup): void;
+
+	/**
 	 * Copy an editor from this group to another group.
 	 *
 	 * Note: It is currently not supported to show the same editor more than once in the same group.
 	 */
 	copyEditor(editor: IEditorInput, target: IEditorGroup, options?: IEditorOptions): void;
+
+	/**
+	 * Copy editors from this group to another group.
+	 *
+	 * Note: It is currently not supported to show the same editor more than once in the same group.
+	 */
+	copyEditors(editors: IEditorInputWithOptions[], target: IEditorGroup): void;
 
 	/**
 	 * Close an editor from the group. This may trigger a confirmation dialog if
@@ -636,6 +687,13 @@ export interface IEditorGroup {
 	 * if unspecified.
 	 */
 	unstickEditor(editor?: IEditorInput): void;
+
+	/**
+	 * Whether this editor group should be locked or not.
+	 *
+	 * See {@linkcode IEditorGroup.isLocked `isLocked`}
+	 */
+	lock(locked: boolean): void;
 
 	/**
 	 * Move keyboard focus into the group.

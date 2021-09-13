@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { asArray } from 'vs/base/common/arrays';
-import { timeout } from 'vs/base/common/async';
+import { DeferredPromise, timeout } from 'vs/base/common/async';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import { Emitter } from 'vs/base/common/event';
 import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
@@ -12,7 +12,7 @@ import { ResourceMap } from 'vs/base/common/map';
 import { URI, UriComponents } from 'vs/base/common/uri';
 import { ExtensionIdentifier, IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ILogService } from 'vs/platform/log/common/log';
-import { ICellExecuteUpdateDto, ExtHostNotebookKernelsShape, IMainContext, INotebookKernelDto2, MainContext, MainThreadNotebookKernelsShape, NotebookOutputDto } from 'vs/workbench/api/common/extHost.protocol';
+import { ExtHostNotebookKernelsShape, ICellExecuteUpdateDto, IMainContext, INotebookKernelDto2, MainContext, MainThreadNotebookKernelsShape, NotebookOutputDto } from 'vs/workbench/api/common/extHost.protocol';
 import { IExtHostInitDataService } from 'vs/workbench/api/common/extHostInitDataService';
 import { ExtHostNotebookController } from 'vs/workbench/api/common/extHostNotebook';
 import { ExtHostCell, ExtHostNotebookDocument } from 'vs/workbench/api/common/extHostNotebookDocument';
@@ -21,6 +21,7 @@ import { NotebookCellOutput } from 'vs/workbench/api/common/extHostTypes';
 import { asWebviewUri } from 'vs/workbench/api/common/shared/webview';
 import { CellExecutionUpdateType } from 'vs/workbench/contrib/notebook/common/notebookExecutionService';
 import { checkProposedApiEnabled } from 'vs/workbench/services/extensions/common/extensions';
+import { SerializableObjectWithBuffers } from 'vs/workbench/services/extensions/common/proxyIdentifier';
 import * as vscode from 'vscode';
 
 interface IKernelData {
@@ -362,7 +363,7 @@ class NotebookCellExecutionTask extends Disposable {
 
 	private async update(update: ICellExecuteUpdateDto | ICellExecuteUpdateDto[]): Promise<void> {
 		const updates = Array.isArray(update) ? update : [update];
-		return this._proxy.$updateExecutions(updates);
+		return this._proxy.$updateExecutions(new SerializableObjectWithBuffers(updates));
 	}
 
 	private verifyStateForOutput() {
@@ -507,27 +508,42 @@ class NotebookCellExecutionTask extends Disposable {
 
 class TimeoutBasedCollector<T> {
 	private batch: T[] = [];
-	private waitPromise: Promise<void> | undefined;
+	private startedTimer = Date.now();
+	private currentDeferred: DeferredPromise<void> | undefined;
 
 	constructor(
 		private readonly delay: number,
-		private readonly callback: (items: T[]) => Promise<void> | void) { }
+		private readonly callback: (items: T[]) => Promise<void>) { }
 
 	addItem(item: T): Promise<void> {
 		this.batch.push(item);
-		if (!this.waitPromise) {
-			this.waitPromise = timeout(this.delay).then(() => {
+		if (!this.currentDeferred) {
+			this.currentDeferred = new DeferredPromise<void>();
+			this.startedTimer = Date.now();
+			timeout(this.delay).then(() => {
 				return this.flush();
 			});
 		}
 
-		return this.waitPromise;
+		// This can be called by the extension repeatedly for a long time before the timeout is able to run.
+		// Force a flush after the delay.
+		if (Date.now() - this.startedTimer > this.delay) {
+			return this.flush();
+		}
+
+		return this.currentDeferred.p;
 	}
 
-	flush(): void | Promise<void> {
-		this.waitPromise = undefined;
+	flush(): Promise<void> {
+		if (this.batch.length === 0 || !this.currentDeferred) {
+			return Promise.resolve();
+		}
+
+		const deferred = this.currentDeferred;
+		this.currentDeferred = undefined;
 		const batch = this.batch;
 		this.batch = [];
-		return this.callback(batch);
+		return this.callback(batch)
+			.finally(() => deferred.complete());
 	}
 }

@@ -43,10 +43,19 @@ export interface PreloadOptions {
 	dragAndDropEnabled: boolean;
 }
 
+interface PreloadContext {
+	readonly nonce: string;
+	readonly style: PreloadStyles;
+	readonly options: PreloadOptions;
+	readonly rendererData: readonly RendererMetadata[];
+	readonly isWorkspaceTrusted: boolean;
+}
+
 declare function __import(path: string): Promise<any>;
 
-async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, rendererData: readonly RendererMetadata[]) {
-	let currentOptions = options;
+async function webviewPreloads(ctx: PreloadContext) {
+	let currentOptions = ctx.options;
+	let isWorkspaceTrusted = ctx.isWorkspaceTrusted;
 
 	const acquireVsCodeApi = globalThis.acquireVsCodeApi;
 	const vscode = acquireVsCodeApi();
@@ -156,10 +165,27 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		getRenderer(id: string): Promise<any | undefined>;
 		postMessage?(message: unknown): void;
 		onDidReceiveMessage?: Event<unknown>;
+		readonly workspace: { readonly isTrusted: boolean };
 	}
 
-	interface ScriptModule {
-		activate(ctx?: RendererContext): Promise<RendererApi | undefined | any> | RendererApi | undefined | any;
+	interface RendererModule {
+		activate(ctx: RendererContext): Promise<RendererApi | undefined | any> | RendererApi | undefined | any;
+	}
+
+	interface KernelPreloadContext {
+		readonly onDidReceiveKernelMessage: Event<unknown>;
+		postKernelMessage(data: unknown): void;
+	}
+
+	interface KernelPreloadModule {
+		activate(ctx: KernelPreloadContext): Promise<void> | void;
+	}
+
+	function createKernelContext(): KernelPreloadContext {
+		return {
+			onDidReceiveKernelMessage: onDidReceiveKernelMessage.event,
+			postKernelMessage: (data: unknown) => postNotebookMessage('customKernelMessage', { message: data }),
+		};
 	}
 
 	const invokeSourceWithGlobals = (functionSrc: string, globals: { [name: string]: unknown }) => {
@@ -167,18 +193,20 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		return new Function(...args.map(([k]) => k), functionSrc)(...args.map(([, v]) => v));
 	};
 
-	const runPreload = async (url: string, originalUri: string): Promise<ScriptModule> => {
+	const runKernelPreload = async (url: string, originalUri: string): Promise<void> => {
 		const text = await loadScriptSource(url, originalUri);
-		return {
-			activate: () => {
-				try {
-					return invokeSourceWithGlobals(text, { ...kernelPreloadGlobals, scriptUrl: url });
-				} catch (e) {
-					console.error(e);
-					throw e;
-				}
+		const isModule = /\bexport\b.*\bactivate\b/.test(text);
+		try {
+			if (isModule) {
+				const module: KernelPreloadModule = await __import(url);
+				return module.activate(createKernelContext());
+			} else {
+				return invokeSourceWithGlobals(text, { ...kernelPreloadGlobals, scriptUrl: url });
 			}
-		};
+		} catch (e) {
+			console.error(e);
+			throw e;
+		}
 	};
 
 	const dimensionUpdater = new class {
@@ -230,7 +258,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 					if (entry.target.id === observedElementInfo.id && entry.contentRect) {
 						if (observedElementInfo.output) {
 							if (entry.contentRect.height !== 0) {
-								entry.target.style.padding = `${style.outputNodePadding}px 0 ${style.outputNodePadding}px 0`;
+								entry.target.style.padding = `${ctx.style.outputNodePadding}px 0 ${ctx.style.outputNodePadding}px 0`;
 							} else {
 								entry.target.style.padding = `0px`;
 							}
@@ -445,12 +473,6 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 	interface IOutputItem {
 		readonly id: string;
 
-		/** @deprecated */
-		readonly outputId?: string;
-
-		/** @deprecated */
-		readonly element: HTMLElement;
-
 		readonly mime: string;
 		metadata: unknown;
 
@@ -458,8 +480,34 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		json(): any;
 		data(): Uint8Array;
 		blob(): Blob;
-		/** @deprecated */
-		bytes(): Uint8Array;
+	}
+
+	class OutputItem implements IOutputItem {
+		constructor(
+			public readonly id: string,
+			public readonly element: HTMLElement,
+			public readonly mime: string,
+			public readonly metadata: unknown,
+			public readonly valueBytes: Uint8Array
+		) { }
+
+		data() {
+			return this.valueBytes;
+		}
+
+		bytes() { return this.data(); }
+
+		text() {
+			return new TextDecoder().decode(this.valueBytes);
+		}
+
+		json() {
+			return JSON.parse(this.text());
+		}
+
+		blob() {
+			return new Blob([this.valueBytes], { type: this.mime });
+		}
 	}
 
 	const onDidReceiveKernelMessage = createEmitter<unknown>();
@@ -545,25 +593,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 					} else {
 						const rendererApi = preloadsAndErrors[0] as RendererApi;
 						try {
-							rendererApi.renderOutputItem({
-								id: outputId,
-								element: outputNode,
-								mime: content.mimeType,
-								metadata: content.metadata,
-								data() {
-									return content.valueBytes;
-								},
-								bytes() { return this.data(); },
-								text() {
-									return new TextDecoder().decode(content.valueBytes);
-								},
-								json() {
-									return JSON.parse(this.text());
-								},
-								blob() {
-									return new Blob([content.valueBytes], { type: content.mimeType });
-								}
-							}, outputNode);
+							rendererApi.renderOutputItem(new OutputItem(outputId, outputNode, content.mimeType, content.metadata, content.valueBytes), outputNode);
 						} catch (e) {
 							showPreloadErrors(outputNode, e);
 						}
@@ -576,12 +606,12 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 					if (offsetHeight !== 0 && cps.padding === '0px') {
 						// we set padding to zero if the output height is zero (then we can have a zero-height output DOM node)
 						// thus we need to ensure the padding is accounted when updating the init height of the output
-						dimensionUpdater.updateHeight(outputId, offsetHeight + style.outputNodePadding * 2, {
+						dimensionUpdater.updateHeight(outputId, offsetHeight + ctx.style.outputNodePadding * 2, {
 							isOutput: true,
 							init: true,
 						});
 
-						outputNode.style.padding = `${style.outputNodePadding}px 0 ${style.outputNodePadding}px 0`;
+						outputNode.style.padding = `${ctx.style.outputNodePadding}px 0 ${ctx.style.outputNodePadding}px 0`;
 					} else {
 						dimensionUpdater.updateHeight(outputId, outputNode.offsetHeight, {
 							isOutput: true,
@@ -684,6 +714,11 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 				currentOptions = event.data.options;
 				viewModel.toggleDragDropEnabled(currentOptions.dragAndDropEnabled);
 				break;
+			case 'updateWorkspaceTrust': {
+				isWorkspaceTrusted = event.data.isTrusted;
+				viewModel.rerenderMarkupCells();
+				break;
+			}
 		}
 	});
 
@@ -727,6 +762,9 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 				// TODO: This is async so that we can return a promise to the API in the future.
 				// Currently the API is always resolved before we call `createRendererContext`.
 				getRenderer: async (id: string) => renderers.getRenderer(id)?.api,
+				workspace: {
+					get isTrusted() { return isWorkspaceTrusted; }
+				}
 			};
 
 			if (messaging) {
@@ -739,7 +777,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 
 		/** Inner function cached in the _loadPromise(). */
 		private async _load(): Promise<RendererApi | undefined> {
-			const module = await __import(this.data.entrypoint);
+			const module: RendererModule = await __import(this.data.entrypoint);
 			if (!module) {
 				return;
 			}
@@ -749,7 +787,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 
 			// Squash any errors extends errors. They won't prevent the renderer
 			// itself from working, so just log them.
-			await Promise.all(rendererData
+			await Promise.all(ctx.rendererData
 				.filter(d => d.extends === this.data.id)
 				.map(d => this.loadExtension(d.id).catch(console.error)),
 			);
@@ -775,9 +813,9 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		 */
 		public load(uri: string, originalUri: string) {
 			const promise = Promise.all([
-				runPreload(uri, originalUri),
+				runKernelPreload(uri, originalUri),
 				this.waitForAllCurrent(),
-			]).then(([module]) => module.activate());
+			]);
 
 			this.preloads.set(uri, promise);
 			return promise;
@@ -834,7 +872,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		private readonly _renderers = new Map</* id */ string, Renderer>();
 
 		constructor() {
-			for (const renderer of rendererData) {
+			for (const renderer of ctx.rendererData) {
 				this._renderers.set(renderer.id, new Renderer(renderer, async (extensionId) => {
 					const ext = this._renderers.get(extensionId);
 					if (!ext) {
@@ -938,7 +976,7 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		public deleteMarkupCell(id: string) {
 			const cell = this.getExpectedMarkupCell(id);
 			if (cell) {
-				cell.element.remove();
+				cell.remove();
 				this._markupCells.delete(id);
 			}
 		}
@@ -961,6 +999,12 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		public unhideMarkupCell(id: string): void {
 			const cell = this.getExpectedMarkupCell(id);
 			cell?.unhide();
+		}
+
+		public rerenderMarkupCells() {
+			for (const cell of this._markupCells.values()) {
+				cell.rerender();
+			}
 		}
 
 		private getExpectedMarkupCell(id: string): MarkupCell | undefined {
@@ -1042,6 +1086,8 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 
 		public readonly ready: Promise<void>;
 
+		public readonly element: HTMLElement;
+
 		/// Internal field that holds text content
 		private _content: string;
 
@@ -1073,12 +1119,8 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 
 		//#region IOutputItem
 		public readonly id: string;
-		public readonly mime;
-		public readonly element: HTMLElement;
-
-		// deprecated fields
+		public readonly mime: string;
 		public readonly metadata = undefined;
-		public readonly outputId?: string | undefined;
 
 		text() { return this._content; }
 		json() { return undefined; }
@@ -1200,6 +1242,14 @@ async function webviewPreloads(style: PreloadStyles, options: PreloadOptions, re
 		public unhide() {
 			this.element.style.visibility = 'visible';
 			this.updateMarkupDimensions();
+		}
+
+		public rerender() {
+			this.updateContentAndRender(this._content);
+		}
+
+		public remove() {
+			this.element.remove();
 		}
 
 		private async updateMarkupDimensions() {
@@ -1437,14 +1487,19 @@ export interface RendererMetadata {
 	readonly messaging: boolean;
 }
 
-export function preloadsScriptStr(styleValues: PreloadStyles, options: PreloadOptions, renderers: readonly RendererMetadata[]) {
-	// TS will try compiling `import()` in webviePreloads, so use an helper function instead
+export function preloadsScriptStr(styleValues: PreloadStyles, options: PreloadOptions, renderers: readonly RendererMetadata[], isWorkspaceTrusted: boolean, nonce: string) {
+	const ctx: PreloadContext = {
+		style: styleValues,
+		options,
+		rendererData: renderers,
+		isWorkspaceTrusted,
+		nonce,
+	};
+	// TS will try compiling `import()` in webviewPreloads, so use an helper function instead
 	// of using `import(...)` directly
 	return `
 		const __import = (x) => import(x);
 		(${webviewPreloads})(
-				JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(styleValues))}")),
-				JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(options))}")),
-				JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(renderers))}"))
-			)\n//# sourceURL=notebookWebviewPreloads.js\n`;
+			JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(ctx))}"))
+		)\n//# sourceURL=notebookWebviewPreloads.js\n`;
 }

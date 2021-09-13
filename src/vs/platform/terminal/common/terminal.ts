@@ -64,6 +64,9 @@ export const enum TerminalSettingId {
 	DetectLocale = 'terminal.integrated.detectLocale',
 	DefaultLocation = 'terminal.integrated.defaultLocation',
 	GpuAcceleration = 'terminal.integrated.gpuAcceleration',
+	TerminalTitleSeparator = 'terminal.integrated.tabs.separator',
+	TerminalTitle = 'terminal.integrated.tabs.title',
+	TerminalDescription = 'terminal.integrated.tabs.description',
 	RightClickBehavior = 'terminal.integrated.rightClickBehavior',
 	Cwd = 'terminal.integrated.cwd',
 	ConfirmOnExit = 'terminal.integrated.confirmOnExit',
@@ -89,6 +92,7 @@ export const enum TerminalSettingId {
 	LocalEchoExcludePrograms = 'terminal.integrated.localEchoExcludePrograms',
 	LocalEchoStyle = 'terminal.integrated.localEchoStyle',
 	EnablePersistentSessions = 'terminal.integrated.enablePersistentSessions',
+	CustomGlyphs = 'terminal.integrated.customGlyphs',
 	PersistentSessionScrollback = 'terminal.integrated.persistentSessionScrollback',
 	PersistentSessionExperimentalSerializer = 'terminal.integrated.persistentSessionExperimentalSerializer',
 	InheritEnv = 'terminal.integrated.inheritEnv',
@@ -139,7 +143,9 @@ export enum TitleEventSource {
 	/** From the process name property*/
 	Process,
 	/** From the VT sequence */
-	Sequence
+	Sequence,
+	/** Config changed */
+	Config
 }
 
 export type ITerminalsLayoutInfo = IRawTerminalsLayoutInfo<IPtyHostAttachTarget | null>;
@@ -170,6 +176,22 @@ export enum TerminalIpcChannels {
 }
 
 export const IPtyService = createDecorator<IPtyService>('ptyService');
+
+export const enum TerminalPropertyType {
+	Cwd,
+	InitialCwd
+}
+
+export interface ITerminalProperty<T extends TerminalPropertyType> {
+	type: T,
+	value: ITerminalPropertyMap[T]
+}
+
+export interface ITerminalPropertyMap {
+	[TerminalPropertyType.Cwd]: string,
+	[TerminalPropertyType.InitialCwd]: string,
+}
+
 export interface IPtyService {
 	readonly _serviceBrand: undefined;
 
@@ -190,6 +212,7 @@ export interface IPtyService {
 	readonly onProcessOrphanQuestion: Event<{ id: number }>;
 	readonly onDidRequestDetach: Event<{ requestId: number, workspaceId: string, instanceId: number }>;
 	readonly onProcessDidChangeHasChildProcesses: Event<{ id: number, event: boolean }>;
+	readonly onDidChangeProperty: Event<{ id: number, property: ITerminalProperty<any> }>
 
 	restartPtyHost?(): Promise<void>;
 	shutdownAll?(): Promise<void>;
@@ -200,6 +223,7 @@ export interface IPtyService {
 		cwd: string,
 		cols: number,
 		rows: number,
+		unicodeVersion: '6' | '11',
 		env: IProcessEnvironment,
 		executableEnv: IProcessEnvironment,
 		windowsEnableConpty: boolean,
@@ -223,6 +247,7 @@ export interface IPtyService {
 	getCwd(id: number): Promise<string>;
 	getLatency(id: number): Promise<number>;
 	acknowledgeDataEvent(id: number, charCount: number): Promise<void>;
+	setUnicodeVersion(id: number, version: '6' | '11'): Promise<void>;
 	processBinary(id: number, data: string): Promise<void>;
 	/** Confirm the process is _not_ an orphan. */
 	orphanQuestionReply(id: number): Promise<void>;
@@ -386,16 +411,27 @@ export interface IShellLaunchConfig {
 	 * The color ID to use for this terminal. If not specified it will use the default fallback
 	 */
 	color?: string;
+
+	/**
+	 * When a parent terminal is provided via API, the group needs
+	 * to find the index in order to place the child
+	 * directly to the right of its parent.
+	 */
+	parentTerminalId?: number;
 }
 
 export interface ICreateContributedTerminalProfileOptions {
-	target?: TerminalLocation;
 	icon?: URI | string | { light: URI, dark: URI };
 	color?: string;
-	isSplitTerminal?: boolean;
+	location?: TerminalLocation | { viewColumn: number, preserveState?: boolean } | { splitActiveTerminal: boolean };
 }
 
-export const enum TerminalLocation {
+export enum TerminalLocation {
+	Panel = 1,
+	Editor = 2
+}
+
+export const enum TerminalLocationString {
 	TerminalView = 'view',
 	Editor = 'editor'
 }
@@ -452,6 +488,7 @@ export interface ITerminalChildProcess {
 	onProcessOverrideDimensions?: Event<ITerminalDimensionsOverride | undefined>;
 	onProcessResolvedShellLaunchConfig?: Event<IShellLaunchConfig>;
 	onDidChangeHasChildProcesses?: Event<boolean>;
+	onDidChangeProperty: Event<ITerminalProperty<any>>;
 
 	/**
 	 * Starts the process.
@@ -484,6 +521,12 @@ export interface ITerminalChildProcess {
 	 * @param charCount The number of characters being acknowledged.
 	 */
 	acknowledgeDataEvent(charCount: number): void;
+
+	/**
+	 * Sets the unicode version for the process, this drives the size of some characters in the
+	 * xterm-headless instance.
+	 */
+	setUnicodeVersion(version: '6' | '11'): Promise<void>;
 
 	getInitialCwd(): Promise<string>;
 	getCwd(): Promise<string>;

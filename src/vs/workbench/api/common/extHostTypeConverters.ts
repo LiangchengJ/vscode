@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { coalesce, isNonEmptyArray } from 'vs/base/common/arrays';
+import { VSBuffer } from 'vs/base/common/buffer';
 import * as htmlContent from 'vs/base/common/htmlContent';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import * as marked from 'vs/base/common/marked/marked';
@@ -31,7 +32,7 @@ import { SaveReason } from 'vs/workbench/common/editor';
 import * as notebooks from 'vs/workbench/contrib/notebook/common/notebookCommon';
 import { ICellRange } from 'vs/workbench/contrib/notebook/common/notebookRange';
 import * as search from 'vs/workbench/contrib/search/common/search';
-import { CoverageDetails, DetailType, ICoveredCount, IFileCoverage, ISerializedTestResults, ITestErrorMessage, ITestItem, ITestItemContext, ITestTag, ITestTagDisplayInfo, SerializedTestResultItem, TestMessageType } from 'vs/workbench/contrib/testing/common/testCollection';
+import { CoverageDetails, DetailType, ICoveredCount, IFileCoverage, ISerializedTestResults, ITestErrorMessage, ITestItem, ITestItemContext, ITestTag, SerializedTestErrorMessage, SerializedTestResultItem, TestMessageType } from 'vs/workbench/contrib/testing/common/testCollection';
 import { TestId } from 'vs/workbench/contrib/testing/common/testId';
 import { EditorGroupColumn } from 'vs/workbench/services/editor/common/editorGroupColumn';
 import { ACTIVE_GROUP, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
@@ -279,7 +280,7 @@ export namespace MarkdownString {
 			const { language, value } = markup;
 			res = { value: '```' + language + '\n' + value + '\n```\n' };
 		} else if (types.MarkdownString.isMarkdownString(markup)) {
-			res = { value: markup.value, isTrusted: markup.isTrusted, supportThemeIcons: markup.supportThemeIcons };
+			res = { value: markup.value, isTrusted: markup.isTrusted, supportThemeIcons: markup.supportThemeIcons, supportHtml: markup.supportHtml };
 		} else if (typeof markup === 'string') {
 			res = { value: markup };
 		} else {
@@ -344,6 +345,7 @@ export namespace MarkdownString {
 	export function to(value: htmlContent.IMarkdownString): vscode.MarkdownString {
 		const result = new types.MarkdownString(value.value, value.supportThemeIcons);
 		result.isTrusted = value.isTrusted;
+		result.supportHtml = value.supportHtml;
 		return result;
 	}
 
@@ -1494,12 +1496,12 @@ export namespace NotebookCellOutputItem {
 	export function from(item: types.NotebookCellOutputItem): extHostProtocol.NotebookOutputItemDto {
 		return {
 			mime: item.mime,
-			valueBytes: Array.from(item.data), //todo@jrieken this HACKY and SLOW... hoist VSBuffer instead
+			valueBytes: VSBuffer.wrap(item.data),
 		};
 	}
 
 	export function to(item: extHostProtocol.NotebookOutputItemDto): types.NotebookCellOutputItem {
-		return new types.NotebookCellOutputItem(new Uint8Array(item.valueBytes), item.mime);
+		return new types.NotebookCellOutputItem(item.valueBytes.buffer, item.mime);
 	}
 }
 
@@ -1639,7 +1641,7 @@ export namespace NotebookRendererScript {
 }
 
 export namespace TestMessage {
-	export function from(message: vscode.TestMessage): ITestErrorMessage {
+	export function from(message: vscode.TestMessage): SerializedTestErrorMessage {
 		return {
 			message: MarkdownString.fromStrict(message.message) || '',
 			type: TestMessageType.Error,
@@ -1649,10 +1651,11 @@ export namespace TestMessage {
 		};
 	}
 
-	export function to(item: ITestErrorMessage): vscode.TestMessage {
+	export function to(item: SerializedTestErrorMessage): vscode.TestMessage {
 		const message = new types.TestMessage(typeof item.message === 'string' ? item.message : MarkdownString.to(item.message));
 		message.actualOutput = item.actual;
 		message.expectedOutput = item.expected;
+		message.location = item.location ? location.to(item.location) : undefined;
 		return message;
 	}
 }
@@ -1664,14 +1667,6 @@ export namespace TestTag {
 
 	export const namespace = (ctrlId: string, tagId: string) =>
 		ctrlId + Constants.Delimiter + tagId;
-
-	export function display(controllerId: string, tag: vscode.TestTag): ITestTagDisplayInfo {
-		return {
-			displayId: tag.id,
-			id: namespace(controllerId, tag.id),
-			label: tag.label,
-		};
-	}
 
 	export const denamespace = (namespaced: string) => {
 		const index = namespaced.indexOf(Constants.Delimiter);
@@ -1702,7 +1697,7 @@ export namespace TestItem {
 			uri: URI.revive(item.uri),
 			tags: (item.tags || []).map(t => {
 				const { tagId } = TestTag.denamespace(t);
-				return new types.TestTag(tagId, tagId);
+				return new types.TestTag(tagId);
 			}),
 			range: Range.to(item.range || undefined),
 			invalidateResults: () => undefined,
@@ -1734,11 +1729,11 @@ export namespace TestItem {
 
 export namespace TestTag {
 	export function from(tag: vscode.TestTag): ITestTag {
-		return { id: tag.id, label: tag.label };
+		return { id: tag.id };
 	}
 
 	export function to(tag: ITestTag): vscode.TestTag {
-		return new types.TestTag(tag.id, tag.label);
+		return new types.TestTag(tag.id);
 	}
 }
 

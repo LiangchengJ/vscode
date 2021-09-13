@@ -8,13 +8,12 @@ import { Emitter } from 'vs/base/common/event';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { URI } from 'vs/base/common/uri';
 import { ILogService } from 'vs/platform/log/common/log';
-import { IProcessDataEvent, IProcessReadyEvent, IShellLaunchConfig, ITerminalChildProcess, ITerminalDimensionsOverride, ITerminalLaunchError, TerminalShellType } from 'vs/platform/terminal/common/terminal';
+import { IProcessDataEvent, IProcessReadyEvent, IShellLaunchConfig, ITerminalChildProcess, ITerminalDimensionsOverride, ITerminalLaunchError, ITerminalProperty, TerminalShellType } from 'vs/platform/terminal/common/terminal';
 import { IPtyHostProcessReplayEvent } from 'vs/platform/terminal/common/terminalProcess';
 import { RemoteTerminalChannelClient } from 'vs/workbench/contrib/terminal/common/remoteTerminalChannel';
 import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
 
 export class RemotePty extends Disposable implements ITerminalChildProcess {
-
 	private readonly _onProcessData = this._register(new Emitter<string | IProcessDataEvent>());
 	readonly onProcessData = this._onProcessData.event;
 	private readonly _onProcessExit = this._register(new Emitter<number | undefined>());
@@ -31,6 +30,8 @@ export class RemotePty extends Disposable implements ITerminalChildProcess {
 	readonly onProcessResolvedShellLaunchConfig = this._onProcessResolvedShellLaunchConfig.event;
 	private readonly _onDidChangeHasChildProcesses = this._register(new Emitter<boolean>());
 	readonly onDidChangeHasChildProcesses = this._onDidChangeHasChildProcesses.event;
+	private readonly _onDidChangeProperty = this._register(new Emitter<ITerminalProperty<any>>());
+	readonly onDidChangeProperty = this._onDidChangeProperty.event;
 
 	private _startBarrier: Barrier;
 
@@ -112,14 +113,15 @@ export class RemotePty extends Disposable implements ITerminalChildProcess {
 		});
 	}
 
-	async getInitialCwd(): Promise<string> {
-		await this._startBarrier.wait();
-		return this._remoteTerminalChannel.getInitialCwd(this._id);
+	async setUnicodeVersion(version: '6' | '11'): Promise<void> {
+		return this._remoteTerminalChannel.setUnicodeVersion(this._id, version);
 	}
 
+	getInitialCwd(): Promise<string> {
+		return this._remoteTerminalChannel.getInitialCwd(this.id);
+	}
 	async getCwd(): Promise<string> {
-		await this._startBarrier.wait();
-		return this._remoteTerminalChannel.getCwd(this._id);
+		return this._remoteTerminalChannel.getCwd(this.id);
 	}
 
 	handleData(e: string | IProcessDataEvent) {
@@ -152,6 +154,9 @@ export class RemotePty extends Disposable implements ITerminalChildProcess {
 	}
 	handleDidChangeHasChildProcesses(e: boolean) {
 		this._onDidChangeHasChildProcesses.fire(e);
+	}
+	handleDidChangeProperty(e: ITerminalProperty<any>) {
+		this._onDidChangeProperty.fire(e);
 	}
 
 	async handleReplay(e: IPtyHostProcessReplayEvent) {

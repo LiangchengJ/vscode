@@ -6,7 +6,7 @@
 import { Emitter } from 'vs/base/common/event';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { ILocalPtyService } from 'vs/platform/terminal/electron-sandbox/terminal';
-import { IProcessDataEvent, IProcessReadyEvent, IShellLaunchConfig, ITerminalChildProcess, ITerminalDimensionsOverride, ITerminalLaunchError, TerminalShellType } from 'vs/platform/terminal/common/terminal';
+import { IProcessDataEvent, IProcessReadyEvent, IShellLaunchConfig, ITerminalChildProcess, ITerminalDimensionsOverride, ITerminalLaunchError, ITerminalProperty, TerminalShellType } from 'vs/platform/terminal/common/terminal';
 import { IPtyHostProcessReplayEvent } from 'vs/platform/terminal/common/terminalProcess';
 
 /**
@@ -34,6 +34,8 @@ export class LocalPty extends Disposable implements ITerminalChildProcess {
 	readonly onProcessShellTypeChanged = this._onProcessShellTypeChanged.event;
 	private readonly _onDidChangeHasChildProcesses = this._register(new Emitter<boolean>());
 	readonly onDidChangeHasChildProcesses = this._onDidChangeHasChildProcesses.event;
+	private readonly _onDidChangeProperty = this._register(new Emitter<ITerminalProperty<any>>());
+	readonly onDidChangeProperty = this._onDidChangeProperty.event;
 
 	constructor(
 		readonly id: number,
@@ -73,7 +75,7 @@ export class LocalPty extends Disposable implements ITerminalChildProcess {
 	getInitialCwd(): Promise<string> {
 		return this._localPtyService.getInitialCwd(this.id);
 	}
-	getCwd(): Promise<string> {
+	async getCwd(): Promise<string> {
 		return this._localPtyService.getCwd(this.id);
 	}
 	getLatency(): Promise<number> {
@@ -85,6 +87,9 @@ export class LocalPty extends Disposable implements ITerminalChildProcess {
 			return;
 		}
 		this._localPtyService.acknowledgeDataEvent(this.id, charCount);
+	}
+	setUnicodeVersion(version: '6' | '11'): Promise<void> {
+		return this._localPtyService.setUnicodeVersion(this.id, version);
 	}
 
 	handleData(e: string | IProcessDataEvent) {
@@ -110,6 +115,9 @@ export class LocalPty extends Disposable implements ITerminalChildProcess {
 	}
 	handleDidChangeHasChildProcesses(e: boolean) {
 		this._onDidChangeHasChildProcesses.fire(e);
+	}
+	handleDidChangeProperty(e: ITerminalProperty<any>) {
+		this._onDidChangeProperty.fire(e);
 	}
 
 	async handleReplay(e: IPtyHostProcessReplayEvent) {
