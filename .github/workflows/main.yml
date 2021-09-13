@@ -94,7 +94,7 @@ jobs:
           echo "=========================================================================================================================================================="
           mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
           wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
-          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-Recipe.yml
+          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
           mv out/*.AppImage ${{ env.APP_IMAGE_NAME }} && chmod +x ${{ env.APP_IMAGE_NAME }}
 
       - name: Generate SHA512 checksum file for xz
