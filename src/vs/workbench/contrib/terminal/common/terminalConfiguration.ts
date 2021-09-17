@@ -11,8 +11,9 @@ import { isMacintosh, isWindows } from 'vs/base/common/platform';
 import { Registry } from 'vs/platform/registry/common/platform';
 
 const terminalDescriptors = '\n- ' + [
-	localize('cwd', "`\${cwd}`: the terminal's current working directory - on Windows, this will not dynamically update"),
-	localize('cwdFolder', "`\${cwdFolder}`: the terminal's current folder - on Windows, this will not dynamically update"),
+	localize('cwd', "`\${cwd}`: the terminal's current working directory"),
+	localize('cwdFolder', "`\${cwdFolder}`:  the terminal's current working directory, displayed for multi-root workspaces or in a single root workspace when the value differs from the initial working directory. This will not be displayed for Windows."),
+	localize('workspaceFolder', "`\${workspaceFolder}`:  the workpsace in which the terminal was launched"),
 	localize('local', "`\${local}`: indicates a local terminal in a remote workspace"),
 	localize('process', "`\${process}`: the name of the terminal process"),
 	localize('separator', "`\${separator}`: a conditional separator (\" - \") that only shows when surrounded by variables with values or static text."),
@@ -265,7 +266,7 @@ const terminalConfiguration: IConfigurationNode = {
 		},
 		[TerminalSettingId.TerminalTitleSeparator]: {
 			'type': 'string',
-			'default': isMacintosh ? ' — ' : ' - ',
+			'default': ' - ',
 			'markdownDescription': localize("terminal.integrated.tabs.separator", "Separator used by `terminal.integrated.title` and `terminal.integrated.description`.")
 		},
 		[TerminalSettingId.TerminalTitle]: {
@@ -481,6 +482,17 @@ const terminalConfiguration: IConfigurationNode = {
 			description: localize('terminal.integrated.enablePersistentSessions', "Persist terminal sessions for the workspace across window reloads."),
 			type: 'boolean',
 			default: true
+		},
+		[TerminalSettingId.PersistentSessionReviveProcess]: {
+			description: localize('terminal.integrated.persistentSessionReviveProcess', "When the terminal process must be shutdown (eg. on window or application close), this determines when the previous terminal session contents should be restored and processes be recreated when the workspace is next opened. Restoring of the process current working directory depends on whether it is supported by the shell."),
+			type: 'string',
+			enum: ['onExit', 'onExitAndWindowClose', 'never'],
+			markdownEnumDescriptions: [
+				localize('terminal.integrated.persistentSessionReviveProcess.onExit', "Revive the processes after the last window is closed on Windows/Linux or when the `workbench.action.quit` command is triggered (command palette, keybinding, menu)."),
+				localize('terminal.integrated.persistentSessionReviveProcess.onExitAndWindowClose', "Revive the processes after the last window is closed on Windows/Linux or when the `workbench.action.quit` command is triggered (command palette, keybinding, menu), or when the window is closed."),
+				localize('terminal.integrated.persistentSessionReviveProcess.never', "Never restore the terminal buffers or recreate the process.")
+			],
+			default: 'onExit'
 		},
 		[TerminalSettingId.CustomGlyphs]: {
 			description: localize('terminal.integrated.customGlyphs', "Whether to draw custom glyphs for block element and box drawing characters instead of using the font, which typically yields better rendering with continuous lines. Note that this doesn't work with the DOM renderer"),
