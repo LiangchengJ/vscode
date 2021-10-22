@@ -5,34 +5,317 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ feature ]
-  pull_request:
-    branches: [ feature ]
+    branches: [dev/liangchengj]
+  # pull_request:
+  #   branches: [ feature ]
 
 jobs:
-  build:
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      APP_IMAGE_NAME: VSCode-linux-x64.AppImage
+
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-
-    runs-on: ${{ matrix.os }}
+        arch: [x64, arm64, ia32, armhf]
 
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
+          sudo apt-get install -y fakeroot rpm
+
+      - uses: actions/setup-node@v2
         with:
-          node-version: 14.17.0
-      - run: yarn
+          node-version: 14
 
-      - name: Build for macOS
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          yarn gulp vscode-darwin-x64-min
-          tar -cvJf ../VSCode-darwin-x64.tar.xz ../VSCode-darwin-x64
+      - name: Compute node modules cache key
+        id: nodeModulesCacheKey
+        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
+      - name: Cache node modules
+        id: cacheNodeModules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+      - name: Get yarn cache directory path
+        id: yarnCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Cache yarn directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-yarnCacheDir-
+      - name: Execute yarn
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 180000
 
-      - name: Build for Linux
-        if: startsWith(matrix.os, 'ubuntu')
+      - name: Update Configurations
+        run: node ./.github/updateProduct.js
+
+      - name: Build and Package xz
         run: |
-          yarn gulp vscode-linux-x64-min
-          tar -cvJf ../VSCode-linux-x64.tar.xz ../VSCode-linux-x64
+          yarn gulp vscode-linux-${{ matrix.arch }}-min
+          bash -c "cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}"
+          mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
+
+      - name: Build and Package rpm and deb
+        if: ${{ matrix.arch != 'ia32' }}
+        run: |
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          mv .build/linux/rpm/*/*.rpm VSCode-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
+          cp .build/linux/deb/*/deb/*.deb VSCode-linux-${{ matrix.arch }}.deb
+
+      - name: Package AppImage for arch x64
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
+          curl -fsSL https://deno.land/x/install/install.sh | sh && export DENO_INSTALL="/home/$(whoami)/.deno" && export PATH="$DENO_INSTALL/bin:$PATH"
+          echo "=========================================================================================================================================================="
+          echo "=========================================================================================================================================================="
+          (deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > fserv.log 2>&1 &) && sleep 20 && (netstat -tlnp | grep 4507) && cat fserv.log
+          echo "=========================================================================================================================================================="
+          echo "=========================================================================================================================================================="
+          mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
+          wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
+          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
+          mv out/*.AppImage ${{ env.APP_IMAGE_NAME }} && chmod +x ${{ env.APP_IMAGE_NAME }}
+
+      - name: Generate SHA512 checksum file for xz
+        run: |
+          sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
+
+      - name: Generate SHA512 checksum file for rpm and deb
+        if: ${{ matrix.arch != 'ia32' }}
+        run: |
+          sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
+
+      - name: Generate SHA512 checksum file for AppImage
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
+          sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part6
+          tag_name: dev_test_part6
+          prerelease: true
+          files: |
+            VSCode-linux-${{ matrix.arch }}.tar.xz
+            VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-linux-${{ matrix.arch }}*.rpm
+            VSCode-linux-${{ matrix.arch }}*.rpm.sha512
+            VSCode-linux-*.deb
+            VSCode-linux-*.deb.sha512
+            ${{ env.APP_IMAGE_NAME }}
+            ${{ env.APP_IMAGE_NAME }}.sha512
+
+
+  darwin:
+    name: macOS
+    runs-on: macos-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Compute node modules cache key
+        id: nodeModulesCacheKey
+        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
+      - name: Cache node modules
+        id: cacheNodeModules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+      - name: Get yarn cache directory path
+        id: yarnCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Cache yarn directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-yarnCacheDir-
+      - name: Execute yarn
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 180000
+
+      - name: Update Configurations
+        run: node ./.github/updateProduct.js
+
+      - name: Build and Package
+        run: |
+          yarn gulp vscode-darwin-${{ matrix.arch }}-min
+          bash -c "cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}"
+          mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && zip -r -9 -o VSCode-darwin-${{ matrix.arch }}.zip VSCode-darwin-${{ matrix.arch }}"
+          mv ../VSCode-darwin-${{ matrix.arch }}.zip .
+
+      # - name: Package DMG for arch x64
+      #   if: ${{ matrix.arch == 'x64' }}
+      #   run: |
+      #     npm install -g create-dmg
+      #     NAME_LONG=`node -p "require('./product.json').nameLong"`
+      #     bash -c "cd ../VSCode-darwin-${{ matrix.arch }} && create-dmg '${NAME_LONG}.app'"
+      #     mv ../VSCode-darwin-${{ matrix.arch }}/*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
+
+      - name: Generate SHA512 checksum file
+        run: |
+          npm install -g checksum
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.zip.sha512
+
+      # - name: Generate SHA512 checksum file for DMG
+      #   if: ${{ matrix.arch == 'x64' }}
+      #   run: |
+      #     checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.dmg | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.dmg.sha512
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part6
+          tag_name: dev_test_part6
+          prerelease: true
+          files: |
+            VSCode-darwin-${{ matrix.arch }}.tar.xz
+            VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-darwin-${{ matrix.arch }}.zip
+            VSCode-darwin-${{ matrix.arch }}.zip.sha512
+            # VSCode-darwin-${{ matrix.arch }}.dmg
+            # VSCode-darwin-${{ matrix.arch }}.dmg.sha512
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    env:
+      CHILD_CONCURRENCY: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "2.x"
+
+      - name: Compute node modules cache key
+        id: nodeModulesCacheKey
+        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
+      - name: Cache node_modules archive
+        id: cacheNodeModules
+        uses: actions/cache@v2
+        with:
+          path: ".build/node_modules_cache"
+          key: "${{ runner.os }}-cacheNodeModulesArchive-${{ steps.nodeModulesCacheKey.outputs.value }}"
+      - name: Extract node_modules archive
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit == 'true' }}
+        run: 7z.exe x .build/node_modules_cache/cache.7z -aos
+      - name: Get yarn cache directory path
+        id: yarnCacheDirPath
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Cache yarn directory
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
+          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-yarnCacheDir-
+      - name: Execute yarn
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 180000
+      - name: Create node_modules archive
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir -Force .build
+          node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
+          mkdir -Force .build/node_modules_cache
+          7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
+
+      - name: Update Configurations
+        run: |
+          node .\.github\updateProduct.js
+          node .\.github\updateWin32VisualElementsManifest.js
+
+      - name: Build and Package
+        run: |
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
+          mv ..\VSCode-win32-${{ matrix.arch }}.tar.xz .
+          cmd.exe /c 'cd .. && 7z a VSCode-win32-${{ matrix.arch }}.zip VSCode-win32-${{ matrix.arch }} -r -mx9'
+          mv ..\VSCode-win32-${{ matrix.arch }}.zip .
+          yarn gulp vscode-win32-${{ matrix.arch }}-code-helper
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -o resources\win32\code.ico https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
+          yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
+          mv .build\win32-${{ matrix.arch }}\user-setup\VSCodeSetup.exe VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+          yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
+          mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
+
+      - name: Generate SHA512 checksum file
+        run: |
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.tar.xz | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.tar.xz.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.zip | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.zip.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeUserSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeSystemSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512"'
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part6
+          tag_name: dev_test_part6
+          prerelease: true
+          files: |
+            VSCode-win32-${{ matrix.arch }}.tar.xz
+            VSCode-win32-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-win32-${{ matrix.arch }}.zip
+            VSCode-win32-${{ matrix.arch }}.zip.sha512
+            VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+            VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512
+            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
+            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512

@@ -14,14 +14,16 @@ const product = require(`../${outputFileName}`);
  * @param {string} name
  */
 const replaceName = (name) => {
-  return name.replace(/-[ ]/, "");
+  return name.replace(/-[ ]*/, "");
 };
 
 product["nameShort"] = replaceName(product["nameShort"]);
 product["nameLong"] = replaceName(product["nameLong"]);
-// product["win32MutexName"] = "vscode";
+product["applicationName"] = replaceName(product["applicationName"]);
+product["win32MutexName"] = "codeoss";
 // product["win32RegValueName"] = "VSCode";
 product["win32ShellNameShort"] = replaceName(product["win32ShellNameShort"]);
+product["dataFolderName"] = ".codeoss";
 product["serverDataFolderName"] = `${product["dataFolderName"]}-server`;
 product["webviewContentExternalBaseUrlTemplate"] = undefined;
 // "https://{{uuid}}.vscode-webview.net/{{quality}}/{{commit}}/out/vs/workbench/contrib/webview/browser/pre/";
@@ -812,20 +814,20 @@ product["extensionAllowedBadgeProvidersRegex"] = [
 //   productName: "VSCode",
 //   companyName: "Microsoft",
 // };
-// product["appCenter"] = {
-//   "win32-ia32": "appcenter://code?aid=f4289815-a66e-4ad9-b74f-d8e5bc093e41",
-//   "win32-x64": "appcenter://code?aid=a4e3233c-699c-46ec-b4f4-9c2a77254662",
-//   "win32-arm64": "appcenter://code?aid=3712d786-7cc8-4f11-8b08-cc12eab6d4f7",
-//   "linux-x64": "appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171",
-//   darwin: "appcenter://code?aid=860d6632-f65b-490b-85a8-3e72944f7774",
-//   "darwin-arm64": "appcenter://code?aid=be71415d-3893-4ae5-b453-e537b9668a10",
-//   "darwin-universal":
-//     "appcenter://code?aid=de75e3cc-e22f-4f42-a03f-1409c21d8af8",
-// };
+product["appCenter"] = {
+  "win32-ia32": "appcenter://code?aid=f4289815-a66e-4ad9-b74f-d8e5bc093e41",
+  "win32-x64": "appcenter://code?aid=a4e3233c-699c-46ec-b4f4-9c2a77254662",
+  "win32-arm64": "appcenter://code?aid=3712d786-7cc8-4f11-8b08-cc12eab6d4f7",
+  "linux-x64": "appcenter://code?aid=fba07a4d-84bd-4fc8-a125-9640fc8ce171",
+  darwin: "appcenter://code?aid=860d6632-f65b-490b-85a8-3e72944f7774",
+  "darwin-arm64": "appcenter://code?aid=be71415d-3893-4ae5-b453-e537b9668a10",
+  "darwin-universal":
+    "appcenter://code?aid=de75e3cc-e22f-4f42-a03f-1409c21d8af8",
+};
 product["enableTelemetry"] = false;
-// product["aiConfig"] = {
-//   asimovKey: "AIF-444c3af9-8e69-4462-ab49-4191e6ad1916",
-// };
+product["aiConfig"] = {
+  asimovKey: "AIF-444c3af9-8e69-4462-ab49-4191e6ad1916",
+};
 product["msftInternalDomains"] = [
   "redmond.corp.microsoft.com",
   "northamerica.corp.microsoft.com",
