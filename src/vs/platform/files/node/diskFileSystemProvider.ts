@@ -10,7 +10,7 @@ import { VSBuffer } from 'vs/base/common/buffer';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Emitter, Event } from 'vs/base/common/event';
 import { isEqual } from 'vs/base/common/extpath';
-import { combinedDisposable, Disposable, dispose, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { combinedDisposable, Disposable, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { basename, dirname, normalize } from 'vs/base/common/path';
 import { isLinux, isWindows } from 'vs/base/common/platform';
 import { joinPath } from 'vs/base/common/resources';
@@ -22,10 +22,11 @@ import { createFileSystemProviderError, FileDeleteOptions, FileOpenOptions, File
 import { readFileIntoStream } from 'vs/platform/files/common/io';
 import { FileWatcher as NodeJSWatcherService } from 'vs/platform/files/node/watcher/nodejs/watcherService';
 import { FileWatcher as NsfwWatcherService } from 'vs/platform/files/node/watcher/nsfw/watcherService';
+import { FileWatcher as ParcelWatcherService } from 'vs/platform/files/node/watcher/parcel/watcherService';
 import { FileWatcher as UnixWatcherService } from 'vs/platform/files/node/watcher/unix/watcherService';
-import { IDiskFileChange, ILogMessage, toFileChanges } from 'vs/platform/files/node/watcher/watcher';
-import { FileWatcher as WindowsWatcherService } from 'vs/platform/files/node/watcher/win32/watcherService';
+import { IDiskFileChange, ILogMessage, IWatchRequest, toFileChanges, WatcherService } from 'vs/platform/files/common/watcher';
 import { ILogService, LogLevel } from 'vs/platform/log/common/log';
+import product from 'vs/platform/product/common/product';
 
 export interface IWatcherOptions {
 	pollingInterval?: number;
@@ -35,6 +36,7 @@ export interface IWatcherOptions {
 export interface IDiskFileSystemProviderOptions {
 	bufferSize?: number;
 	watcher?: IWatcherOptions;
+	legacyWatcher?: string;
 }
 
 export class DiskFileSystemProvider extends Disposable implements
@@ -43,7 +45,7 @@ export class DiskFileSystemProvider extends Disposable implements
 	IFileSystemProviderWithFileReadStreamCapability,
 	IFileSystemProviderWithFileFolderCopyCapability {
 
-	private readonly BUFFER_SIZE = this.options?.bufferSize || 64 * 1024;
+	private readonly BUFFER_SIZE = this.options?.bufferSize || 256 * 1024;
 
 	constructor(
 		protected readonly logService: ILogService,
@@ -54,7 +56,7 @@ export class DiskFileSystemProvider extends Disposable implements
 
 	//#region File Capabilities
 
-	onDidChangeCapabilities: Event<void> = Event.None;
+	readonly onDidChangeCapabilities: Event<void> = Event.None;
 
 	protected _capabilities: FileSystemProviderCapabilities | undefined;
 	get capabilities(): FileSystemProviderCapabilities {
@@ -122,7 +124,7 @@ export class DiskFileSystemProvider extends Disposable implements
 	private toType(entry: Stats | IDirent, symbolicLink?: { dangling: boolean }): FileType {
 
 		// Signal file type by checking for file / directory, except:
-		// - symbolic links pointing to non-existing files are FileType.Unknown
+		// - symbolic links pointing to nonexistent files are FileType.Unknown
 		// - files that are neither file nor directory are FileType.Unknown
 		let type: FileType;
 		if (symbolicLink?.dangling) {
@@ -201,7 +203,7 @@ export class DiskFileSystemProvider extends Disposable implements
 		}
 	}
 
-	private readonly mapHandleToPos: Map<number, number> = new Map();
+	private readonly mapHandleToPos = new Map<number, number>();
 
 	private readonly writeHandles = new Map<number, URI>();
 	private canFlush: boolean = true;
@@ -289,7 +291,7 @@ export class DiskFileSystemProvider extends Disposable implements
 			// to flush the contents to disk if possible.
 			if (this.writeHandles.delete(fd) && this.canFlush) {
 				try {
-					await Promises.fdatasync(fd);
+					await Promises.fdatasync(fd); // https://github.com/microsoft/vscode/issues/9589
 				} catch (error) {
 					// In some exotic setups it is well possible that node fails to sync
 					// In that case we disable flushing and log the error to our logger
@@ -530,24 +532,22 @@ export class DiskFileSystemProvider extends Disposable implements
 	private readonly _onDidChangeFile = this._register(new Emitter<readonly IFileChange[]>());
 	readonly onDidChangeFile = this._onDidChangeFile.event;
 
-	private recursiveWatcher: WindowsWatcherService | UnixWatcherService | NsfwWatcherService | undefined;
-	private readonly recursiveFoldersToWatch: { path: string, excludes: string[] }[] = [];
+	private recursiveWatcher: WatcherService | undefined;
+	private readonly recursiveFoldersToWatch: IWatchRequest[] = [];
 	private recursiveWatchRequestDelayer = this._register(new ThrottledDelayer<void>(0));
-
-	private recursiveWatcherLogLevelListener: IDisposable | undefined;
 
 	watch(resource: URI, opts: IWatchOptions): IDisposable {
 		if (opts.recursive) {
-			return this.watchRecursive(resource, opts.excludes);
+			return this.watchRecursive(resource, opts);
 		}
 
 		return this.watchNonRecursive(resource);
 	}
 
-	private watchRecursive(resource: URI, excludes: string[]): IDisposable {
+	private watchRecursive(resource: URI, opts: IWatchOptions): IDisposable {
 
 		// Add to list of folders to watch recursively
-		const folderToWatch = { path: this.toFilePath(resource), excludes };
+		const folderToWatch: IWatchRequest = { path: this.toFilePath(resource), excludes: opts.excludes };
 		const remove = insert(this.recursiveFoldersToWatch, folderToWatch);
 
 		// Trigger update
@@ -575,77 +575,88 @@ export class DiskFileSystemProvider extends Disposable implements
 	private doRefreshRecursiveWatchers(): void {
 
 		// Reuse existing
-		if (this.recursiveWatcher instanceof NsfwWatcherService) {
-			this.recursiveWatcher.setFolders(this.recursiveFoldersToWatch);
+		if (this.recursiveWatcher) {
+			this.recursiveWatcher.watch(this.recursiveFoldersToWatch);
 		}
 
-		// Create new
+		// Otherwise, create new if we have folders to watch
+		else if (this.recursiveFoldersToWatch.length > 0) {
+			this.recursiveWatcher = this._register(this.createRecursiveWatcher(
+				this.recursiveFoldersToWatch,
+				changes => this._onDidChangeFile.fire(toFileChanges(changes)),
+				msg => {
+					if (msg.type === 'error') {
+						this._onDidWatchErrorOccur.fire(msg.message);
+					}
+
+					this.logService[msg.type](msg.message);
+				},
+				this.logService.getLevel() === LogLevel.Trace
+			));
+
+			// Apply log levels dynamically
+			this._register(this.logService.onDidChangeLogLevel(() => {
+				this.recursiveWatcher?.setVerboseLogging(this.logService.getLevel() === LogLevel.Trace);
+			}));
+		}
+	}
+
+	protected createRecursiveWatcher(
+		folders: IWatchRequest[],
+		onChange: (changes: IDiskFileChange[]) => void,
+		onLogMessage: (msg: ILogMessage) => void,
+		verboseLogging: boolean
+	): WatcherService {
+		let watcherImpl: {
+			new(
+				folders: IWatchRequest[],
+				onChange: (changes: IDiskFileChange[]) => void,
+				onLogMessage: (msg: ILogMessage) => void,
+				verboseLogging: boolean,
+				watcherOptions?: IWatcherOptions
+			): WatcherService
+		};
+
+		let watcherOptions: IWatcherOptions | undefined = undefined;
+
+		// requires a polling watcher
+		if (this.options?.watcher?.usePolling) {
+			watcherImpl = UnixWatcherService;
+			watcherOptions = this.options?.watcher;
+		}
+
+		// can use efficient watcher
 		else {
-
-			// Dispose old
-			dispose(this.recursiveWatcher);
-			this.recursiveWatcher = undefined;
-
-			// Create new if we actually have folders to watch
-			if (this.recursiveFoldersToWatch.length > 0) {
-				let watcherImpl: {
-					new(
-						folders: { path: string, excludes: string[] }[],
-						onChange: (changes: IDiskFileChange[]) => void,
-						onLogMessage: (msg: ILogMessage) => void,
-						verboseLogging: boolean,
-						watcherOptions?: IWatcherOptions
-					): WindowsWatcherService | UnixWatcherService | NsfwWatcherService
-				};
-
-				let watcherOptions: IWatcherOptions | undefined = undefined;
-
-				// requires a polling watcher
-				if (this.options?.watcher?.usePolling) {
-					watcherImpl = UnixWatcherService;
-					watcherOptions = this.options?.watcher;
-				}
-
-				// Single Folder Watcher
-				else {
-					if (this.recursiveFoldersToWatch.length === 1) {
-						if (isWindows) {
-							watcherImpl = WindowsWatcherService;
-						} else {
-							watcherImpl = UnixWatcherService;
-						}
-					}
-
-					// Multi Folder Watcher
-					else {
-						watcherImpl = NsfwWatcherService;
-					}
-				}
-
-				// Create and start watching
-				this.recursiveWatcher = new watcherImpl(
-					this.recursiveFoldersToWatch,
-					event => this._onDidChangeFile.fire(toFileChanges(event)),
-					msg => {
-						if (msg.type === 'error') {
-							this._onDidWatchErrorOccur.fire(msg.message);
-						}
-
-						this.logService[msg.type](msg.message);
-					},
-					this.logService.getLevel() === LogLevel.Trace,
-					watcherOptions
-				);
-
-				if (!this.recursiveWatcherLogLevelListener) {
-					this.recursiveWatcherLogLevelListener = this.logService.onDidChangeLogLevel(() => {
-						if (this.recursiveWatcher) {
-							this.recursiveWatcher.setVerboseLogging(this.logService.getLevel() === LogLevel.Trace);
-						}
-					});
+			let enableLegacyWatcher = false;
+			if (this.options?.legacyWatcher === 'on' || this.options?.legacyWatcher === 'off') {
+				enableLegacyWatcher = this.options.legacyWatcher === 'on'; // setting always wins
+			} else {
+				if (product.quality === 'stable') {
+					// in stable use legacy for single folder workspaces
+					// TODO@bpasero remove me eventually
+					enableLegacyWatcher = this.recursiveFoldersToWatch.length === 1;
 				}
 			}
+
+			if (enableLegacyWatcher) {
+				if (isLinux) {
+					watcherImpl = UnixWatcherService;
+				} else {
+					watcherImpl = NsfwWatcherService;
+				}
+			} else {
+				watcherImpl = ParcelWatcherService;
+			}
 		}
+
+		// Create and start watching
+		return new watcherImpl(
+			folders,
+			changes => onChange(changes),
+			msg => onLogMessage(msg),
+			verboseLogging,
+			watcherOptions
+		);
 	}
 
 	private watchNonRecursive(resource: URI): IDisposable {
@@ -728,14 +739,4 @@ export class DiskFileSystemProvider extends Disposable implements
 	}
 
 	//#endregion
-
-	override dispose(): void {
-		super.dispose();
-
-		dispose(this.recursiveWatcher);
-		this.recursiveWatcher = undefined;
-
-		dispose(this.recursiveWatcherLogLevelListener);
-		this.recursiveWatcherLogLevelListener = undefined;
-	}
 }

@@ -44,6 +44,8 @@ import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IPreferencesService } from 'vs/workbench/services/preferences/common/preferences';
 import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
+import { SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
+import { isAbsolute } from 'vs/base/common/path';
 
 export const switchTerminalActionViewItemSeparator = '─────────';
 export const switchTerminalShowTabsTitle = localize('showTerminalTabs', "Show Tabs");
@@ -112,7 +114,7 @@ export function registerTerminalActions() {
 		constructor() {
 			super({
 				id: TerminalCommandId.NewInActiveWorkspace,
-				title: { value: localize('workbench.action.terminal.newInActiveWorkspace', "Create New Integrated Terminal (In Active Workspace)"), original: 'Create New Integrated Terminal (In Active Workspace)' },
+				title: { value: localize('workbench.action.terminal.newInActiveWorkspace', "Create New Terminal (In Active Workspace)"), original: 'Create New Terminal (In Active Workspace)' },
 				f1: true,
 				category,
 				precondition: TerminalContextKeys.processSupported
@@ -122,7 +124,7 @@ export function registerTerminalActions() {
 			const terminalService = accessor.get(ITerminalService);
 			const terminalGroupService = accessor.get(ITerminalGroupService);
 			if (terminalService.isProcessSupportRegistered) {
-				const instance = await terminalService.createTerminal({ target: terminalService.configHelper.config.defaultLocation });
+				const instance = await terminalService.createTerminal({ location: terminalService.defaultLocation });
 				if (!instance) {
 					return;
 				}
@@ -139,17 +141,16 @@ export function registerTerminalActions() {
 		constructor() {
 			super({
 				id: TerminalCommandId.CreateTerminalEditor,
-				title: { value: localize('workbench.action.terminal.createTerminalEditor', "Create Terminal in Editor Area"), original: 'Create Terminal in Editor Area' },
+				title: { value: localize('workbench.action.terminal.createTerminalEditor', "Create New Terminal in Editor Area"), original: 'Create New Terminal in Editor Area' },
 				f1: true,
 				category,
 				precondition: TerminalContextKeys.processSupported
 			});
 		}
-		async run(accessor: ServicesAccessor) {
+		async run(accessor: ServicesAccessor, args?: unknown) {
 			const terminalService = accessor.get(ITerminalService);
-			const instance = await terminalService.createTerminal({
-				target: TerminalLocation.Editor
-			});
+			const options = (typeof args === 'object' && args && 'location' in args) ? args as ICreateTerminalOptions : { location: TerminalLocation.Editor };
+			const instance = await terminalService.createTerminal(options);
 			instance.focusWhenReady();
 		}
 	});
@@ -158,7 +159,7 @@ export function registerTerminalActions() {
 		constructor() {
 			super({
 				id: TerminalCommandId.CreateTerminalEditorSide,
-				title: { value: localize('workbench.action.terminal.createTerminalEditorSide', "Create Terminal in Editor Area to the Side"), original: 'Create Terminal in Editor Area to the Side' },
+				title: { value: localize('workbench.action.terminal.createTerminalEditorSide', "Create New Terminal in Editor Area to the Side"), original: 'Create New Terminal in Editor Area to the Side' },
 				f1: true,
 				category,
 				precondition: TerminalContextKeys.processSupported
@@ -167,8 +168,7 @@ export function registerTerminalActions() {
 		async run(accessor: ServicesAccessor) {
 			const terminalService = accessor.get(ITerminalService);
 			const instance = await terminalService.createTerminal({
-				target: TerminalLocation.Editor,
-				forceSplit: true
+				location: { viewColumn: SIDE_GROUP }
 			});
 			instance.focusWhenReady();
 		}
@@ -386,7 +386,7 @@ export function registerTerminalActions() {
 		async run(accessor: ServicesAccessor) {
 			const terminalService = accessor.get(ITerminalService);
 			const terminalGroupService = accessor.get(ITerminalGroupService);
-			const instance = terminalService.activeInstance || await terminalService.createTerminal({ target: TerminalLocation.TerminalView });
+			const instance = terminalService.activeInstance || await terminalService.createTerminal({ location: TerminalLocation.Panel });
 			if (!instance) {
 				return;
 			}
@@ -402,7 +402,7 @@ export function registerTerminalActions() {
 				f1: true,
 				category,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_BACKSLASH,
+					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Backslash,
 					weight: KeybindingWeight.WorkbenchContrib,
 					when: ContextKeyExpr.or(TerminalContextKeys.tabsFocus, TerminalContextKeys.focus),
 				},
@@ -424,7 +424,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyCode.PageDown,
 					mac: {
-						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_CLOSE_SQUARE_BRACKET
+						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.BracketRight
 					},
 					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.editorFocus.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
@@ -448,7 +448,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyCode.PageUp,
 					mac: {
-						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_OPEN_SQUARE_BRACKET
+						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.BracketLeft
 					},
 					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.editorFocus.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
@@ -544,7 +544,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageDown,
 					linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.DownArrow },
-					when: TerminalContextKeys.focus,
+					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.altBufferActive.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
 				precondition: TerminalContextKeys.processSupported
@@ -584,7 +584,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyCode.End,
 					linux: { primary: KeyMod.Shift | KeyCode.End },
-					when: TerminalContextKeys.focus,
+					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.altBufferActive.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
 				precondition: TerminalContextKeys.processSupported
@@ -604,7 +604,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.PageUp,
 					linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.UpArrow },
-					when: TerminalContextKeys.focus,
+					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.altBufferActive.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
 				precondition: TerminalContextKeys.processSupported
@@ -644,7 +644,7 @@ export function registerTerminalActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyCode.Home,
 					linux: { primary: KeyMod.Shift | KeyCode.Home },
-					when: TerminalContextKeys.focus,
+					when: ContextKeyExpr.and(TerminalContextKeys.focus, TerminalContextKeys.altBufferActive.negate()),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
 				precondition: TerminalContextKeys.processSupported
@@ -749,8 +749,22 @@ export function registerTerminalActions() {
 				precondition: TerminalContextKeys.processSupported
 			});
 		}
+		async run(accessor: ServicesAccessor, resource: unknown) {
+			doWithInstance(accessor, resource)?.changeIcon();
+		}
+	});
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.ChangeIconPanel,
+				title: terminalStrings.changeIcon,
+				f1: true,
+				category,
+				precondition: TerminalContextKeys.processSupported
+			});
+		}
 		async run(accessor: ServicesAccessor) {
-			return accessor.get(ITerminalService).activeInstance?.changeIcon();
+			return accessor.get(ITerminalGroupService).activeInstance?.changeIcon();
 		}
 	});
 	registerAction2(class extends Action2 {
@@ -777,8 +791,22 @@ export function registerTerminalActions() {
 				precondition: TerminalContextKeys.processSupported
 			});
 		}
+		async run(accessor: ServicesAccessor, resource: unknown) {
+			doWithInstance(accessor, resource)?.changeColor();
+		}
+	});
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.ChangeColorPanel,
+				title: terminalStrings.changeColor,
+				f1: true,
+				category,
+				precondition: TerminalContextKeys.processSupported
+			});
+		}
 		async run(accessor: ServicesAccessor) {
-			return accessor.get(ITerminalService).activeInstance?.changeColor();
+			return accessor.get(ITerminalGroupService).activeInstance?.changeColor();
 		}
 	});
 	registerAction2(class extends Action2 {
@@ -805,8 +833,23 @@ export function registerTerminalActions() {
 				precondition: TerminalContextKeys.processSupported
 			});
 		}
+		async run(accessor: ServicesAccessor, resource: unknown) {
+			doWithInstance(accessor, resource)?.rename();
+		}
+	});
+
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.RenamePanel,
+				title: terminalStrings.rename,
+				f1: false,
+				category,
+				precondition: TerminalContextKeys.processSupported
+			});
+		}
 		async run(accessor: ServicesAccessor) {
-			return accessor.get(ITerminalService).activeInstance?.rename();
+			return accessor.get(ITerminalGroupService).activeInstance?.rename();
 		}
 	});
 	registerAction2(class extends Action2 {
@@ -860,7 +903,7 @@ export function registerTerminalActions() {
 				f1: true,
 				category,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyCode.KEY_F,
+					primary: KeyMod.CtrlCmd | KeyCode.KeyF,
 					when: ContextKeyExpr.or(TerminalContextKeys.findFocus, TerminalContextKeys.focus),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
@@ -1137,10 +1180,10 @@ export function registerTerminalActions() {
 	});
 	registerAction2(class extends Action2 {
 		constructor() {
-			const title = localize('workbench.action.terminal.newWithCwd', "Create New Integrated Terminal Starting in a Custom Working Directory");
+			const title = localize('workbench.action.terminal.newWithCwd', "Create New Terminal Starting in a Custom Working Directory");
 			super({
 				id: TerminalCommandId.NewWithCwd,
-				title: { value: title, original: 'Create New Integrated Terminal Starting in a Custom Working Directory' },
+				title: { value: title, original: 'Create New Terminal Starting in a Custom Working Directory' },
 				category,
 				description: {
 					description: title,
@@ -1214,7 +1257,7 @@ export function registerTerminalActions() {
 				notificationService.warn(localize('workbench.action.terminal.renameWithArg.noName', "No name argument provided"));
 				return;
 			}
-			accessor.get(ITerminalService).activeInstance?.setTitle(args.name, TitleEventSource.Api);
+			accessor.get(ITerminalService).activeInstance?.refreshTabLabels(args.name, TitleEventSource.Api);
 		}
 	});
 	registerAction2(class extends Action2 {
@@ -1225,8 +1268,8 @@ export function registerTerminalActions() {
 				f1: true,
 				category,
 				keybinding: {
-					primary: KeyMod.Alt | KeyCode.KEY_R,
-					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_R },
+					primary: KeyMod.Alt | KeyCode.KeyR,
+					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyR },
 					when: ContextKeyExpr.or(TerminalContextKeys.focus, TerminalContextKeys.findFocus),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
@@ -1248,8 +1291,8 @@ export function registerTerminalActions() {
 				f1: true,
 				category,
 				keybinding: {
-					primary: KeyMod.Alt | KeyCode.KEY_W,
-					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_W },
+					primary: KeyMod.Alt | KeyCode.KeyW,
+					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyW },
 					when: ContextKeyExpr.or(TerminalContextKeys.focus, TerminalContextKeys.findFocus),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
@@ -1271,8 +1314,8 @@ export function registerTerminalActions() {
 				f1: true,
 				category,
 				keybinding: {
-					primary: KeyMod.Alt | KeyCode.KEY_C,
-					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_C },
+					primary: KeyMod.Alt | KeyCode.KeyC,
+					mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KeyC },
 					when: ContextKeyExpr.or(TerminalContextKeys.focus, TerminalContextKeys.findFocus),
 					weight: KeybindingWeight.WorkbenchContrib
 				},
@@ -1296,7 +1339,7 @@ export function registerTerminalActions() {
 				keybinding: [
 					{
 						primary: KeyCode.F3,
-						mac: { primary: KeyMod.CtrlCmd | KeyCode.KEY_G, secondary: [KeyCode.F3] },
+						mac: { primary: KeyMod.CtrlCmd | KeyCode.KeyG, secondary: [KeyCode.F3] },
 						when: ContextKeyExpr.or(TerminalContextKeys.focus, TerminalContextKeys.findFocus),
 						weight: KeybindingWeight.WorkbenchContrib
 					},
@@ -1323,7 +1366,7 @@ export function registerTerminalActions() {
 				keybinding: [
 					{
 						primary: KeyMod.Shift | KeyCode.F3,
-						mac: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_G, secondary: [KeyMod.Shift | KeyCode.F3] },
+						mac: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyG, secondary: [KeyMod.Shift | KeyCode.F3] },
 						when: ContextKeyExpr.or(TerminalContextKeys.focus, TerminalContextKeys.findFocus),
 						weight: KeybindingWeight.WorkbenchContrib
 					},
@@ -1349,7 +1392,7 @@ export function registerTerminalActions() {
 				category,
 				keybinding: [
 					{
-						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_F,
+						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyF,
 						when: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.focus, TerminalContextKeys.textSelected),
 						weight: KeybindingWeight.WorkbenchContrib + 50
 					}
@@ -1399,11 +1442,11 @@ export function registerTerminalActions() {
 				category,
 				precondition: TerminalContextKeys.processSupported,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_5,
+					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Digit5,
 					weight: KeybindingWeight.WorkbenchContrib,
 					mac: {
-						primary: KeyMod.CtrlCmd | KeyCode.US_BACKSLASH,
-						secondary: [KeyMod.WinCtrl | KeyMod.Shift | KeyCode.KEY_5]
+						primary: KeyMod.CtrlCmd | KeyCode.Backslash,
+						secondary: [KeyMod.WinCtrl | KeyMod.Shift | KeyCode.Digit5]
 					},
 					when: TerminalContextKeys.focus
 				},
@@ -1425,7 +1468,7 @@ export function registerTerminalActions() {
 			const terminalService = accessor.get(ITerminalService);
 			const workspaceContextService = accessor.get(IWorkspaceContextService);
 			const options = convertOptionsOrProfileToOptions(optionsOrProfile);
-			const activeInstance = terminalService.getInstanceHost(options?.target).activeInstance;
+			const activeInstance = terminalService.getInstanceHost(options?.location).activeInstance;
 			if (!activeInstance) {
 				return;
 			}
@@ -1433,7 +1476,7 @@ export function registerTerminalActions() {
 			if (cwd === undefined) {
 				return undefined;
 			}
-			const instance = await terminalService.createTerminal({ instanceToSplit: activeInstance, config: options?.config, cwd, target: activeInstance.target });
+			const instance = await terminalService.createTerminal({ location: { parentTerminal: activeInstance }, config: options?.config, cwd });
 			if (instance) {
 				if (instance.target === TerminalLocation.Editor) {
 					instance.focusWhenReady();
@@ -1452,10 +1495,10 @@ export function registerTerminalActions() {
 				category,
 				precondition: TerminalContextKeys.processSupported,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_5,
+					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Digit5,
 					mac: {
-						primary: KeyMod.CtrlCmd | KeyCode.US_BACKSLASH,
-						secondary: [KeyMod.WinCtrl | KeyMod.Shift | KeyCode.KEY_5]
+						primary: KeyMod.CtrlCmd | KeyCode.Backslash,
+						secondary: [KeyMod.WinCtrl | KeyMod.Shift | KeyCode.Digit5]
 					},
 					weight: KeybindingWeight.WorkbenchContrib,
 					when: TerminalContextKeys.tabsFocus
@@ -1471,7 +1514,7 @@ export function registerTerminalActions() {
 					terminalService.setActiveInstance(t);
 					terminalService.doWithActiveInstance(async instance => {
 						const cwd = await getCwdForSplit(terminalService.configHelper, instance);
-						await terminalService.createTerminal({ instanceToSplit: instance, cwd });
+						await terminalService.createTerminal({ location: { parentTerminal: instance }, cwd });
 						await terminalGroupService.showPanel(true);
 					});
 				}
@@ -1546,7 +1589,7 @@ export function registerTerminalActions() {
 			const terminalGroupService = accessor.get(ITerminalGroupService);
 			await terminalService.doWithActiveInstance(async t => {
 				const cwd = await getCwdForSplit(terminalService.configHelper, t);
-				const instance = await terminalService.createTerminal({ instanceToSplit: t, cwd });
+				const instance = await terminalService.createTerminal({ location: { parentTerminal: t }, cwd });
 				if (instance?.target !== TerminalLocation.Editor) {
 					await terminalGroupService.showPanel(true);
 				}
@@ -1568,7 +1611,7 @@ export function registerTerminalActions() {
 					// Technically this doesn't need to be here as it will fall back to this
 					// behavior anyway when handed to xterm.js, having this handled by VS Code
 					// makes it easier for users to see how it works though.
-					mac: { primary: KeyMod.CtrlCmd | KeyCode.KEY_A },
+					mac: { primary: KeyMod.CtrlCmd | KeyCode.KeyA },
 					weight: KeybindingWeight.WorkbenchContrib,
 					when: TerminalContextKeys.focus
 				}]
@@ -1582,14 +1625,14 @@ export function registerTerminalActions() {
 		constructor() {
 			super({
 				id: TerminalCommandId.New,
-				title: { value: localize('workbench.action.terminal.new', "Create New Integrated Terminal"), original: 'Create New Integrated Terminal' },
+				title: { value: localize('workbench.action.terminal.new', "Create New Terminal"), original: 'Create New Terminal' },
 				f1: true,
 				category,
 				precondition: TerminalContextKeys.processSupported,
 				icon: Codicon.plus,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_BACKTICK,
-					mac: { primary: KeyMod.WinCtrl | KeyMod.Shift | KeyCode.US_BACKTICK },
+					primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Backquote,
+					mac: { primary: KeyMod.WinCtrl | KeyMod.Shift | KeyCode.Backquote },
 					weight: KeybindingWeight.WorkbenchContrib
 				},
 				description: {
@@ -1608,19 +1651,20 @@ export function registerTerminalActions() {
 			const terminalGroupService = accessor.get(ITerminalGroupService);
 			const workspaceContextService = accessor.get(IWorkspaceContextService);
 			const commandService = accessor.get(ICommandService);
+			const configurationService = accessor.get(IConfigurationService);
 			const folders = workspaceContextService.getWorkspace().folders;
 			if (eventOrOptions && eventOrOptions instanceof MouseEvent && (eventOrOptions.altKey || eventOrOptions.ctrlKey)) {
 				const activeInstance = terminalService.activeInstance;
 				if (activeInstance) {
 					const cwd = await getCwdForSplit(terminalService.configHelper, activeInstance);
-					await terminalService.createTerminal({ instanceToSplit: activeInstance, cwd });
+					await terminalService.createTerminal({ location: { parentTerminal: activeInstance }, cwd });
 					return;
 				}
 			}
 
 			if (terminalService.isProcessSupportRegistered) {
 				eventOrOptions = !eventOrOptions || eventOrOptions instanceof MouseEvent ? {} : eventOrOptions;
-				eventOrOptions.target = eventOrOptions.target || terminalService.configHelper.config.defaultLocation;
+
 				let instance: ITerminalInstance | undefined;
 				if (folders.length <= 1) {
 					// Allow terminal service to handle the path when there is only a
@@ -1630,12 +1674,23 @@ export function registerTerminalActions() {
 					const options: IPickOptions<IQuickPickItem> = {
 						placeHolder: localize('workbench.action.terminal.newWorkspacePlaceholder', "Select current working directory for new terminal")
 					};
-					const workspace = await commandService.executeCommand(PICK_WORKSPACE_FOLDER_COMMAND_ID, [options]);
+					const workspace = await commandService.executeCommand<IWorkspaceFolder>(PICK_WORKSPACE_FOLDER_COMMAND_ID, [options]);
 					if (!workspace) {
 						// Don't create the instance if the workspace picker was canceled
 						return;
 					}
 					eventOrOptions.cwd = workspace.uri;
+					const cwdConfig = configurationService.getValue(TerminalSettingId.Cwd, { resource: workspace.uri });
+					if (typeof cwdConfig === 'string' && cwdConfig.length > 0) {
+						if (isAbsolute(cwdConfig)) {
+							eventOrOptions.cwd = URI.from({
+								scheme: workspace.uri.scheme,
+								path: cwdConfig
+							});
+						} else {
+							eventOrOptions.cwd = URI.joinPath(workspace.uri, cwdConfig);
+						}
+					}
 					instance = await terminalService.createTerminal(eventOrOptions);
 				}
 				terminalService.setActiveInstance(instance);
@@ -1680,8 +1735,8 @@ export function registerTerminalActions() {
 				category,
 				precondition: TerminalContextKeys.processSupported,
 				keybinding: {
-					primary: KeyMod.CtrlCmd | KeyCode.KEY_W,
-					win: { primary: KeyMod.CtrlCmd | KeyCode.F4, secondary: [KeyMod.CtrlCmd | KeyCode.KEY_W] },
+					primary: KeyMod.CtrlCmd | KeyCode.KeyW,
+					win: { primary: KeyMod.CtrlCmd | KeyCode.F4, secondary: [KeyMod.CtrlCmd | KeyCode.KeyW] },
 					weight: KeybindingWeight.WorkbenchContrib,
 					when: ContextKeyExpr.and(TerminalContextKeys.focus, ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal), TerminalContextKeys.editorFocus)
 				}
@@ -1737,7 +1792,7 @@ export function registerTerminalActions() {
 				precondition: TerminalContextKeys.processSupported,
 				keybinding: [{
 					primary: 0,
-					mac: { primary: KeyMod.CtrlCmd | KeyCode.KEY_K },
+					mac: { primary: KeyMod.CtrlCmd | KeyCode.KeyK },
 					// Weight is higher than work workbench contributions so the keybinding remains
 					// highest priority when chords are registered afterwards
 					weight: KeybindingWeight.WorkbenchContrib + 1,
@@ -1793,6 +1848,53 @@ export function registerTerminalActions() {
 		}
 	});
 
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.SetDimensions,
+				title: { value: localize('workbench.action.terminal.setFixedDimensions', "Set Fixed Dimensions"), original: 'Set Fixed Dimensions' },
+				f1: true,
+				category,
+				precondition: TerminalContextKeys.isOpen
+			});
+		}
+		async run(accessor: ServicesAccessor) {
+			await accessor.get(ITerminalService).doWithActiveInstance(t => t.setFixedDimensions());
+		}
+	});
+
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.SizeToContentWidth,
+				title: { value: localize('workbench.action.terminal.sizeToContentWidth', "Toggle Size to Content Width"), original: 'Toggle Size to Content Width' },
+				f1: true,
+				category,
+				precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.isOpen, TerminalContextKeys.focus),
+				keybinding: {
+					primary: KeyMod.Alt | KeyCode.KeyZ,
+					weight: KeybindingWeight.WorkbenchContrib
+				}
+			});
+		}
+		async run(accessor: ServicesAccessor) {
+			await accessor.get(ITerminalService).doWithActiveInstance(t => t.toggleSizeToContentWidth());
+		}
+	});
+	registerAction2(class extends Action2 {
+		constructor() {
+			super({
+				id: TerminalCommandId.SizeToContentWidthInstance,
+				title: terminalStrings.toggleSizeToContentWidth,
+				f1: false,
+				category,
+				precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.focus)
+			});
+		}
+		async run(accessor: ServicesAccessor) {
+			return getSelectedInstances(accessor)?.[0].toggleSizeToContentWidth();
+		}
+	});
 	// Some commands depend on platform features
 	if (BrowserFeatures.clipboard.writeText) {
 		registerAction2(class extends Action2 {
@@ -1805,9 +1907,9 @@ export function registerTerminalActions() {
 					// TODO: Why is copy still showing up when text isn't selected?
 					precondition: ContextKeyExpr.and(TerminalContextKeys.processSupported, TerminalContextKeys.textSelected),
 					keybinding: [{
-						primary: KeyMod.CtrlCmd | KeyCode.KEY_C,
-						win: { primary: KeyMod.CtrlCmd | KeyCode.KEY_C, secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_C] },
-						linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_C },
+						primary: KeyMod.CtrlCmd | KeyCode.KeyC,
+						win: { primary: KeyMod.CtrlCmd | KeyCode.KeyC, secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyC] },
+						linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyC },
 						weight: KeybindingWeight.WorkbenchContrib,
 						when: ContextKeyExpr.and(TerminalContextKeys.textSelected, TerminalContextKeys.focus)
 					}]
@@ -1829,9 +1931,9 @@ export function registerTerminalActions() {
 					category,
 					precondition: TerminalContextKeys.processSupported,
 					keybinding: [{
-						primary: KeyMod.CtrlCmd | KeyCode.KEY_V,
-						win: { primary: KeyMod.CtrlCmd | KeyCode.KEY_V, secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_V] },
-						linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_V },
+						primary: KeyMod.CtrlCmd | KeyCode.KeyV,
+						win: { primary: KeyMod.CtrlCmd | KeyCode.KeyV, secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV] },
+						linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyV },
 						weight: KeybindingWeight.WorkbenchContrib,
 						when: TerminalContextKeys.focus
 					}],
@@ -1964,7 +2066,7 @@ export function validateTerminalName(name: string): { content: string, severity:
 
 function convertOptionsOrProfileToOptions(optionsOrProfile?: ICreateTerminalOptions | ITerminalProfile): ICreateTerminalOptions | undefined {
 	if (typeof optionsOrProfile === 'object' && 'profileName' in optionsOrProfile) {
-		return { config: optionsOrProfile as ITerminalProfile };
+		return { config: optionsOrProfile as ITerminalProfile, location: (optionsOrProfile as ICreateTerminalOptions).location };
 	}
 	return optionsOrProfile;
 }
@@ -1979,7 +2081,7 @@ export function refreshTerminalActions(detectedProfiles: ITerminalProfile[]) {
 		constructor() {
 			super({
 				id: TerminalCommandId.NewWithProfile,
-				title: { value: localize('workbench.action.terminal.newWithProfile', "Create New Integrated Terminal (With Profile)"), original: 'Create New Integrated Terminal (With Profile)' },
+				title: { value: localize('workbench.action.terminal.newWithProfile', "Create New Terminal (With Profile)"), original: 'Create New Terminal (With Profile)' },
 				f1: true,
 				category,
 				precondition: TerminalContextKeys.processSupported,
@@ -2005,12 +2107,20 @@ export function refreshTerminalActions(detectedProfiles: ITerminalProfile[]) {
 		}
 		async run(accessor: ServicesAccessor, eventOrOptionsOrProfile: MouseEvent | ICreateTerminalOptions | ITerminalProfile | { profileName: string } | undefined, profile?: ITerminalProfile) {
 			const terminalService = accessor.get(ITerminalService);
+
+			if (!terminalService.isProcessSupportRegistered) {
+				return;
+			}
+
 			const terminalGroupService = accessor.get(ITerminalGroupService);
 			const workspaceContextService = accessor.get(IWorkspaceContextService);
 			const commandService = accessor.get(ICommandService);
 
 			let event: MouseEvent | PointerEvent | KeyboardEvent | undefined;
 			let options: ICreateTerminalOptions | undefined;
+			let instance: ITerminalInstance | undefined;
+			let cwd: string | URI | undefined;
+
 			if (typeof eventOrOptionsOrProfile === 'object' && eventOrOptionsOrProfile && 'profileName' in eventOrOptionsOrProfile) {
 				const config = terminalService.availableProfiles.find(profile => profile.profileName === eventOrOptionsOrProfile.profileName);
 				if (!config) {
@@ -2024,48 +2134,53 @@ export function refreshTerminalActions(detectedProfiles: ITerminalProfile[]) {
 				options = convertOptionsOrProfileToOptions(eventOrOptionsOrProfile);
 			}
 
-			const folders = workspaceContextService.getWorkspace().folders;
+			// split terminal
 			if (event && (event.altKey || event.ctrlKey)) {
-				const activeInstance = terminalService.activeInstance;
-				if (activeInstance) {
-					const cwd = await getCwdForSplit(terminalService.configHelper, activeInstance);
-					await terminalService.createTerminal({ instanceToSplit: activeInstance, config: options?.config, cwd });
+				const parentTerminal = terminalService.activeInstance;
+				if (parentTerminal) {
+					cwd = await getCwdForSplit(terminalService.configHelper, parentTerminal);
+					await terminalService.createTerminal({ location: { parentTerminal }, config: options?.config, cwd });
 					return;
 				}
 			}
 
-			if (terminalService.isProcessSupportRegistered) {
-				let instance: ITerminalInstance | undefined;
-				let cwd: string | URI | undefined;
-				if (folders.length > 1) {
-					// multi-root workspace, create root picker
-					const options: IPickOptions<IQuickPickItem> = {
-						placeHolder: localize('workbench.action.terminal.newWorkspacePlaceholder', "Select current working directory for new terminal")
-					};
-					const workspace = await commandService.executeCommand(PICK_WORKSPACE_FOLDER_COMMAND_ID, [options]);
-					if (!workspace) {
-						// Don't create the instance if the workspace picker was canceled
-						return;
-					}
-					cwd = workspace.uri;
+			const folders = workspaceContextService.getWorkspace().folders;
+			if (folders.length > 1) {
+				// multi-root workspace, create root picker
+				const options: IPickOptions<IQuickPickItem> = {
+					placeHolder: localize('workbench.action.terminal.newWorkspacePlaceholder', "Select current working directory for new terminal")
+				};
+				const workspace = await commandService.executeCommand(PICK_WORKSPACE_FOLDER_COMMAND_ID, [options]);
+				if (!workspace) {
+					// Don't create the instance if the workspace picker was canceled
+					return;
 				}
+				cwd = workspace.uri;
+			}
 
-				if (options) {
-					instance = await terminalService.createTerminal(options);
+			if (options) {
+				options.cwd = cwd;
+				instance = await terminalService.createTerminal(options);
+			} else {
+				instance = await terminalService.showProfileQuickPick('createInstance', cwd);
+			}
+
+			if (instance) {
+				terminalService.setActiveInstance(instance);
+				if (instance.target === TerminalLocation.Editor) {
+					await instance.focusWhenReady(true);
 				} else {
-					instance = await terminalService.showProfileQuickPick('createInstance', cwd);
+					await terminalGroupService.showPanel(true);
 				}
-
-				if (instance) {
-					terminalService.setActiveInstance(instance);
-					if (instance.target === TerminalLocation.Editor) {
-						await instance.focusWhenReady(true);
-					} else {
-						await terminalGroupService.showPanel(true);
-					}
-				}
-
 			}
 		}
 	});
+}
+
+/** doc */
+function doWithInstance(accessor: ServicesAccessor, resource: unknown): ITerminalInstance | undefined {
+	const terminalService = accessor.get(ITerminalService);
+	const castedResource = URI.isUri(resource) ? resource : undefined;
+	const instance = terminalService.getInstanceFromResource(castedResource) || terminalService.activeInstance;
+	return instance;
 }

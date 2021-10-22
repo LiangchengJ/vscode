@@ -109,28 +109,28 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 		},
 		[TerminalSettingId.ShellLinux]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shell.linux', "The path of the shell that the terminal uses on Linux. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shell.linux', "The path of the shell that the terminal uses on Linux. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			type: ['string', 'null'],
 			default: null,
 			markdownDeprecationMessage: shellDeprecationMessageLinux
 		},
 		[TerminalSettingId.ShellMacOs]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shell.osx', "The path of the shell that the terminal uses on macOS. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shell.osx', "The path of the shell that the terminal uses on macOS. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			type: ['string', 'null'],
 			default: null,
 			markdownDeprecationMessage: shellDeprecationMessageOsx
 		},
 		[TerminalSettingId.ShellWindows]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shell.windows', "The path of the shell that the terminal uses on Windows. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shell.windows', "The path of the shell that the terminal uses on Windows. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			type: ['string', 'null'],
 			default: null,
 			markdownDeprecationMessage: shellDeprecationMessageWindows
 		},
 		[TerminalSettingId.ShellArgsLinux]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shellArgs.linux', "The command line arguments to use when on the Linux terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shellArgs.linux', "The command line arguments to use when on the Linux terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			type: 'array',
 			items: {
 				type: 'string'
@@ -140,7 +140,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 		},
 		[TerminalSettingId.ShellArgsMacOs]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shellArgs.osx', "The command line arguments to use when on the macOS terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shellArgs.osx', "The command line arguments to use when on the macOS terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			type: 'array',
 			items: {
 				type: 'string'
@@ -153,18 +153,18 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 		},
 		[TerminalSettingId.ShellArgsWindows]: {
 			restricted: true,
-			markdownDescription: localize('terminal.integrated.shellArgs.windows', "The command line arguments to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration)."),
+			markdownDescription: localize('terminal.integrated.shellArgs.windows', "The command line arguments to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles)."),
 			'anyOf': [
 				{
 					type: 'array',
 					items: {
 						type: 'string',
-						markdownDescription: localize('terminal.integrated.shellArgs.windows', "The command line arguments to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration).")
+						markdownDescription: localize('terminal.integrated.shellArgs.windows', "The command line arguments to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles).")
 					},
 				},
 				{
 					type: 'string',
-					markdownDescription: localize('terminal.integrated.shellArgs.windows.string', "The command line arguments in [command-line format](https://msdn.microsoft.com/en-au/08dfcab2-eb6e-49a4-80eb-87d4076c98c6) to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_configuration).")
+					markdownDescription: localize('terminal.integrated.shellArgs.windows.string', "The command line arguments in [command-line format](https://msdn.microsoft.com/en-au/08dfcab2-eb6e-49a4-80eb-87d4076c98c6) to use when on the Windows terminal. [Read more about configuring the shell](https://code.visualstudio.com/docs/editor/integrated-terminal#_terminal-profiles).")
 				}
 			],
 			default: [],
@@ -177,7 +177,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 					key: 'terminal.integrated.profiles.windows',
 					comment: ['{0}, {1}, and {2} are the `source`, `path` and optional `args` settings keys']
 				},
-				"The Windows profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude them, use the {0} property to use the default detected configuration. Or, set the {1} and optional {2}", '`source`', '`path`', '`args`.'
+				"The Windows profiles to present when creating a new terminal via the terminal dropdown. Use the {0} property to automatically detect the shell's location. Or set the {1} property manually with an optional {2}.\n\nSet an existing profile to {3} to hide the profile from the list, for example: {4}.", '`source`', '`path`', '`args`', '`null`', '`"Ubuntu-20.04 (WSL)": null`'
 			),
 			type: 'object',
 			default: {
@@ -241,7 +241,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 					key: 'terminal.integrated.profile.osx',
 					comment: ['{0} and {1} are the `path` and optional `args` settings keys']
 				},
-				"The macOS profiles to present when creating a new terminal via the terminal dropdown. When set, these will override the default detected profiles. They are comprised of a {0} and optional {1}", '`path`', '`args`.'
+				"The macOS profiles to present when creating a new terminal via the terminal dropdown. Set the {0} property manually with an optional {1}.\n\nSet an existing profile to {2} to hide the profile from the list, for example: {3}.", '`path`', '`args`', '`null`', '`"bash": null`'
 			),
 			type: 'object',
 			default: {
@@ -300,7 +300,7 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 					key: 'terminal.integrated.profile.linux',
 					comment: ['{0} and {1} are the `path` and optional `args` settings keys']
 				},
-				"The Linux profiles to present when creating a new terminal via the terminal dropdown. When set, these will override the default detected profiles. They are comprised of a {0} and optional {1}", '`path`', '`args`.'
+				"The Linux profiles to present when creating a new terminal via the terminal dropdown. Set the {0} property manually with an optional {1}.\n\nSet an existing profile to {2} to hide the profile from the list, for example: {3}.", '`path`', '`args`', '`null`', '`"bash": null`'
 			),
 			type: 'object',
 			default: {
@@ -366,12 +366,6 @@ const terminalPlatformConfiguration: IConfigurationNode = {
 			type: 'number',
 			default: 100
 		},
-		[TerminalSettingId.PersistentSessionExperimentalSerializer]: {
-			scope: ConfigurationScope.APPLICATION,
-			description: localize('terminal.integrated.persistentSessionExperimentalSerializer', "Whether to use a more efficient experimental approach for restoring the terminal's buffer. This setting requires a restart to take effect."),
-			type: 'boolean',
-			default: true
-		},
 		[TerminalSettingId.ShowLinkHover]: {
 			scope: ConfigurationScope.APPLICATION,
 			description: localize('terminal.integrated.showLinkHover', "Whether to show hovers for links in the terminal output."),
@@ -389,17 +383,15 @@ export function registerTerminalPlatformConfiguration() {
 	registerTerminalDefaultProfileConfiguration();
 }
 
-let lastDefaultProfilesConfiguration: IConfigurationNode | undefined;
+let defaultProfilesConfiguration: IConfigurationNode | undefined;
 export function registerTerminalDefaultProfileConfiguration(detectedProfiles?: { os: OperatingSystem, profiles: ITerminalProfile[] }, extensionContributedProfiles?: readonly IExtensionTerminalProfile[]) {
 	const registry = Registry.as<IConfigurationRegistry>(Extensions.Configuration);
-	if (lastDefaultProfilesConfiguration) {
-		registry.deregisterConfigurations([lastDefaultProfilesConfiguration]);
-	}
 	let profileEnum;
 	if (detectedProfiles) {
 		profileEnum = createProfileSchemaEnums(detectedProfiles?.profiles, extensionContributedProfiles);
 	}
-	lastDefaultProfilesConfiguration = {
+	const oldDefaultProfilesConfiguration = defaultProfilesConfiguration;
+	defaultProfilesConfiguration = {
 		id: 'terminal',
 		order: 100,
 		title: localize('terminalIntegratedConfigurationTitle', "Integrated Terminal"),
@@ -431,5 +423,5 @@ export function registerTerminalDefaultProfileConfiguration(detectedProfiles?: {
 			},
 		}
 	};
-	registry.registerConfiguration(lastDefaultProfilesConfiguration);
+	registry.updateConfigurations({ add: [defaultProfilesConfiguration], remove: oldDefaultProfilesConfiguration ? [oldDefaultProfilesConfiguration] : [] });
 }
