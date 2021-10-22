@@ -94,7 +94,7 @@ jobs:
           echo "=========================================================================================================================================================="
           mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
           wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
-          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-Recipe.yml
+          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
           mv out/*.AppImage ${{ env.APP_IMAGE_NAME }} && chmod +x ${{ env.APP_IMAGE_NAME }}
 
       - name: Generate SHA512 checksum file for xz
@@ -182,11 +182,27 @@ jobs:
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
           bash -c "cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}"
           mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && zip -r -9 -o VSCode-darwin-${{ matrix.arch }}.zip VSCode-darwin-${{ matrix.arch }}"
+          mv ../VSCode-darwin-${{ matrix.arch }}.zip .
+
+      # - name: Package DMG for arch x64
+      #   if: ${{ matrix.arch == 'x64' }}
+      #   run: |
+      #     npm install -g create-dmg
+      #     NAME_LONG=`node -p "require('./product.json').nameLong"`
+      #     bash -c "cd ../VSCode-darwin-${{ matrix.arch }} && create-dmg '${NAME_LONG}.app'"
+      #     mv ../VSCode-darwin-${{ matrix.arch }}/*.dmg VSCode-darwin-${{ matrix.arch }}.dmg
 
       - name: Generate SHA512 checksum file
         run: |
           npm install -g checksum
           checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.zip.sha512
+
+      # - name: Generate SHA512 checksum file for DMG
+      #   if: ${{ matrix.arch == 'x64' }}
+      #   run: |
+      #     checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.dmg | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -197,6 +213,10 @@ jobs:
           files: |
             VSCode-darwin-${{ matrix.arch }}.tar.xz
             VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
+            VSCode-darwin-${{ matrix.arch }}.zip
+            VSCode-darwin-${{ matrix.arch }}.zip.sha512
+            # VSCode-darwin-${{ matrix.arch }}.dmg
+            # VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
   windows:
     name: Windows
