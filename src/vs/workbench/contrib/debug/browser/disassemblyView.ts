@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getPixelRatio, getZoomLevel } from 'vs/base/browser/browser';
+import { getPixelRatio, getZoomLevel, isSafari } from 'vs/base/browser/browser';
 import { Dimension, append, $, addStandardDisposableListener } from 'vs/base/browser/dom';
 import { ITableRenderer, ITableVirtualDelegate } from 'vs/base/browser/ui/table/table';
 import { BareFontInfo } from 'vs/editor/common/config/fontInfo';
@@ -29,6 +29,7 @@ import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/c
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { isCodeEditor } from 'vs/editor/browser/editorBrowser';
+import { EDITOR_FONT_DEFAULTS } from 'vs/editor/common/config/editorOptions';
 
 interface IDisassembledInstructionEntry {
 	allowBreakpoint: boolean;
@@ -36,6 +37,17 @@ interface IDisassembledInstructionEntry {
 	instruction: DebugProtocol.DisassembledInstruction;
 	instructionAddress?: bigint;
 }
+
+// Special entry as a placeholer when disassembly is not available
+const disassemblyNotAvailable: IDisassembledInstructionEntry = {
+	allowBreakpoint: false,
+	isBreakpointSet: false,
+	instruction: {
+		address: '-1',
+		instruction: localize('instructionNotAvailable', "Disassembly not available.")
+	},
+	instructionAddress: BigInt(-1)
+};
 
 export class DisassemblyView extends EditorPane {
 
@@ -202,7 +214,7 @@ export class DisassemblyView extends EditorPane {
 			if ((e === State.Running || e === State.Stopped) &&
 				(this._previousDebuggingState !== State.Running && this._previousDebuggingState !== State.Stopped)) {
 				// Just started debugging, clear the view
-				this._disassembledInstructions?.splice(0, this._disassembledInstructions.length);
+				this._disassembledInstructions?.splice(0, this._disassembledInstructions.length, [disassemblyNotAvailable]);
 			}
 			this._previousDebuggingState = e;
 		}));
@@ -278,7 +290,7 @@ export class DisassemblyView extends EditorPane {
 
 	private async loadDisassembledInstructions(address: string | undefined, instructionOffset: number, instructionCount: number): Promise<boolean> {
 		// if address is null, then use current stack frame.
-		if (!address) {
+		if (!address || address === '-1') {
 			address = this.focusedInstructionAddress;
 		}
 		if (!address) {
@@ -296,11 +308,13 @@ export class DisassemblyView extends EditorPane {
 				newEntries.push({ allowBreakpoint: true, isBreakpointSet: found !== undefined, instruction: resultEntries[i] });
 			}
 
+			const specialEntriesToRemove = this._disassembledInstructions.length === 1 ? 1 : 0;
+
 			// request is either at the start or end
 			if (instructionOffset >= 0) {
-				this._disassembledInstructions.splice(this._disassembledInstructions.length, 0, newEntries);
+				this._disassembledInstructions.splice(this._disassembledInstructions.length, specialEntriesToRemove, newEntries);
 			} else {
-				this._disassembledInstructions.splice(0, 0, newEntries);
+				this._disassembledInstructions.splice(0, specialEntriesToRemove, newEntries);
 			}
 
 			return true;
@@ -363,7 +377,7 @@ export class DisassemblyView extends EditorPane {
 	 */
 	private reloadDisassembly(targetAddress?: string) {
 		if (this._disassembledInstructions) {
-			this._disassembledInstructions.splice(0, this._disassembledInstructions.length);
+			this._disassembledInstructions.splice(0, this._disassembledInstructions.length, [disassemblyNotAvailable]);
 			this._instructionBpList = this._debugService.getModel().getInstructionBreakpoints();
 			this.loadDisassembledInstructions(targetAddress, -DisassemblyView.NUM_INSTRUCTIONS_TO_LOAD * 4, DisassemblyView.NUM_INSTRUCTIONS_TO_LOAD * 8).then(() => {
 				// on load, set the target instruction in the middle of the page.
@@ -526,14 +540,16 @@ class InstructionRenderer extends Disposable implements ITableRenderer<IDisassem
 
 		const instruction = element.instruction;
 		const sb = createStringBuilder(10000);
-
-		sb.appendASCIIString(instruction.address);
 		let spacesToAppend = 10;
-		if (instruction.address.length < InstructionRenderer.INSTRUCTION_ADDR_MIN_LENGTH) {
-			spacesToAppend = InstructionRenderer.INSTRUCTION_ADDR_MIN_LENGTH - instruction.address.length;
-		}
-		for (let i = 0; i < spacesToAppend; i++) {
-			sb.appendASCII(0x00A0);
+
+		if (instruction.address !== '-1') {
+			sb.appendASCIIString(instruction.address);
+			if (instruction.address.length < InstructionRenderer.INSTRUCTION_ADDR_MIN_LENGTH) {
+				spacesToAppend = InstructionRenderer.INSTRUCTION_ADDR_MIN_LENGTH - instruction.address.length;
+			}
+			for (let i = 0; i < spacesToAppend; i++) {
+				sb.appendASCII(0x00A0);
+			}
 		}
 
 		if (instruction.instructionBytes) {
@@ -572,7 +588,7 @@ class InstructionRenderer extends Disposable implements ITableRenderer<IDisassem
 
 	private applyFontInfo(element: HTMLElement) {
 		const fontInfo = this._disassemblyView.fontInfo;
-		element.style.fontFamily = fontInfo.getMassagedFontFamily();
+		element.style.fontFamily = fontInfo.getMassagedFontFamily(isSafari ? EDITOR_FONT_DEFAULTS.fontFamily : null);
 		element.style.fontWeight = fontInfo.fontWeight;
 		element.style.fontSize = fontInfo.fontSize + 'px';
 		element.style.fontFeatureSettings = fontInfo.fontFeatureSettings;
@@ -591,7 +607,9 @@ class AccessibilityProvider implements IListAccessibilityProvider<IDisassembledI
 		let label = '';
 
 		const instruction = element.instruction;
-		label += `${localize('instructionAddress', "Address")}: ${instruction.address}`;
+		if (instruction.address !== '-1') {
+			label += `${localize('instructionAddress', "Address")}: ${instruction.address}`;
+		}
 		if (instruction.instructionBytes) {
 			label += `, ${localize('instructionBytes', "Bytes")}: ${instruction.instructionBytes}`;
 		}
@@ -625,7 +643,7 @@ export class DisassemblyViewContribution implements IWorkbenchContribution {
 
 			const activeTextEditorControl = editorService.activeTextEditorControl;
 			if (isCodeEditor(activeTextEditorControl)) {
-				const language = activeTextEditorControl.getModel()?.getLanguageIdentifier().language;
+				const language = activeTextEditorControl.getModel()?.getLanguageId();
 				// TODO: instead of using idDebuggerInterestedInLanguage, have a specific ext point for languages
 				// support disassembly
 				this._languageSupportsDisassemleRequest?.set(!!language && debugService.getAdapterManager().isDebuggerInterestedInLanguage(language));

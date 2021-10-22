@@ -11,7 +11,7 @@ import { ThrottledDelayer } from 'vs/base/common/async';
 import { streamToBuffer } from 'vs/base/common/buffer';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import { Emitter } from 'vs/base/common/event';
-import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
+import { Disposable, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
 import { URI } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
@@ -98,7 +98,17 @@ export class IFrameWebview extends Disposable implements Webview {
 	protected get element(): HTMLIFrameElement | undefined { return this._element; }
 
 	private _focused: boolean | undefined;
-	public get isFocused(): boolean { return !!this._focused; }
+	public get isFocused(): boolean {
+		if (!this._focused) {
+			return false;
+		}
+		if (document.activeElement && document.activeElement !== this.element) {
+			// looks like https://github.com/microsoft/vscode/issues/132641
+			// where the focus is actually not in the `<iframe>`
+			return false;
+		}
+		return true;
+	}
 
 	private _state: WebviewState.State = new WebviewState.Initializing([]);
 
@@ -116,6 +126,8 @@ export class IFrameWebview extends Disposable implements Webview {
 
 	private readonly _onDidHtmlChange: Emitter<string> = this._register(new Emitter<string>());
 	protected readonly onDidHtmlChange = this._onDidHtmlChange.event;
+
+	private readonly _messageHandlers = new Map<string, Set<(data: any) => void>>();
 
 	constructor(
 		public readonly id: string,
@@ -288,6 +300,18 @@ export class IFrameWebview extends Disposable implements Webview {
 			}
 		}));
 
+		this._register(addDisposableListener(window, 'message', e => {
+			if (e?.data?.target === this.id) {
+				if (e.origin !== this.webviewContentOrigin) {
+					console.log(`Skipped renderer receiving message due to mismatched origins: ${e.origin} ${this.webviewContentOrigin}`);
+					return;
+				}
+
+				const handlers = this._messageHandlers.get(e.data.channel);
+				handlers?.forEach(handler => handler(e.data.data));
+			}
+		}));
+
 		this.initElement(extension, options);
 	}
 
@@ -379,6 +403,7 @@ export class IFrameWebview extends Disposable implements Webview {
 			extensionId: extension?.id.value ?? '',
 			platform: this.platform,
 			'vscode-resource-base-authority': webviewRootResourceAuthority,
+			parentOrigin: window.origin,
 		};
 
 		if (options.purpose) {
@@ -406,20 +431,32 @@ export class IFrameWebview extends Disposable implements Webview {
 		return endpoint;
 	}
 
+	private _webviewContentOrigin?: string;
+
+	private get webviewContentOrigin(): string {
+		if (!this._webviewContentOrigin) {
+			const uri = URI.parse(this.webviewContentEndpoint);
+			this._webviewContentOrigin = uri.scheme + '://' + uri.authority.toLowerCase();
+		}
+		return this._webviewContentOrigin;
+	}
+
 	private doPostMessage(channel: string, data?: any): void {
 		if (this.element) {
-			this.element.contentWindow!.postMessage({ channel, args: data }, '*');
+			this.element.contentWindow!.postMessage({ channel, args: data }, this.webviewContentEndpoint);
 		}
 	}
 
 	protected on<T = unknown>(channel: WebviewMessageChannels, handler: (data: T) => void): IDisposable {
-		return addDisposableListener(window, 'message', e => {
-			if (!e || !e.data || e.data.target !== this.id) {
-				return;
-			}
-			if (e.data.channel === channel) {
-				handler(e.data.data);
-			}
+		let handlers = this._messageHandlers.get(channel);
+		if (!handlers) {
+			handlers = new Set();
+			this._messageHandlers.set(channel, handlers);
+		}
+
+		handlers.add(handler);
+		return toDisposable(() => {
+			this._messageHandlers.get(channel)?.delete(handler);
 		});
 	}
 
@@ -468,8 +505,8 @@ export class IFrameWebview extends Disposable implements Webview {
 	}
 
 	private rewriteVsCodeResourceUrls(value: string): string {
-		const isRemote = this.extension?.location.scheme === Schemas.vscodeRemote;
-		const remoteAuthority = this.extension?.location.scheme === Schemas.vscodeRemote ? this.extension.location.authority : undefined;
+		const isRemote = this.extension?.location?.scheme === Schemas.vscodeRemote;
+		const remoteAuthority = this.extension?.location?.scheme === Schemas.vscodeRemote ? this.extension.location.authority : undefined;
 		return value
 			.replace(/(["'])(?:vscode-resource):(\/\/([^\s\/'"]+?)(?=\/))?([^\s'"]+?)(["'])/gi, (_match, startQuote, _1, scheme, path, endQuote) => {
 				const uri = URI.from({
@@ -528,9 +565,14 @@ export class IFrameWebview extends Disposable implements Webview {
 
 		this.content = newContent;
 
+		const allowScripts = !!this.content.options.allowScripts;
 		this._send('content', {
 			contents: this.content.html,
-			options: this.content.options,
+			options: {
+				allowMultipleAPIAcquire: !!this.content.options.allowMultipleAPIAcquire,
+				allowScripts: allowScripts,
+				allowForms: this.content.options.allowForms ?? allowScripts, // For back compat, we allow forms by default when scripts are enabled
+			},
 			state: this.content.state,
 			cspSource: webviewGenericCspSource,
 			confirmBeforeClose: this._confirmBeforeClose,

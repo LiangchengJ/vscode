@@ -68,9 +68,17 @@
 	{
 		"type": "label",
 		"name": "notebook",
+		"regex": "notebook.*",
 		"assign": [
 			"rebornix"
 		]
+	},
+	{
+		"type": "label",
+		"name": "notebook-triage",
+		"regex": "notebook.*",
+		"action": "updateLabels",
+		"addLabel": "needs-notebook-triage"
 	},
 	{
 		"type": "label",
