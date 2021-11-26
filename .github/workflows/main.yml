@@ -1,7 +1,7 @@
 # This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-name: GitHub CI
+name: NodeJS CI
 
 on:
   push:
@@ -107,6 +107,7 @@ jobs:
 
           chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
           mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -123,12 +124,13 @@ jobs:
 
           [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] && \
           sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+        shell: bash
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part8
-          tag_name: dev_test_part8
+          name: dev_test_part9
+          tag_name: dev_test_part9
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -206,8 +208,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part8
-          tag_name: dev_test_part8
+          name: dev_test_part9
+          tag_name: dev_test_part9
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -311,8 +313,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part8
-          tag_name: dev_test_part8
+          name: dev_test_part9
+          tag_name: dev_test_part9
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
