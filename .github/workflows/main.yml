@@ -86,9 +86,7 @@ jobs:
 
       - name: Package AppImage for arch x64
         if: ${{ matrix.arch == 'x64' }}
-        run: >
-          #!/usr/bin/env bash
-
+        run: |
           curl -fsSL https://deno.land/x/install/install.sh | sh && \
           export DENO_INSTALL="/home/$(whoami)/.deno" && export PATH="$DENO_INSTALL/bin:$PATH"
 
@@ -109,9 +107,7 @@ jobs:
           mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
 
       - name: Generate SHA512 checksum files
-        run: >
-          #!/usr/bin/env bash
-
+        run: |
           [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ] && \
           sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
 
