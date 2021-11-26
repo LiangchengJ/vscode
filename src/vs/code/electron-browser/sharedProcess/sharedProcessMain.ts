@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ipcRenderer } from 'electron';
-import * as fs from 'fs';
-import { gracefulify } from 'graceful-fs';
 import { hostname, release } from 'os';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { onUnexpectedError, setUnexpectedErrorHandler } from 'vs/base/common/errors';
@@ -90,12 +88,13 @@ import { IExtensionHostStarter, ipcExtensionHostStarterChannelName } from 'vs/pl
 import { ExtensionHostStarter } from 'vs/platform/extensions/node/extensionHostStarter';
 import { ISignService } from 'vs/platform/sign/common/sign';
 import { SignService } from 'vs/platform/sign/node/signService';
-import { ITunnelService } from 'vs/platform/remote/common/tunnel';
-import { TunnelService } from 'vs/platform/remote/node/tunnelService';
+import { ISharedTunnelsService } from 'vs/platform/remote/common/tunnel';
+import { SharedTunnelsService } from 'vs/platform/remote/node/tunnelService';
 import { ipcSharedProcessTunnelChannelName, ISharedProcessTunnelService } from 'vs/platform/remote/common/sharedProcessTunnelService';
 import { SharedProcessTunnelService } from 'vs/platform/remote/node/sharedProcessTunnelService';
 import { ipcSharedProcessWorkerChannelName, ISharedProcessWorkerConfiguration, ISharedProcessWorkerService } from 'vs/platform/sharedProcess/common/sharedProcessWorkerService';
 import { SharedProcessWorkerService } from 'vs/platform/sharedProcess/electron-browser/sharedProcessWorkerService';
+import { IUserConfigurationFileService, UserConfigurationFileServiceId } from 'vs/platform/configuration/common/userConfigurationFileService';
 
 class SharedProcessMain extends Disposable {
 
@@ -105,9 +104,6 @@ class SharedProcessMain extends Disposable {
 
 	constructor(private configuration: ISharedProcessConfiguration) {
 		super();
-
-		// Enable gracefulFs
-		gracefulify(fs);
 
 		this.registerListeners();
 	}
@@ -223,6 +219,9 @@ class SharedProcessMain extends Disposable {
 			storageService.initialize()
 		]);
 
+		// User Configuration File
+		services.set(IUserConfigurationFileService, ProxyChannel.toService<IUserConfigurationFileService>(mainProcessService.getChannel(UserConfigurationFileServiceId)));
+
 		// Request
 		services.set(IRequestService, new SyncDescriptor(RequestService));
 
@@ -305,22 +304,20 @@ class SharedProcessMain extends Disposable {
 		services.set(IUserDataSyncResourceEnablementService, new SyncDescriptor(UserDataSyncResourceEnablementService));
 		services.set(IUserDataSyncService, new SyncDescriptor(UserDataSyncService));
 
-		// Terminal
-		services.set(
-			ILocalPtyService,
-			this._register(
-				new PtyHostService({
-					graceTime: LocalReconnectConstants.GraceTime,
-					shortGraceTime: LocalReconnectConstants.ShortGraceTime,
-					scrollback: configurationService.getValue<number>(TerminalSettingId.PersistentSessionScrollback) ?? 100
-				},
-					configurationService,
-					environmentService,
-					logService,
-					telemetryService
-				)
-			)
+		const ptyHostService = new PtyHostService({
+			graceTime: LocalReconnectConstants.GraceTime,
+			shortGraceTime: LocalReconnectConstants.ShortGraceTime,
+			scrollback: configurationService.getValue<number>(TerminalSettingId.PersistentSessionScrollback) ?? 100
+		},
+			configurationService,
+			environmentService,
+			logService,
+			telemetryService
 		);
+		await ptyHostService.initialize();
+
+		// Terminal
+		services.set(ILocalPtyService, this._register(ptyHostService));
 
 		// Extension Host
 		services.set(IExtensionHostStarter, this._register(new ExtensionHostStarter(logService)));
@@ -329,7 +326,7 @@ class SharedProcessMain extends Disposable {
 		services.set(ISignService, new SyncDescriptor(SignService));
 
 		// Tunnel
-		services.set(ITunnelService, new SyncDescriptor(TunnelService));
+		services.set(ISharedTunnelsService, new SyncDescriptor(SharedTunnelsService));
 		services.set(ISharedProcessTunnelService, new SyncDescriptor(SharedProcessTunnelService));
 
 		return new InstantiationService(services);

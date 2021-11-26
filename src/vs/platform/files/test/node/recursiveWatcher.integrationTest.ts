@@ -36,7 +36,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 
 		async whenReady(): Promise<void> {
 			for (const [, watcher] of this.watchers) {
-				await watcher.instance;
+				await watcher.ready;
 			}
 		}
 
@@ -70,6 +70,12 @@ flakySuite('Recursive Watcher (parcel)', () => {
 			}
 		});
 
+		service.onDidError(e => {
+			if (loggingEnabled) {
+				console.log(`[recursive watcher test error] ${e}`);
+			}
+		});
+
 		testDir = getRandomTestPath(tmpdir(), 'vsctests', 'filewatcher');
 
 		const sourceDir = getPathFromAmdModule(require, './fixtures/service');
@@ -95,7 +101,7 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		}
 	}
 
-	async function awaitEvent(service: TestParcelWatcherService, path: string, type: FileChangeType, failOnEvent?: boolean): Promise<void> {
+	async function awaitEvent(service: TestParcelWatcherService, path: string, type: FileChangeType, failOnEventReason?: string): Promise<void> {
 		if (loggingEnabled) {
 			console.log(`Awaiting change type '${toMsg(type)}' on file '${path}'`);
 		}
@@ -106,8 +112,8 @@ flakySuite('Recursive Watcher (parcel)', () => {
 				for (const event of events) {
 					if (event.path === path && event.type === type) {
 						disposable.dispose();
-						if (failOnEvent) {
-							reject(new Error('Unexpected file event'));
+						if (failOnEventReason) {
+							reject(new Error(`Unexpected file event: ${failOnEventReason}`));
 						} else {
 							resolve();
 						}
@@ -207,12 +213,12 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		await changeFuture;
 
 		// Read file does not emit event
-		changeFuture = awaitEvent(service, copiedFilepath, FileChangeType.UPDATED, true /* unexpected */);
+		changeFuture = awaitEvent(service, copiedFilepath, FileChangeType.UPDATED, 'unexpected-event-from-read-file');
 		await Promises.readFile(copiedFilepath);
 		await Promise.race([timeout(100), changeFuture]);
 
 		// Stat file does not emit event
-		changeFuture = awaitEvent(service, copiedFilepath, FileChangeType.UPDATED, true /* unexpected */);
+		changeFuture = awaitEvent(service, copiedFilepath, FileChangeType.UPDATED, 'unexpected-event-from-stat');
 		await Promises.stat(copiedFilepath);
 		await Promise.race([timeout(100), changeFuture]);
 
@@ -224,6 +230,26 @@ flakySuite('Recursive Watcher (parcel)', () => {
 		// Delete folder
 		changeFuture = awaitEvent(service, copiedFolderpath, FileChangeType.DELETED);
 		await Promises.rmdir(copiedFolderpath);
+		await changeFuture;
+	});
+
+	(!isLinux /* polling is only used in linux environments (WSL) */ ? test.skip : test)('basics (polling)', async function () {
+		await service.watch([{ path: testDir, excludes: [], pollingInterval: 100 }]);
+
+		// New file
+		const newFilePath = join(testDir, 'deep', 'newFile.txt');
+		let changeFuture: Promise<unknown> = awaitEvent(service, newFilePath, FileChangeType.ADDED);
+		await Promises.writeFile(newFilePath, 'Hello World');
+		await changeFuture;
+
+		// Change file
+		changeFuture = awaitEvent(service, newFilePath, FileChangeType.UPDATED);
+		await Promises.writeFile(newFilePath, 'Hello Change');
+		await changeFuture;
+
+		// Delete file
+		changeFuture = awaitEvent(service, newFilePath, FileChangeType.DELETED);
+		await Promises.unlink(newFilePath);
 		await changeFuture;
 	});
 

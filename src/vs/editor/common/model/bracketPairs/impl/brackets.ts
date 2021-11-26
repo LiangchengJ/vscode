@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { escapeRegExpCharacters } from 'vs/base/common/strings';
-import { toLength } from 'vs/editor/common/model/bracketPairColorizer/length';
-import { SmallImmutableSet, DenseKeyProvider, identityKeyProvider } from 'vs/editor/common/model/bracketPairColorizer/smallImmutableSet';
 import { ResolvedLanguageConfiguration } from 'vs/editor/common/modes/languageConfigurationRegistry';
 import { BracketAstNode } from './ast';
+import { toLength } from './length';
+import { DenseKeyProvider, identityKeyProvider, SmallImmutableSet } from './smallImmutableSet';
 import { OpeningBracketId, Token, TokenKind } from './tokenizer';
 
 export class BracketTokens {
@@ -74,7 +74,7 @@ export class BracketTokens {
 			const keys = [...this.map.keys()];
 			keys.sort();
 			keys.reverse();
-			return keys.map(k => escapeRegExpCharacters(k)).join('|');
+			return keys.map(k => prepareBracketForRegExp(k)).join('|');
 		}
 	}
 
@@ -97,6 +97,13 @@ export class BracketTokens {
 	get isEmpty(): boolean {
 		return this.map.size === 0;
 	}
+}
+
+function prepareBracketForRegExp(str: string): string {
+	const escaped = escapeRegExpCharacters(str);
+	// This bracket pair uses letters like e.g. "begin" - "end" (see https://github.com/microsoft/vscode/issues/132162)
+	const needsWordBoundaries = (/^[\w ]+$/.test(str));
+	return (needsWordBoundaries ? `\\b${escaped}\\b` : escaped);
 }
 
 export class LanguageAgnosticBracketTokens {

@@ -2836,7 +2836,7 @@ export class SemanticTokensBuilder {
 }
 
 export class SemanticTokens {
-	readonly resultId?: string;
+	readonly resultId: string | undefined;
 	readonly data: Uint32Array;
 
 	constructor(data: Uint32Array, resultId?: string) {
@@ -2848,7 +2848,7 @@ export class SemanticTokens {
 export class SemanticTokensEdit {
 	readonly start: number;
 	readonly deleteCount: number;
-	readonly data?: Uint32Array;
+	readonly data: Uint32Array | undefined;
 
 	constructor(start: number, deleteCount: number, data?: Uint32Array) {
 		this.start = start;
@@ -2858,7 +2858,7 @@ export class SemanticTokensEdit {
 }
 
 export class SemanticTokensEdits {
-	readonly resultId?: string;
+	readonly resultId: string | undefined;
 	readonly edits: SemanticTokensEdit[];
 
 	constructor(edits: SemanticTokensEdit[], resultId?: string) {
@@ -3328,9 +3328,9 @@ export enum TestRunProfileKind {
 @es5ClassCompat
 export class TestRunRequest implements vscode.TestRunRequest {
 	constructor(
-		public readonly include?: vscode.TestItem[],
-		public readonly exclude?: vscode.TestItem[] | undefined,
-		public readonly profile?: vscode.TestRunProfile,
+		public readonly include: vscode.TestItem[] | undefined = undefined,
+		public readonly exclude: vscode.TestItem[] | undefined = undefined,
+		public readonly profile: vscode.TestRunProfile | undefined = undefined,
 	) { }
 }
 

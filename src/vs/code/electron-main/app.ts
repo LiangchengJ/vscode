@@ -47,7 +47,7 @@ import { ExtensionUrlTrustService } from 'vs/platform/extensionManagement/node/e
 import { IExternalTerminalMainService } from 'vs/platform/externalTerminal/common/externalTerminal';
 import { LinuxExternalTerminalService, MacExternalTerminalService, WindowsExternalTerminalService } from 'vs/platform/externalTerminal/node/externalTerminalService';
 import { IFileService } from 'vs/platform/files/common/files';
-import { DiskFileSystemProviderChannel } from 'vs/platform/files/electron-main/diskFileSystemProviderChannel';
+import { DiskFileSystemProviderChannel } from 'vs/platform/files/electron-main/diskFileSystemProviderIpc';
 import { DiskFileSystemProvider } from 'vs/platform/files/node/diskFileSystemProvider';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -564,11 +564,13 @@ export class CodeApplication extends Disposable {
 		// Local Files
 		const diskFileSystemProvider = this.fileService.getProvider(Schemas.file);
 		assertType(diskFileSystemProvider instanceof DiskFileSystemProvider);
-		const fileSystemProviderChannel = new DiskFileSystemProviderChannel(diskFileSystemProvider);
-		mainProcessElectronServer.registerChannel('localFiles', fileSystemProviderChannel);
+		const fileSystemProviderChannel = new DiskFileSystemProviderChannel(diskFileSystemProvider, this.logService);
+		mainProcessElectronServer.registerChannel('localFilesystem', fileSystemProviderChannel);
 
-		// Configuration
-		mainProcessElectronServer.registerChannel(UserConfigurationFileServiceId, ProxyChannel.fromService(new UserConfigurationFileService(this.environmentMainService, this.fileService, this.logService)));
+		// User Configuration File
+		const userConfigurationFileService = new UserConfigurationFileService(this.environmentMainService, this.fileService, this.logService);
+		mainProcessElectronServer.registerChannel(UserConfigurationFileServiceId, ProxyChannel.fromService(userConfigurationFileService));
+		sharedProcessClient.then(client => client.registerChannel(UserConfigurationFileServiceId, ProxyChannel.fromService(userConfigurationFileService)));
 
 		// Update
 		const updateChannel = new UpdateChannel(accessor.get(IUpdateService));
