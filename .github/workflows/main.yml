@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      APP_IMAGE_NAME: VSCode-linux-x64.AppImage
 
     strategy:
       matrix:
@@ -72,16 +71,17 @@ jobs:
       - name: Build and Package xz
         run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-min
-          bash -c "cd .. && tar -cvJf VSCode-linux-${{ matrix.arch }}.tar.xz VSCode-linux-${{ matrix.arch }}"
-          mv ../VSCode-linux-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }}"
+          bash -c "cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }}"
+          mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
       - name: Build and Package rpm and deb
         if: ${{ matrix.arch != 'ia32' }}
         run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
-          mv .build/linux/rpm/*/*.rpm VSCode-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
           yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
-          cp .build/linux/deb/*/deb/*.deb VSCode-linux-${{ matrix.arch }}.deb
+          cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
 
       - name: Package AppImage for arch x64
         if: ${{ matrix.arch == 'x64' }}
@@ -95,38 +95,38 @@ jobs:
           mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
           wget -c https://github.com/$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)
           chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
-          mv out/*.AppImage ${{ env.APP_IMAGE_NAME }} && chmod +x ${{ env.APP_IMAGE_NAME }}
+          mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
 
       - name: Generate SHA512 checksum file for xz
         run: |
-          sha512sum VSCode-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
+          sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
 
       - name: Generate SHA512 checksum file for rpm and deb
         if: ${{ matrix.arch != 'ia32' }}
         run: |
-          sha512sum VSCode-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
-          sha512sum VSCode-linux-${{ matrix.arch }}.deb | awk '{print $1}' > VSCode-linux-${{ matrix.arch }}.deb.sha512
+          sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.deb.sha512
 
       - name: Generate SHA512 checksum file for AppImage
         if: ${{ matrix.arch == 'x64' }}
         run: |
-          sha512sum ${{ env.APP_IMAGE_NAME }} | awk '{print $1}' > ${{ env.APP_IMAGE_NAME }}.sha512
+          sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part6
-          tag_name: dev_test_part6
+          name: dev_test_part7
+          tag_name: dev_test_part7
           prerelease: true
           files: |
-            VSCode-linux-${{ matrix.arch }}.tar.xz
-            VSCode-linux-${{ matrix.arch }}.tar.xz.sha512
-            VSCode-linux-${{ matrix.arch }}*.rpm
-            VSCode-linux-${{ matrix.arch }}*.rpm.sha512
-            VSCode-linux-*.deb
-            VSCode-linux-*.deb.sha512
-            ${{ env.APP_IMAGE_NAME }}
-            ${{ env.APP_IMAGE_NAME }}.sha512
+            CodeOSS-linux-${{ matrix.arch }}.tar.xz
+            CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-linux-${{ matrix.arch }}*.rpm
+            CodeOSS-linux-${{ matrix.arch }}*.rpm.sha512
+            CodeOSS-linux-*.deb
+            CodeOSS-linux-*.deb.sha512
+            CodeOSS-linux-${{ matrix.arch }}.AppImage
+            CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
 
 
   darwin:
@@ -180,10 +180,11 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
-          bash -c "cd .. && tar -cvJf VSCode-darwin-${{ matrix.arch }}.tar.xz VSCode-darwin-${{ matrix.arch }}"
-          mv ../VSCode-darwin-${{ matrix.arch }}.tar.xz .
-          bash -c "cd .. && zip -r -9 -o VSCode-darwin-${{ matrix.arch }}.zip VSCode-darwin-${{ matrix.arch }}"
-          mv ../VSCode-darwin-${{ matrix.arch }}.zip .
+          bash -c "cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }}"
+          bash -c "cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }}"
+          mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && zip -r -9 -o CodeOSS-darwin-${{ matrix.arch }}.zip CodeOSS-darwin-${{ matrix.arch }}"
+          mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
 
       # - name: Package DMG for arch x64
       #   if: ${{ matrix.arch == 'x64' }}
@@ -196,8 +197,8 @@ jobs:
       - name: Generate SHA512 checksum file
         run: |
           npm install -g checksum
-          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
-          checksum -a sha512 VSCode-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > VSCode-darwin-${{ matrix.arch }}.zip.sha512
+          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
+          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
 
       # - name: Generate SHA512 checksum file for DMG
       #   if: ${{ matrix.arch == 'x64' }}
@@ -207,14 +208,14 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part6
-          tag_name: dev_test_part6
+          name: dev_test_part7
+          tag_name: dev_test_part7
           prerelease: true
           files: |
-            VSCode-darwin-${{ matrix.arch }}.tar.xz
-            VSCode-darwin-${{ matrix.arch }}.tar.xz.sha512
-            VSCode-darwin-${{ matrix.arch }}.zip
-            VSCode-darwin-${{ matrix.arch }}.zip.sha512
+            CodeOSS-darwin-${{ matrix.arch }}.tar.xz
+            CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-darwin-${{ matrix.arch }}.zip
+            CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
             # VSCode-darwin-${{ matrix.arch }}.dmg
             # VSCode-darwin-${{ matrix.arch }}.dmg.sha512
 
@@ -285,37 +286,38 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-win32-${{ matrix.arch }}-min
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd .. && tar -cvJf VSCode-win32-${{ matrix.arch }}.tar.xz VSCode-win32-${{ matrix.arch }}"'
-          mv ..\VSCode-win32-${{ matrix.arch }}.tar.xz .
-          cmd.exe /c 'cd .. && 7z a VSCode-win32-${{ matrix.arch }}.zip VSCode-win32-${{ matrix.arch }} -r -mx9'
-          mv ..\VSCode-win32-${{ matrix.arch }}.zip .
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }}"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }}"'
+          mv ..\CodeOSS-win32-${{ matrix.arch }}.tar.xz .
+          cmd.exe /c 'cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9'
+          mv ..\CodeOSS-win32-${{ matrix.arch }}.zip .
           yarn gulp vscode-win32-${{ matrix.arch }}-code-helper
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
           curl -o resources\win32\code.ico https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
           yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
-          mv .build\win32-${{ matrix.arch }}\user-setup\VSCodeSetup.exe VSCodeUserSetup-win32-${{ matrix.arch }}.exe
+          mv .build\win32-${{ matrix.arch }}\user-setup\VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
-          mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
+          mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
 
       - name: Generate SHA512 checksum file
         run: |
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.tar.xz | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.tar.xz.sha512"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCode-win32-${{ matrix.arch }}.zip | awk ''{print $1}'' > VSCode-win32-${{ matrix.arch }}.zip.sha512"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeUserSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512"'
-          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum VSCodeSystemSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum CodeOSS-win32-${{ matrix.arch }}.tar.xz | awk ''{print $1}'' > CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum CodeOSS-win32-${{ matrix.arch }}.zip | awk ''{print $1}'' > CodeOSS-win32-${{ matrix.arch }}.zip.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum CodeOSSUserSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512"'
+          cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "sha512sum CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe | awk ''{print $1}'' > CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512"'
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part6
-          tag_name: dev_test_part6
+          name: dev_test_part7
+          tag_name: dev_test_part7
           prerelease: true
           files: |
-            VSCode-win32-${{ matrix.arch }}.tar.xz
-            VSCode-win32-${{ matrix.arch }}.tar.xz.sha512
-            VSCode-win32-${{ matrix.arch }}.zip
-            VSCode-win32-${{ matrix.arch }}.zip.sha512
-            VSCodeUserSetup-win32-${{ matrix.arch }}.exe
-            VSCodeUserSetup-win32-${{ matrix.arch }}.exe.sha512
-            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe
-            VSCodeSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-win32-${{ matrix.arch }}.zip
+            CodeOSS-win32-${{ matrix.arch }}.zip.sha512
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
