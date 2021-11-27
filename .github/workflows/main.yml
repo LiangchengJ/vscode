@@ -87,16 +87,14 @@ jobs:
       - name: Package AppImage for arch x64
         if: ${{ matrix.arch == 'x64' }}
         run: |
-          #!/usr/bin/env bash
-
-          curl -fsSL https://deno.land/x/install/install.sh | sh && \
+          curl -fsSL https://deno.land/x/install/install.sh | sh
           export DENO_INSTALL="/home/$(whoami)/.deno" && export PATH="$DENO_INSTALL/bin:$PATH"
 
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-          (deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > fserv.log 2>&1 &) && \
-          sleep 20 && (netstat -tlnp | grep 4507) && cat fserv.log
+          deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > dfserv.log 2>&1 &
+          sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
 
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
@@ -107,30 +105,30 @@ jobs:
 
           chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
           mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
-        shell: echo {0} > /tmp/bash.sh && bash /tmp/bash.sh
 
       - name: Generate SHA512 checksum files
         run: |
-          #!/usr/bin/env bash
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+          fi
 
-          [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ] && \
-          sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+          if [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}*\.rpm$")" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          fi
 
-          [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}*\.rpm$")" ] && \
-          (sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512)
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.deb.sha512
+          fi
 
-          [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ] && \
-          sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.deb.sha512
-
-          [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] && \
-          sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
-        shell: echo {0} > /tmp/bash.sh && bash /tmp/bash.sh
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+          fi
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part9
-          tag_name: dev_test_part9
+          name: dev_test_part10
+          tag_name: dev_test_part10
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -208,8 +206,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part9
-          tag_name: dev_test_part9
+          name: dev_test_part10
+          tag_name: dev_test_part10
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -313,8 +311,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part9
-          tag_name: dev_test_part9
+          name: dev_test_part10
+          tag_name: dev_test_part10
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
