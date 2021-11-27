@@ -107,7 +107,7 @@ jobs:
 
           chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
           mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
-        shell: bash {0}
+        shell: echo {0} > /tmp/bash.sh && bash /tmp/bash.sh
 
       - name: Generate SHA512 checksum files
         run: |
@@ -124,7 +124,7 @@ jobs:
 
           [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] && \
           sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
-        shell: bash {0}
+        shell: echo {0} > /tmp/bash.sh && bash /tmp/bash.sh
 
       - name: Release
         uses: softprops/action-gh-release@v1
