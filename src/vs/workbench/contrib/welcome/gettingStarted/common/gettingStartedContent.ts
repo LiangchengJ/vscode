@@ -7,10 +7,10 @@ import 'vs/workbench/contrib/welcome/gettingStarted/common/media/example_markdow
 import 'vs/workbench/contrib/welcome/gettingStarted/common/media/notebookProfile';
 import { localize } from 'vs/nls';
 import { Codicon } from 'vs/base/common/codicons';
+import product from 'vs/platform/product/common/product';
 import { ThemeIcon } from 'vs/platform/theme/common/themeService';
 import { registerIcon } from 'vs/platform/theme/common/iconRegistry';
 import { OpenGettingStarted } from 'vs/workbench/contrib/notebook/common/notebookCommon';
-import product from 'vs/platform/product/common/product';
 
 
 const setupIcon = registerIcon('getting-started-setup', Codicon.zap, localize('getting-started-setup-icon', "Icon used for the setup category of welcome page"));
@@ -160,8 +160,8 @@ const Button = (title: string, href: string) => `[${title}](${href})`;
 export const walkthroughs: GettingStartedWalkthroughContent = [
 	{
 		id: 'Setup',
-		title: localize('gettingStarted.setup.title', `Get Started with ${product.nameLong}`),
-		description: localize('gettingStarted.setup.description', `Discover the best customizations to make ${product.nameLong} yours.`),
+		title: localize('gettingStarted.setup.title', "Get Started with {0}", product.nameLong),
+		description: localize('gettingStarted.setup.description', "Discover the best customizations to make {0} yours.", product.nameLong),
 		isFeatured: true,
 		icon: setupIcon,
 		when: '!isWeb',
@@ -182,7 +182,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'settingsSync',
 					title: localize('gettingStarted.settingsSync.title', "Sync to and from other devices"),
-					description: localize('gettingStarted.settingsSync.description.interpolated', `Keep your essential ${product.nameLong} customizations backed up and updated across all your devices.\n{0}`, Button(localize('enableSync', "Enable Settings Sync"), 'command:workbench.userDataSync.actions.turnOn')),
+					description: localize('gettingStarted.settingsSync.description.interpolated', "Keep your essential {1} customizations backed up and updated across all your devices.\n{0}", Button(localize('enableSync', "Enable Settings Sync"), 'command:workbench.userDataSync.actions.turnOn'), product.nameLong),
 					when: 'syncStatus != uninitialized',
 					completionEvents: ['onEvent:sync-enabled'],
 					media: {
@@ -192,13 +192,13 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'commandPaletteTask',
 					title: localize('gettingStarted.commandPalette.title', "One shortcut to access everything"),
-					description: localize('gettingStarted.commandPalette.description.interpolated', `Commands are the keyboard way to accomplish any task in ${product.nameLong}. **Practice** by looking up your frequent ones to save time.\n{0}\n__Try searching for 'view toggle'.__`, Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
+					description: localize('gettingStarted.commandPalette.description.interpolated', "Commands are the keyboard way to accomplish any task in {1}. **Practice** by looking up your frequent ones to save time.\n{0}\n__Try searching for 'view toggle'.__", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands'), product.nameLong),
 					media: { type: 'svg', altText: 'Command Palette overlay for searching and executing commands.', path: 'commandPalette.svg' },
 				},
 				{
 					id: 'extensionsWeb',
 					title: localize('gettingStarted.extensions.title', "Limitless extensibility"),
-					description: localize('gettingStarted.extensionsWeb.description.interpolated', `Extensions are ${product.nameLong}'s power-ups. A growing number are becoming available in the web.\n{0}`, Button(localize('browsePopular', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
+					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Extensions are {1}'s power-ups. A growing number are becoming available in the web.\n{0}", Button(localize('browsePopular', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions'), product.nameLong),
 					when: 'workspacePlatform == \'webworker\'',
 					media: {
 						type: 'svg', altText: `${product.nameLong} extension marketplace with featured language extensions`, path: 'extensions-web.svg'
@@ -216,7 +216,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'pickAFolderTask-Mac',
 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
-					description: localize('gettingStarted.setup.OpenFolder.description.interpolated', `You're all set to start coding. Open a project folder to get your files into ${product.nameLong}.\n{0}`, Button(localize('pickFolder', "Pick a Folder"), 'command:workbench.action.files.openFileFolder')),
+					description: localize('gettingStarted.setup.OpenFolder.description.interpolated', "You're all set to start coding. Open a project folder to get your files into {1}.\n{0}", Button(localize('pickFolder', "Pick a Folder"), 'command:workbench.action.files.openFileFolder'), product.nameLong),
 					when: 'isMac && workspaceFolderCount == 0',
 					media: {
 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'
@@ -225,7 +225,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'pickAFolderTask-Other',
 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
-					description: localize('gettingStarted.setup.OpenFolder.description.interpolated', `You're all set to start coding. Open a project folder to get your files into ${product.nameLong}.\n{0}`, Button(localize('pickFolder', "Pick a Folder"), 'command:workbench.action.files.openFolder')),
+					description: localize('gettingStarted.setup.OpenFolder.description.interpolated', "You're all set to start coding. Open a project folder to get your files into {1}.\n{0}", Button(localize('pickFolder', "Pick a Folder"), 'command:workbench.action.files.openFolder'), product.nameLong),
 					when: '!isMac && workspaceFolderCount == 0',
 					media: {
 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'
@@ -246,8 +246,8 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 
 	{
 		id: 'SetupWeb',
-		title: localize('gettingStarted.setupWeb.title', `Get Started with ${product.nameLong} in the Web`),
-		description: localize('gettingStarted.setupWeb.description', `Discover the best customizations to make ${product.nameLong} in the Web yours.`),
+		title: localize('gettingStarted.setupWeb.title', "Get Started with {0} in the Web", product.nameLong),
+		description: localize('gettingStarted.setupWeb.description', "Discover the best customizations to make {0} in the Web yours.", product.nameLong),
 		isFeatured: true,
 		icon: setupIcon,
 		when: 'isWeb',
@@ -268,7 +268,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'settingsSyncWeb',
 					title: localize('gettingStarted.settingsSync.title', "Sync to and from other devices"),
-					description: localize('gettingStarted.settingsSync.description.interpolated', `Keep your essential ${product.nameLong} customizations backed up and updated across all your devices.\n{0}`, Button(localize('enableSync', "Enable Settings Sync"), 'command:workbench.userDataSync.actions.turnOn')),
+					description: localize('gettingStarted.settingsSync.description.interpolated', "Keep your essential {1} customizations backed up and updated across all your devices.\n{0}", Button(localize('enableSync', "Enable Settings Sync"), 'command:workbench.userDataSync.actions.turnOn'), product.nameLong),
 					when: 'syncStatus != uninitialized',
 					completionEvents: ['onEvent:sync-enabled'],
 					media: {
@@ -278,7 +278,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'commandPaletteTaskWeb',
 					title: localize('gettingStarted.commandPalette.title', "One shortcut to access everything"),
-					description: localize('gettingStarted.commandPalette.description.interpolated', `Commands are the keyboard way to accomplish any task in ${product.nameLong}. **Practice** by looking up your frequent ones to save time.\n{0}\n__Try searching for 'view toggle'.__`, Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands')),
+					description: localize('gettingStarted.commandPalette.description.interpolated', "Commands are the keyboard way to accomplish any task in {1}. **Practice** by looking up your frequent ones to save time.\n{0}\n__Try searching for 'view toggle'.__", Button(localize('commandPalette', "Open Command Palette"), 'command:workbench.action.showCommands'), product.nameLong),
 					media: { type: 'svg', altText: 'Command Palette overlay for searching and executing commands.', path: 'commandPalette.svg' },
 				},
 				{
@@ -293,7 +293,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'extensionsWebWeb',
 					title: localize('gettingStarted.extensions.title', "Limitless extensibility"),
-					description: localize('gettingStarted.extensionsWeb.description.interpolated', `Extensions are ${product.nameLong}'s power-ups. A growing number are becoming available in the web.\n{0}`, Button(localize('browsePopular', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions')),
+					description: localize('gettingStarted.extensionsWeb.description.interpolated', "Extensions are {1}'s power-ups. A growing number are becoming available in the web.\n{0}", Button(localize('browsePopular', "Browse Popular Web Extensions"), 'command:workbench.extensions.action.showPopularExtensions'), product.nameLong),
 					when: 'workspacePlatform == \'webworker\'',
 					media: {
 						type: 'svg', altText: `${product.nameLong} extension marketplace with featured language extensions`, path: 'extensions-web.svg'
@@ -311,7 +311,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'pickAFolderTask-WebWeb',
 					title: localize('gettingStarted.setup.OpenFolder.title', "Open up your code"),
-					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', `You're all set to start coding. You can open a local project or a remote repository to get your files into ${product.nameLong}.\n{0}\n{1}`, Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository')),
+					description: localize('gettingStarted.setup.OpenFolderWeb.description.interpolated', "You're all set to start coding. You can open a local project or a remote repository to get your files into {2}.\n{0}\n{1}", Button(localize('openFolder', "Open Folder"), 'command:workbench.action.addRootFolder'), Button(localize('openRepository', "Open Repository"), 'command:remoteHub.openRepository'), product.nameLong),
 					when: 'workspaceFolderCount == 0',
 					media: {
 						type: 'svg', altText: 'Explorer view showing buttons for opening folder and cloning repository.', path: 'openFolder.svg'
@@ -336,7 +336,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 		icon: beginnerIcon,
 		isFeatured: true,
 		next: 'Intermediate',
-		description: localize('gettingStarted.beginner.description', `Jump right into ${product.nameLong} and get an overview of the must-have features.`),
+		description: localize('gettingStarted.beginner.description', "Jump right into {0} and get an overview of the must-have features.", product.nameLong),
 		content: {
 			type: 'steps',
 			steps: [
@@ -360,7 +360,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'extensions',
 					title: localize('gettingStarted.extensions.title', "Limitless extensibility"),
-					description: localize('gettingStarted.extensions.description.interpolated', `Extensions are ${product.nameLong}'s power-ups. They range from handy productivity hacks, expanding out-of-the-box features, to adding completely new capabilities.\n{0}`, Button(localize('browseRecommended', "Browse Recommended Extensions"), 'command:workbench.extensions.action.showRecommendedExtensions')),
+					description: localize('gettingStarted.extensions.description.interpolated', "Extensions are {1}'s power-ups. They range from handy productivity hacks, expanding out-of-the-box features, to adding completely new capabilities.\n{0}", Button(localize('browseRecommended', "Browse Recommended Extensions"), 'command:workbench.extensions.action.showRecommendedExtensions'), product.nameLong),
 					when: 'workspacePlatform != \'webworker\'',
 					media: {
 						type: 'svg', altText: `${product.nameLong} extension marketplace with featured language extensions`, path: 'extensions.svg'
@@ -369,7 +369,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'settings',
 					title: localize('gettingStarted.settings.title', "Tune your settings"),
-					description: localize('gettingStarted.settings.description.interpolated', `Tweak every aspect of ${product.nameLong} and your extensions to your liking. Commonly used settings are listed first to get you started.\n{0}`, Button(localize('tweakSettings', "Tweak my Settings"), 'command:toSide:workbench.action.openSettings')),
+					description: localize('gettingStarted.settings.description.interpolated', "Tweak every aspect of {1} and your extensions to your liking. Commonly used settings are listed first to get you started.\n{0}", Button(localize('tweakSettings', "Tweak my Settings"), 'command:toSide:workbench.action.openSettings'), product.nameLong),
 					media: {
 						type: 'svg', altText: `${product.nameLong} Settings`, path: 'settings.svg'
 					},
@@ -386,7 +386,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 				{
 					id: 'videoTutorial',
 					title: localize('gettingStarted.videoTutorial.title', "Lean back and learn"),
-					description: localize('gettingStarted.videoTutorial.description.interpolated', `Watch the first in a series of short & practical video tutorials for ${product.nameLong}'s key features.\n{0}`, Button(localize('watch', "Watch Tutorial"), 'https://aka.ms/vscode-getting-started-video')),
+					description: localize('gettingStarted.videoTutorial.description.interpolated', "Watch the first in a series of short & practical video tutorials for {1}'s key features.\n{0}", Button(localize('watch', "Watch Tutorial"), 'https://aka.ms/vscode-getting-started-video'), product.nameLong),
 					media: { type: 'svg', altText: `${product.nameLong} Settings`, path: 'learn.svg' },
 				}
 			]
