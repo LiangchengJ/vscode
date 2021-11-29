@@ -112,7 +112,7 @@ jobs:
               sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
           fi
 
-          if [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}*\.rpm$")" ] ; then
+          if [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}.*\.rpm$")" ] ; then
               sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
           fi
 
