@@ -4530,7 +4530,7 @@ export const EditorOptions = {
 		5, 1, 300
 	)),
 	linkedEditing: register(new EditorBooleanOption(
-		EditorOption.linkedEditing, 'linkedEditing', false,
+		EditorOption.linkedEditing, 'linkedEditing', true,
 		{ description: nls.localize('linkedEditing', "Controls whether the editor has linked editing enabled. Depending on the language, related symbols, e.g. HTML tags, are updated while editing.") }
 	)),
 	links: register(new EditorBooleanOption(
