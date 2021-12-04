@@ -394,14 +394,14 @@ class WindowIndicator implements IWindowIndicator {
 
 		// Repo
 		if (repositoryName && repositoryOwner) {
-			this.label = localize('playgroundLabelRepository', "$(remote) Visual Studio Code Playground: {0}/{1}", repositoryOwner, repositoryName);
-			this.tooltip = localize('playgroundRepositoryTooltip', "Visual Studio Code Playground: {0}/{1}", repositoryOwner, repositoryName);
+			this.label = localize('playgroundLabelRepository', "$(remote) {2} Playground: {0}/{1}", repositoryOwner, repositoryName, product.nameLong);
+			this.tooltip = localize('playgroundRepositoryTooltip', "{2} Playground: {0}/{1}", repositoryOwner, repositoryName, product.nameLong);
 		}
 
 		// No Repo
 		else {
-			this.label = localize('playgroundLabel', "$(remote) Visual Studio Code Playground");
-			this.tooltip = localize('playgroundTooltip', "Visual Studio Code Playground");
+			this.label = localize('playgroundLabel', "$(remote) {0} Playground", product.nameLong);
+			this.tooltip = localize('playgroundTooltip', "{0} Playground", product.nameLong);
 		}
 	}
 }
