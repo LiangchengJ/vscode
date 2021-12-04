@@ -212,7 +212,6 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			const activePanel = this.getActivePaneComposite();
 			const isActive =
 				activePanel?.getId() === panel.id ||
-				(!activePanel && this.getLastActivePaneCompositeId() === panel.id) ||
 				(this.extensionsRegistered && this.compositeBar.getVisibleComposites().length === 0);
 
 			if (isActive || !this.shouldBeHidden(panel.id, cachedPanel)) {
@@ -269,7 +268,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 
 		if (activeContainers.length) {
 			if (this.getActivePaneComposite()?.getId() === panelId) {
-				const defaultPanelId = this.viewDescriptorService.getDefaultViewContainer(this.viewContainerLocation)!.id;
+				const defaultPanelId = this.viewDescriptorService.getDefaultViewContainer(this.viewContainerLocation)?.id;
 				const containerToOpen = activeContainers.filter(c => c.id === defaultPanelId)[0] || activeContainers[0];
 				await this.openPaneComposite(containerToOpen.id);
 			}
@@ -398,7 +397,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			const viewContainer = this.getViewContainer(panelDescriptor.id);
 			if (viewContainer?.hideIfEmpty) {
 				const viewContainerModel = this.viewDescriptorService.getViewContainerModel(viewContainer);
-				if (viewContainerModel.activeViewDescriptors.length === 0 && this.compositeBar.getPinnedComposites().length > 1) {
+				if (viewContainerModel.activeViewDescriptors.length === 0) {
 					this.hideComposite(panelDescriptor.id); // Update the composite bar by hiding
 				}
 			}
