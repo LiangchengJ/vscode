@@ -9,7 +9,7 @@
 const outputFileName = "product.json";
 
 const product = require(`../${outputFileName}`);
-const vsProduct = require("../vs-product.json");
+const vsProduct = require(`../vs-${outputFileName}`);
 
 /**
  * @param {string} name
@@ -22,7 +22,14 @@ product["nameShort"] = replaceName(product["nameShort"]);
 product["nameLong"] = replaceName(product["nameLong"]);
 product["applicationName"] = replaceName(product["applicationName"]);
 product["win32MutexName"] = "codeoss";
+product["win32DirName"] = vsProduct["win32DirName"];
 // product["win32RegValueName"] = vsProduct["win32RegValueName"];
+product["win32AppId"] = vsProduct["win32AppId"];
+product["win32x64AppId"] = vsProduct["win32x64AppId"];
+product["win32arm64AppId"] = vsProduct["win32arm64AppId"];
+product["win32UserAppId"] = vsProduct["win32UserAppId"];
+product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
+product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
 product["win32ShellNameShort"] = replaceName(product["win32ShellNameShort"]);
 product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
 product["darwinExecutable"] = "CodeOSS";
