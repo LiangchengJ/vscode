@@ -16,6 +16,9 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SPLIT_LINE: =============================
+      VS_ZIP_FNAME: VSCode-darwin-universal.zip
+      VS_ZIP_HASH: ccbaa2d27e38e5afa3e5c21c1c7bef4657064247
+      VS_ZIP_URL: https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}
 
     strategy:
       matrix:
@@ -67,7 +70,12 @@ jobs:
         run: yarn --frozen-lockfile --network-timeout 180000
 
       - name: Update Configurations
-        run: node ./.github/updateProduct.js
+        run: |
+          curl -L -O ${{ env.VS_ZIP_URL }}
+          unzip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+        shell: bash
 
       - name: Build and Package xz
         run: |
@@ -100,6 +108,9 @@ jobs:
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
           mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
+          export APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo $APPLICATION_NAME
+          export LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo $LINUX_ICON_NAME
+
           URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
           wget -c "https://github.com/${URI}"
 
@@ -127,8 +138,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part10
-          tag_name: dev_test_part10
+          name: dev_test_part11
+          tag_name: dev_test_part11
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -145,6 +156,9 @@ jobs:
     runs-on: macos-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VS_ZIP_FNAME: VSCode-darwin-universal.zip
+      VS_ZIP_HASH: ccbaa2d27e38e5afa3e5c21c1c7bef4657064247
+      VS_ZIP_URL: https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}
 
     strategy:
       matrix:
@@ -186,7 +200,12 @@ jobs:
         run: yarn --frozen-lockfile --network-timeout 180000
 
       - name: Update Configurations
-        run: node ./.github/updateProduct.js
+        run: |
+          curl -L -O ${{ env.VS_ZIP_URL }}
+          unzip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+        shell: bash
 
       - name: Build and Package
         run: |
@@ -206,8 +225,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part10
-          tag_name: dev_test_part10
+          name: dev_test_part11
+          tag_name: dev_test_part11
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -223,6 +242,9 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
       CSH_BEG: cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "
+      VS_ZIP_FNAME: VSCode-darwin-universal.zip
+      VS_ZIP_HASH: ccbaa2d27e38e5afa3e5c21c1c7bef4657064247
+      VS_ZIP_URL: https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}
 
     strategy:
       matrix:
@@ -278,8 +300,12 @@ jobs:
 
       - name: Update Configurations
         run: |
-          node .\.github\updateProduct.js
-          node .\.github\updateWin32VisualElementsManifest.js
+          curl -L -O ${{ env.VS_ZIP_URL }}
+          unzip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build and Package
         run: |
@@ -311,8 +337,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part10
-          tag_name: dev_test_part10
+          name: dev_test_part11
+          tag_name: dev_test_part11
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
