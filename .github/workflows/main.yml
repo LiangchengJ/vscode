@@ -70,7 +70,7 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export $VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
+          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
           curl -L -O $VS_ZIP_URL
           unzip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -200,7 +200,7 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export $VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
+          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
           curl -L -O $VS_ZIP_URL
           unzip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -299,7 +299,7 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export $VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
+          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
           curl -L -O $VS_ZIP_URL
           unzip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
