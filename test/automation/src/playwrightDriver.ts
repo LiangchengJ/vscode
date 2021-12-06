@@ -8,9 +8,10 @@ import { ChildProcess, spawn } from 'child_process';
 import { join } from 'path';
 import { mkdir } from 'fs';
 import { promisify } from 'util';
-import { IDriver, IDisposable } from './driver';
+import { IDriver, IDisposable, IWindowDriver } from './driver';
 import { URI } from 'vscode-uri';
 import * as kill from 'tree-kill';
+import { PageFunction } from 'playwright-core/types/structs';
 
 const width = 1200;
 const height = 800;
@@ -34,84 +35,179 @@ const vscodeToPlaywrightKey: { [key: string]: string } = {
 
 let traceCounter = 1;
 
-function buildDriver(browser: playwright.Browser, context: playwright.BrowserContext, page: playwright.Page): IDriver {
-	const driver: IDriver = {
-		_serviceBrand: undefined,
-		getWindowIds: () => {
-			return Promise.resolve([1]);
-		},
-		capturePage: () => Promise.resolve(''),
-		reloadWindow: (windowId) => Promise.resolve(),
-		exitApplication: async () => {
-			try {
-				await context.tracing.stop({ path: join(logsPath, `playwright-trace-${traceCounter++}.zip`) });
-			} catch (error) {
-				console.warn(`Failed to stop playwright tracing.`); // do not fail the build when this fails
+class PlaywrightDriver implements IDriver {
+
+	_serviceBrand: undefined;
+
+	constructor(
+		private readonly server: ChildProcess,
+		private readonly browser: playwright.Browser,
+		private readonly context: playwright.BrowserContext,
+		readonly page: playwright.Page
+	) {
+	}
+
+	async getWindowIds() {
+		return [1];
+	}
+
+	async capturePage() {
+		return '';
+	}
+
+	async reloadWindow(windowId: number) {
+		throw new Error('Unsupported');
+	}
+
+	async exitApplication() {
+		try {
+			await this.warnAfter(this.context.tracing.stop({ path: join(logsPath, `playwright-trace-${traceCounter++}.zip`) }), 5000, 'Stopping playwright trace took >5seconds');
+		} catch (error) {
+			console.warn(`Failed to stop playwright tracing: ${error}`);
+		}
+
+		try {
+			await this.warnAfter(this.browser.close(), 5000, 'Closing playwright browser took >5seconds');
+		} catch (error) {
+			console.warn(`Failed to close browser: ${error}`);
+		}
+
+		await this.warnAfter(teardown(this.server), 5000, 'Tearing down server took >5seconds');
+
+		return false;
+	}
+
+	private async warnAfter(promise: Promise<void>, delay: number, msg: string): Promise<void> {
+		const timeout = setTimeout(() => console.warn(msg), delay);
+
+		try {
+			await promise;
+		} finally {
+			clearTimeout(timeout);
+		}
+	}
+
+	async dispatchKeybinding(windowId: number, keybinding: string) {
+		const chords = keybinding.split(' ');
+		for (let i = 0; i < chords.length; i++) {
+			const chord = chords[i];
+			if (i > 0) {
+				await this.timeout(100);
 			}
-			await browser.close();
-			await teardown();
 
-			return false;
-		},
-		dispatchKeybinding: async (windowId, keybinding) => {
-			const chords = keybinding.split(' ');
-			for (let i = 0; i < chords.length; i++) {
-				const chord = chords[i];
-				if (i > 0) {
-					await timeout(100);
-				}
-				const keys = chord.split('+');
-				const keysDown: string[] = [];
-				for (let i = 0; i < keys.length; i++) {
-					if (keys[i] in vscodeToPlaywrightKey) {
-						keys[i] = vscodeToPlaywrightKey[keys[i]];
-					}
-					await page.keyboard.down(keys[i]);
-					keysDown.push(keys[i]);
-				}
-				while (keysDown.length > 0) {
-					await page.keyboard.up(keysDown.pop()!);
-				}
+			if (keybinding.startsWith('Alt') || keybinding.startsWith('Control') || keybinding.startsWith('Backspace')) {
+				await this.page.keyboard.press(keybinding);
+				return;
 			}
 
-			await timeout(100);
-		},
-		click: async (windowId, selector, xoffset, yoffset) => {
-			const { x, y } = await driver.getElementXY(windowId, selector, xoffset, yoffset);
-			await page.mouse.click(x + (xoffset ? xoffset : 0), y + (yoffset ? yoffset : 0));
-		},
-		doubleClick: async (windowId, selector) => {
-			await driver.click(windowId, selector, 0, 0);
-			await timeout(60);
-			await driver.click(windowId, selector, 0, 0);
-			await timeout(100);
-		},
-		setValue: async (windowId, selector, text) => page.evaluate(`window.driver.setValue('${selector}', '${text}')`).then(undefined),
-		getTitle: (windowId) => page.evaluate(`window.driver.getTitle()`),
-		isActiveElement: (windowId, selector) => page.evaluate(`window.driver.isActiveElement('${selector}')`),
-		getElements: (windowId, selector, recursive) => page.evaluate(`window.driver.getElements('${selector}', ${recursive})`),
-		getElementXY: (windowId, selector, xoffset?, yoffset?) => page.evaluate(`window.driver.getElementXY('${selector}', ${xoffset}, ${yoffset})`),
-		typeInEditor: (windowId, selector, text) => page.evaluate(`window.driver.typeInEditor('${selector}', '${text}')`),
-		getTerminalBuffer: (windowId, selector) => page.evaluate(`window.driver.getTerminalBuffer('${selector}')`),
-		writeInTerminal: (windowId, selector, text) => page.evaluate(`window.driver.writeInTerminal('${selector}', '${text}')`),
-		getLocaleInfo: (windowId) => page.evaluate(`window.driver.getLocaleInfo()`),
-		getLocalizedStrings: (windowId) => page.evaluate(`window.driver.getLocalizedStrings()`)
-	};
-	return driver;
-}
+			const keys = chord.split('+');
+			const keysDown: string[] = [];
+			for (let i = 0; i < keys.length; i++) {
+				if (keys[i] in vscodeToPlaywrightKey) {
+					keys[i] = vscodeToPlaywrightKey[keys[i]];
+				}
+				await this.page.keyboard.down(keys[i]);
+				keysDown.push(keys[i]);
+			}
+			while (keysDown.length > 0) {
+				await this.page.keyboard.up(keysDown.pop()!);
+			}
+		}
 
-function timeout(ms: number): Promise<void> {
-	return new Promise<void>(r => setTimeout(r, ms));
+		await this.timeout(100);
+	}
+
+	async click(windowId: number, selector: string, xoffset?: number | undefined, yoffset?: number | undefined) {
+		const { x, y } = await this.getElementXY(windowId, selector, xoffset, yoffset);
+		await this.page.mouse.click(x + (xoffset ? xoffset : 0), y + (yoffset ? yoffset : 0));
+	}
+
+	async doubleClick(windowId: number, selector: string) {
+		await this.click(windowId, selector, 0, 0);
+		await this.timeout(60);
+		await this.click(windowId, selector, 0, 0);
+		await this.timeout(100);
+	}
+
+	async setValue(windowId: number, selector: string, text: string) {
+		return this.page.evaluate(([driver, selector, text]) => driver.setValue(selector, text), [await this._getDriverHandle(), selector, text] as const);
+	}
+
+	async getTitle(windowId: number) {
+		return this._evaluateWithDriver(([driver]) => driver.getTitle());
+	}
+
+	async isActiveElement(windowId: number, selector: string) {
+		return this.page.evaluate(([driver, selector]) => driver.isActiveElement(selector), [await this._getDriverHandle(), selector] as const);
+	}
+
+	async getElements(windowId: number, selector: string, recursive: boolean = false) {
+		return this.page.evaluate(([driver, selector, recursive]) => driver.getElements(selector, recursive), [await this._getDriverHandle(), selector, recursive] as const);
+	}
+
+	async getElementXY(windowId: number, selector: string, xoffset?: number, yoffset?: number) {
+		return this.page.evaluate(([driver, selector, xoffset, yoffset]) => driver.getElementXY(selector, xoffset, yoffset), [await this._getDriverHandle(), selector, xoffset, yoffset] as const);
+	}
+
+	async typeInEditor(windowId: number, selector: string, text: string) {
+		return this.page.evaluate(([driver, selector, text]) => driver.typeInEditor(selector, text), [await this._getDriverHandle(), selector, text] as const);
+	}
+
+	async getTerminalBuffer(windowId: number, selector: string) {
+		return this.page.evaluate(([driver, selector]) => driver.getTerminalBuffer(selector), [await this._getDriverHandle(), selector] as const);
+	}
+
+	async writeInTerminal(windowId: number, selector: string, text: string) {
+		return this.page.evaluate(([driver, selector, text]) => driver.writeInTerminal(selector, text), [await this._getDriverHandle(), selector, text] as const);
+	}
+
+	async getLocaleInfo(windowId: number) {
+		return this._evaluateWithDriver(([driver]) => driver.getLocaleInfo());
+	}
+
+	async getLocalizedStrings(windowId: number) {
+		return this._evaluateWithDriver(([driver]) => driver.getLocalizedStrings());
+	}
+
+	private async _evaluateWithDriver<T>(pageFunction: PageFunction<playwright.JSHandle<IWindowDriver>[], T>) {
+		return this.page.evaluate(pageFunction, [await this._getDriverHandle()]);
+	}
+
+	private timeout(ms: number): Promise<void> {
+		return new Promise<void>(resolve => setTimeout(resolve, ms));
+	}
+
+	// TODO: Cache
+	private async _getDriverHandle(): Promise<playwright.JSHandle<IWindowDriver>> {
+		return this.page.evaluateHandle('window.driver');
+	}
 }
 
 let port = 9000;
-let server: ChildProcess | undefined;
-let endpoint: string | undefined;
-let workspacePath: string | undefined;
 
-export async function launch(userDataDir: string, _workspacePath: string, codeServerPath = process.env.VSCODE_REMOTE_SERVER_PATH, extPath: string, verbose: boolean): Promise<void> {
-	workspacePath = _workspacePath;
+export interface PlaywrightOptions {
+	readonly browser?: 'chromium' | 'webkit' | 'firefox';
+	readonly headless?: boolean;
+}
 
+export async function launch(codeServerPath = process.env.VSCODE_REMOTE_SERVER_PATH, userDataDir: string, extensionsPath: string, workspacePath: string, verbose: boolean, options: PlaywrightOptions = {}): Promise<{ serverProcess: ChildProcess, client: IDisposable, driver: IDriver }> {
+
+	// Launch server
+	const { serverProcess, endpoint } = await launchServer(userDataDir, codeServerPath, extensionsPath, verbose);
+
+	// Launch browser
+	const { browser, context, page } = await launchBrowser(options, endpoint, workspacePath);
+
+	return {
+		serverProcess,
+		client: {
+			dispose: () => { /* there is no client to dispose for browser, teardown is triggered via exitApplication call */ }
+		},
+		driver: new PlaywrightDriver(serverProcess, browser, context, page)
+	};
+}
+
+async function launchServer(userDataDir: string, codeServerPath: string | undefined, extensionsPath: string, verbose: boolean) {
 	const agentFolder = userDataDir;
 	await promisify(mkdir)(agentFolder);
 	const env = {
@@ -120,7 +216,7 @@ export async function launch(userDataDir: string, _workspacePath: string, codeSe
 		...process.env
 	};
 
-	const args = ['--disable-telemetry', '--port', `${port++}`, '--browser', 'none', '--driver', 'web', '--extensions-dir', extPath];
+	const args = ['--disable-telemetry', '--port', `${port++}`, '--browser', 'none', '--driver', 'web', '--extensions-dir', extensionsPath];
 
 	let serverLocation: string | undefined;
 	if (codeServerPath) {
@@ -141,79 +237,89 @@ export async function launch(userDataDir: string, _workspacePath: string, codeSe
 		}
 	}
 
-	server = spawn(
+	const serverProcess = spawn(
 		serverLocation,
 		args,
 		{ env }
 	);
 
 	if (verbose) {
-		server.stderr?.on('data', error => console.log(`Server stderr: ${error}`));
-		server.stdout?.on('data', data => console.log(`Server stdout: ${data}`));
+		console.info(`*** Started server for browser smoke tests (pid: ${serverProcess.pid})`);
+		serverProcess.once('exit', (code, signal) => console.info(`*** Server for browser smoke tests terminated (pid: ${serverProcess.pid}, code: ${code}, signal: ${signal})`));
+
+		serverProcess.stderr?.on('data', error => console.log(`Server stderr: ${error}`));
+		serverProcess.stdout?.on('data', data => console.log(`Server stdout: ${data}`));
 	}
 
-	process.on('exit', teardown);
-	process.on('SIGINT', teardown);
-	process.on('SIGTERM', teardown);
+	process.on('exit', () => teardown(serverProcess));
+	process.on('SIGINT', () => teardown(serverProcess));
+	process.on('SIGTERM', () => teardown(serverProcess));
 
-	endpoint = await waitForEndpoint();
+	return {
+		serverProcess,
+		endpoint: await waitForEndpoint(serverProcess)
+	};
 }
 
-async function teardown(): Promise<void> {
-	if (server) {
-		try {
-			await new Promise<void>((c, e) => kill(server!.pid, err => err ? e(err) : c()));
-		} catch {
-			// noop
-		}
-
-		server = undefined;
-	}
-}
-
-function waitForEndpoint(): Promise<string> {
-	return new Promise<string>(r => {
-		server!.stdout?.on('data', (d: Buffer) => {
-			const matches = d.toString('ascii').match(/Web UI available at (.+)/);
-			if (matches !== null) {
-				r(matches[1]);
-			}
-		});
-	});
-}
-
-interface Options {
-	readonly browser?: 'chromium' | 'webkit' | 'firefox';
-	readonly headless?: boolean;
-}
-
-export async function connect(options: Options = {}): Promise<{ client: IDisposable, driver: IDriver }> {
+async function launchBrowser(options: PlaywrightOptions, endpoint: string, workspacePath: string) {
 	const browser = await playwright[options.browser ?? 'chromium'].launch({ headless: options.headless ?? false });
 	const context = await browser.newContext();
+
 	try {
 		await context.tracing.start({ screenshots: true, snapshots: true });
 	} catch (error) {
 		console.warn(`Failed to start playwright tracing.`); // do not fail the build when this fails
 	}
+
 	const page = await context.newPage();
 	await page.setViewportSize({ width, height });
-	page.on('pageerror', async error => console.error(`Playwright ERROR: page error: ${error}`));
+
+	page.on('pageerror', async (error) => console.error(`Playwright ERROR: page error: ${error}`));
 	page.on('crash', page => console.error('Playwright ERROR: page crash'));
-	page.on('response', async response => {
+	page.on('response', async (response) => {
 		if (response.status() >= 400) {
 			console.error(`Playwright ERROR: HTTP status ${response.status()} for ${response.url()}`);
 		}
 	});
+
 	const payloadParam = `[["enableProposedApi",""],["skipWelcome","true"]]`;
 	await page.goto(`${endpoint}&folder=vscode-remote://localhost:9888${URI.file(workspacePath!).path}&payload=${payloadParam}`);
 
-	return {
-		client: {
-			dispose: () => {
-				browser.close();
-				teardown();
+	return { browser, context, page };
+}
+
+async function teardown(server: ChildProcess): Promise<void> {
+	const serverPid = server.pid;
+	if (typeof serverPid !== 'number') {
+		return;
+	}
+
+	let retries = 0;
+	while (retries < 3) {
+		retries++;
+
+		try {
+			return await promisify(kill)(serverPid);
+		} catch (error) {
+			try {
+				process.kill(serverPid, 0); // throws an exception if the process doesn't exist anymore
+				console.warn(`Error tearing down server (pid: ${serverPid}, attempt: ${retries}): ${error}`);
+			} catch (error) {
+				return; // Expected when process is gone
 			}
-		},
-		driver: buildDriver(browser, context, page)
-	};
+		}
+	}
+
+	console.error(`Gave up tearing down server after ${retries} attempts...`);
+}
+
+function waitForEndpoint(server: ChildProcess): Promise<string> {
+	return new Promise<string>(resolve => {
+		server.stdout?.on('data', (d: Buffer) => {
+			const matches = d.toString('ascii').match(/Web UI available at (.+)/);
+			if (matches !== null) {
+				resolve(matches[1]);
+			}
+		});
+	});
 }

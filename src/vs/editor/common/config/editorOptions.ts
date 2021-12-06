@@ -12,6 +12,8 @@ import { USUAL_WORD_SEPARATORS } from 'vs/editor/common/model/wordHelper';
 import { AccessibilitySupport } from 'vs/platform/accessibility/common/accessibility';
 import { IConfigurationPropertySchema } from 'vs/platform/configuration/common/configurationRegistry';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
+import * as arrays from 'vs/base/common/arrays';
+import * as objects from 'vs/base/common/objects';
 
 //#region typed options
 
@@ -298,12 +300,10 @@ export interface IEditorOptions {
 	wrappingStrategy?: 'simple' | 'advanced';
 	/**
 	 * Configure word wrapping characters. A break will be introduced before these characters.
-	 * Defaults to '([{‘“〈《「『【〔（［｛｢£¥＄￡￥+＋'.
 	 */
 	wordWrapBreakBeforeCharacters?: string;
 	/**
 	 * Configure word wrapping characters. A break will be introduced after these characters.
-	 * Defaults to ' \t})]?|/&.,;¢°′″‰℃、。｡､￠，．：；？！％・･ゝゞヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻ｧｨｩｪｫｬｭｮｯｰ”〉》」』】〕）］｝｣'.
 	 */
 	wordWrapBreakAfterCharacters?: string;
 	/**
@@ -575,7 +575,7 @@ export interface IEditorOptions {
 	renderWhitespace?: 'none' | 'boundary' | 'selection' | 'trailing' | 'all';
 	/**
 	 * Enable rendering of control characters.
-	 * Defaults to false.
+	 * Defaults to true.
 	 */
 	renderControlCharacters?: boolean;
 	/**
@@ -642,6 +642,8 @@ export interface IEditorOptions {
 	 * Controls the behavior of editor guides.
 	*/
 	guides?: IGuidesOptions;
+
+	unicodeHighlight?: IUnicodeHighlightOptions;
 }
 
 /**
@@ -806,6 +808,11 @@ export interface IEditorOption<K1 extends EditorOption, V> {
 	 * @internal
 	 */
 	compute(env: IEnvironmentalOptions, options: IComputedEditorOptions, value: V): V;
+
+	/**
+	 * Might modify `value`.
+	*/
+	applyUpdate(value: V, update: V): ApplyUpdateResult<V>;
 }
 
 type PossibleKeyName0<V> = { [K in keyof IEditorOptions]: IEditorOptions[K] extends V | undefined ? K : never }[keyof IEditorOptions];
@@ -828,11 +835,43 @@ abstract class BaseEditorOption<K1 extends EditorOption, V> implements IEditorOp
 		this.schema = schema;
 	}
 
+	public applyUpdate(value: V, update: V): ApplyUpdateResult<V> {
+		return applyUpdate(value, update);
+	}
+
 	public abstract validate(input: any): V;
 
 	public compute(env: IEnvironmentalOptions, options: IComputedEditorOptions, value: V): V {
 		return value;
 	}
+}
+
+export class ApplyUpdateResult<T> {
+	constructor(
+		public readonly newValue: T,
+		public readonly didChange: boolean
+	) { }
+}
+
+function applyUpdate<T>(value: T, update: T): ApplyUpdateResult<T> {
+	if (typeof value !== 'object' || typeof update !== 'object' || !value || !update) {
+		return new ApplyUpdateResult(update, value !== update);
+	}
+	if (Array.isArray(value) || Array.isArray(update)) {
+		const arrayEquals = Array.isArray(value) && Array.isArray(update) && arrays.equals(value, update);
+		return new ApplyUpdateResult(update, arrayEquals);
+	}
+	let didChange = false;
+	for (let key in update) {
+		if ((update as T & object).hasOwnProperty(key)) {
+			const result = applyUpdate(value[key], update[key]);
+			if (result.didChange) {
+				value[key] = result.newValue;
+				didChange = true;
+			}
+		}
+	}
+	return new ApplyUpdateResult(value, didChange);
 }
 
 /**
@@ -851,6 +890,10 @@ abstract class ComputedEditorOption<K1 extends EditorOption, V> implements IEdit
 		this.name = '_never_';
 		this.defaultValue = <any>undefined;
 		this.deps = deps;
+	}
+
+	public applyUpdate(value: V, update: V): ApplyUpdateResult<V> {
+		return applyUpdate(value, update);
 	}
 
 	public validate(input: any): V {
@@ -872,6 +915,10 @@ class SimpleEditorOption<K1 extends EditorOption, V> implements IEditorOption<K1
 		this.name = name;
 		this.defaultValue = defaultValue;
 		this.schema = schema;
+	}
+
+	public applyUpdate(value: V, update: V): ApplyUpdateResult<V> {
+		return applyUpdate(value, update);
 	}
 
 	public validate(input: any): V {
@@ -1776,6 +1823,11 @@ export interface IEditorHoverOptions {
 	 * Defaults to true.
 	 */
 	sticky?: boolean;
+	/**
+	 * Should the hover be shown above the line if possible?
+	 * Defaults to false.
+	 */
+	above?: boolean;
 }
 
 /**
@@ -1789,7 +1841,8 @@ class EditorHover extends BaseEditorOption<EditorOption.hover, EditorHoverOption
 		const defaults: EditorHoverOptions = {
 			enabled: true,
 			delay: 300,
-			sticky: true
+			sticky: true,
+			above: true,
 		};
 		super(
 			EditorOption.hover, 'hover', defaults,
@@ -1809,6 +1862,11 @@ class EditorHover extends BaseEditorOption<EditorOption.hover, EditorHoverOption
 					default: defaults.sticky,
 					description: nls.localize('hover.sticky', "Controls whether the hover should remain visible when mouse is moved over it.")
 				},
+				'editor.hover.above': {
+					type: 'boolean',
+					default: defaults.above,
+					description: nls.localize('hover.above', "Prefer showing hovers above the line, if there's space.")
+				},
 			}
 		);
 	}
@@ -1821,7 +1879,8 @@ class EditorHover extends BaseEditorOption<EditorOption.hover, EditorHoverOption
 		return {
 			enabled: boolean(input.enabled, this.defaultValue.enabled),
 			delay: EditorIntOption.clampedInt(input.delay, this.defaultValue.delay, 0, 10000),
-			sticky: boolean(input.sticky, this.defaultValue.sticky)
+			sticky: boolean(input.sticky, this.defaultValue.sticky),
+			above: boolean(input.above, this.defaultValue.above),
 		};
 	}
 }
@@ -3235,6 +3294,144 @@ class EditorScrollbar extends BaseEditorOption<EditorOption.scrollbar, InternalE
 
 //#endregion
 
+//#region UnicodeHighlight
+
+export type InUntrustedWorkspace = 'inUntrustedWorkspace';
+
+/**
+ * @internal
+*/
+export const inUntrustedWorkspace: InUntrustedWorkspace = 'inUntrustedWorkspace';
+
+/**
+ * Configuration options for unicode highlighting.
+ */
+export interface IUnicodeHighlightOptions {
+	nonBasicASCII?: boolean | InUntrustedWorkspace;
+	invisibleCharacters?: boolean;
+	ambiguousCharacters?: boolean;
+	includeComments?: boolean | InUntrustedWorkspace;
+	/**
+	 * A map of allowed characters (true: allowed).
+	*/
+	allowedCharacters?: Record<string, true>;
+}
+
+/**
+ * @internal
+ */
+export type InternalUnicodeHighlightOptions = Required<Readonly<IUnicodeHighlightOptions>>;
+
+/**
+ * @internal
+ */
+export const unicodeHighlightConfigKeys = {
+	allowedCharacters: 'editor.unicodeHighlight.allowedCharacters',
+	invisibleCharacters: 'editor.unicodeHighlight.invisibleCharacters',
+	nonBasicASCII: 'editor.unicodeHighlight.nonBasicASCII',
+	ambiguousCharacters: 'editor.unicodeHighlight.ambiguousCharacters',
+	includeComments: 'editor.unicodeHighlight.includeComments',
+};
+
+class UnicodeHighlight extends BaseEditorOption<EditorOption.unicodeHighlighting, InternalUnicodeHighlightOptions> {
+	constructor() {
+		const defaults: InternalUnicodeHighlightOptions = {
+			nonBasicASCII: inUntrustedWorkspace,
+			invisibleCharacters: true,
+			ambiguousCharacters: true,
+			includeComments: inUntrustedWorkspace,
+			allowedCharacters: {},
+		};
+
+		super(
+			EditorOption.unicodeHighlighting, 'unicodeHighlight', defaults,
+			{
+				[unicodeHighlightConfigKeys.nonBasicASCII]: {
+					restricted: true,
+					type: ['boolean', 'string'],
+					enum: [true, false, inUntrustedWorkspace],
+					default: defaults.nonBasicASCII,
+					description: nls.localize('unicodeHighlight.nonBasicASCII', "Controls whether all non-basic ASCII characters are highlighted. Only characters between U+0020 and U+007E, tab, line-feed and carriage-return are considered basic ASCII.")
+				},
+				[unicodeHighlightConfigKeys.invisibleCharacters]: {
+					restricted: true,
+					type: 'boolean',
+					default: defaults.invisibleCharacters,
+					description: nls.localize('unicodeHighlight.invisibleCharacters', "Controls whether characters that just reserve space or have no width at all are highlighted.")
+				},
+				[unicodeHighlightConfigKeys.ambiguousCharacters]: {
+					restricted: true,
+					type: 'boolean',
+					default: defaults.ambiguousCharacters,
+					description: nls.localize('unicodeHighlight.ambiguousCharacters', "Controls whether characters are highlighted that can be confused with basic ASCII characters, except those that are common in the current user locale.")
+				},
+				[unicodeHighlightConfigKeys.includeComments]: {
+					restricted: true,
+					type: ['boolean', 'string'],
+					enum: [true, false, inUntrustedWorkspace],
+					default: defaults.includeComments,
+					description: nls.localize('unicodeHighlight.includeComments', "Controls whether characters in comments should also be subject to unicode highlighting.")
+				},
+				[unicodeHighlightConfigKeys.allowedCharacters]: {
+					restricted: true,
+					type: 'object',
+					default: defaults.allowedCharacters,
+					description: nls.localize('unicodeHighlight.allowedCharacters', "Defines allowed characters that are not being highlighted."),
+					additionalProperties: {
+						type: 'boolean'
+					}
+				},
+			}
+		);
+	}
+
+	public override applyUpdate(value: Required<Readonly<IUnicodeHighlightOptions>>, update: Required<Readonly<IUnicodeHighlightOptions>>): ApplyUpdateResult<Required<Readonly<IUnicodeHighlightOptions>>> {
+		let didChange = false;
+		if (update.allowedCharacters) {
+			// Treat allowedCharacters atomically
+			if (!objects.equals(value.allowedCharacters, update.allowedCharacters)) {
+				value = { ...value, allowedCharacters: update.allowedCharacters };
+				didChange = true;
+			}
+		}
+
+		const result = super.applyUpdate(value, update);
+		if (didChange) {
+			return new ApplyUpdateResult(result.newValue, true);
+		}
+		return result;
+	}
+
+	public validate(_input: any): InternalUnicodeHighlightOptions {
+		if (!_input || typeof _input !== 'object') {
+			return this.defaultValue;
+		}
+		const input = _input as IUnicodeHighlightOptions;
+		return {
+			nonBasicASCII: primitiveSet<boolean | InUntrustedWorkspace>(input.nonBasicASCII, inUntrustedWorkspace, [true, false, inUntrustedWorkspace]),
+			invisibleCharacters: boolean(input.invisibleCharacters, this.defaultValue.invisibleCharacters),
+			ambiguousCharacters: boolean(input.ambiguousCharacters, this.defaultValue.ambiguousCharacters),
+			includeComments: primitiveSet<boolean | InUntrustedWorkspace>(input.includeComments, inUntrustedWorkspace, [true, false, inUntrustedWorkspace]),
+			allowedCharacters: this.validateAllowedCharacters(_input.allowedCharacters, this.defaultValue.allowedCharacters),
+		};
+	}
+
+	private validateAllowedCharacters(map: unknown, defaultValue: Record<string, true>): Record<string, true> {
+		if ((typeof map !== 'object') || !map) {
+			return defaultValue;
+		}
+		const result: Record<string, true> = {};
+		for (const [key, value] of Object.entries(map)) {
+			if (value === true) {
+				result[key] = true;
+			}
+		}
+		return result;
+	}
+}
+
+//#endregion
+
 //#region inlineSuggest
 
 export interface IInlineSuggestOptions {
@@ -3401,12 +3598,22 @@ class GuideOptions extends BaseEditorOption<EditorOption.guides, InternalGuidesO
 				'editor.guides.bracketPairs': {
 					type: ['boolean', 'string'],
 					enum: [true, 'active', false],
+					enumDescriptions: [
+						nls.localize('editor.guides.bracketPairs.true', "Enables bracket pair guides."),
+						nls.localize('editor.guides.bracketPairs.active', "Enables bracket pair guides only for the active bracket pair."),
+						nls.localize('editor.guides.bracketPairs.false', "Disables bracket pair guides."),
+					],
 					default: defaults.bracketPairs,
 					description: nls.localize('editor.guides.bracketPairs', "Controls whether bracket pair guides are enabled or not.")
 				},
 				'editor.guides.bracketPairsHorizontal': {
 					type: ['boolean', 'string'],
 					enum: [true, 'active', false],
+					enumDescriptions: [
+						nls.localize('editor.guides.bracketPairsHorizontal.true', "Enables horizontal guides as addition to vertical bracket pair guides."),
+						nls.localize('editor.guides.bracketPairsHorizontal.active', "Enables horizontal guides only for the active bracket pair."),
+						nls.localize('editor.guides.bracketPairsHorizontal.false', "Disables horizontal bracket pair guides."),
+					],
 					default: defaults.bracketPairsHorizontal,
 					description: nls.localize('editor.guides.bracketPairsHorizontal', "Controls whether horizontal bracket pair guides are enabled or not.")
 				},
@@ -4199,6 +4406,7 @@ export const enum EditorOption {
 	suggestSelection,
 	tabCompletion,
 	tabIndex,
+	unicodeHighlighting,
 	unusualLineTerminators,
 	useShadowDOM,
 	useTabStops,
@@ -4353,7 +4561,7 @@ export const EditorOptions = {
 		default: 0,
 		minimum: 0,
 		maximum: 100,
-		markdownDescription: nls.localize('codeLensFontSize', "Controls the font size in pixels for CodeLens. When set to `0`, the 90% of `#editor.fontSize#` is used.")
+		markdownDescription: nls.localize('codeLensFontSize', "Controls the font size in pixels for CodeLens. When set to `0`, 90% of `#editor.fontSize#` is used.")
 	})),
 	colorDecorators: register(new EditorBooleanOption(
 		EditorOption.colorDecorators, 'colorDecorators', true,
@@ -4508,7 +4716,7 @@ export const EditorOptions = {
 		5, 1, 300
 	)),
 	linkedEditing: register(new EditorBooleanOption(
-		EditorOption.linkedEditing, 'linkedEditing', false,
+		EditorOption.linkedEditing, 'linkedEditing', true,
 		{ description: nls.localize('linkedEditing', "Controls whether the editor has linked editing enabled. Depending on the language, related symbols, e.g. HTML tags, are updated while editing.") }
 	)),
 	links: register(new EditorBooleanOption(
@@ -4556,7 +4764,7 @@ export const EditorOptions = {
 					'- `ctrlCmd` refers to a value the setting can take and should not be localized.',
 					'- `Control` and `Command` refer to the modifier keys Ctrl or Cmd on the keyboard and can be localized.'
 				]
-			}, "The modifier to be used to add multiple cursors with the mouse. The Go To Definition and Open Link mouse gestures will adapt such that they do not conflict with the multicursor modifier. [Read more](https://code.visualstudio.com/docs/editor/codebasics#_multicursor-modifier).")
+			}, "The modifier to be used to add multiple cursors with the mouse. The Go to Definition and Open Link mouse gestures will adapt such that they do not conflict with the multicursor modifier. [Read more](https://code.visualstudio.com/docs/editor/codebasics#_multicursor-modifier).")
 		}
 	)),
 	multiCursorPaste: register(new EditorStringEnumOption(
@@ -4615,8 +4823,8 @@ export const EditorOptions = {
 		{ description: nls.localize('renameOnType', "Controls whether the editor auto renames on type."), markdownDeprecationMessage: nls.localize('renameOnTypeDeprecate', "Deprecated, use `editor.linkedEditing` instead.") }
 	)),
 	renderControlCharacters: register(new EditorBooleanOption(
-		EditorOption.renderControlCharacters, 'renderControlCharacters', false,
-		{ description: nls.localize('renderControlCharacters', "Controls whether the editor should render control characters.") }
+		EditorOption.renderControlCharacters, 'renderControlCharacters', true,
+		{ description: nls.localize('renderControlCharacters', "Controls whether the editor should render control characters."), restricted: true }
 	)),
 	renderFinalNewline: register(new EditorBooleanOption(
 		EditorOption.renderFinalNewline, 'renderFinalNewline', true,
@@ -4787,6 +4995,7 @@ export const EditorOptions = {
 		EditorOption.tabIndex, 'tabIndex',
 		0, -1, Constants.MAX_SAFE_SMALL_INTEGER
 	)),
+	unicodeHighlight: register(new UnicodeHighlight()),
 	unusualLineTerminators: register(new EditorStringEnumOption(
 		EditorOption.unusualLineTerminators, 'unusualLineTerminators',
 		'prompt' as 'auto' | 'off' | 'prompt',
@@ -4844,10 +5053,12 @@ export const EditorOptions = {
 	)),
 	wordWrapBreakAfterCharacters: register(new EditorStringOption(
 		EditorOption.wordWrapBreakAfterCharacters, 'wordWrapBreakAfterCharacters',
+		// allow-any-unicode-next-line
 		' \t})]?|/&.,;¢°′″‰℃、。｡､￠，．：；？！％・･ゝゞヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻ｧｨｩｪｫｬｭｮｯｰ”〉》」』】〕）］｝｣',
 	)),
 	wordWrapBreakBeforeCharacters: register(new EditorStringOption(
 		EditorOption.wordWrapBreakBeforeCharacters, 'wordWrapBreakBeforeCharacters',
+		// allow-any-unicode-next-line
 		'([{‘“〈《「『【〔（［｛｢£¥＄￡￥+＋'
 	)),
 	wordWrapColumn: register(new EditorIntOption(

@@ -112,6 +112,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 		private readonly viewContainerLocation: ViewContainerLocation,
 		private readonly activePanelContextKey: IContextKey<string>,
 		private panelFocusContextKey: IContextKey<boolean>,
+		borderWidth: (() => number) | undefined,
 		@INotificationService notificationService: INotificationService,
 		@IStorageService storageService: IStorageService,
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -140,7 +141,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			'panel',
 			undefined,
 			partId,
-			{ hasTitle: true }
+			{ hasTitle: true, borderWidth }
 		);
 
 		this.panelRegistry = Registry.as<PaneCompositeRegistry>(panelRegistryId);
@@ -211,7 +212,6 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			const activePanel = this.getActivePaneComposite();
 			const isActive =
 				activePanel?.getId() === panel.id ||
-				(!activePanel && this.getLastActivePaneCompositeId() === panel.id) ||
 				(this.extensionsRegistered && this.compositeBar.getVisibleComposites().length === 0);
 
 			if (isActive || !this.shouldBeHidden(panel.id, cachedPanel)) {
@@ -268,7 +268,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 
 		if (activeContainers.length) {
 			if (this.getActivePaneComposite()?.getId() === panelId) {
-				const defaultPanelId = this.viewDescriptorService.getDefaultViewContainer(this.viewContainerLocation)!.id;
+				const defaultPanelId = this.viewDescriptorService.getDefaultViewContainer(this.viewContainerLocation)?.id;
 				const containerToOpen = activeContainers.filter(c => c.id === defaultPanelId)[0] || activeContainers[0];
 				await this.openPaneComposite(containerToOpen.id);
 			}
@@ -397,7 +397,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			const viewContainer = this.getViewContainer(panelDescriptor.id);
 			if (viewContainer?.hideIfEmpty) {
 				const viewContainerModel = this.viewDescriptorService.getViewContainerModel(viewContainer);
-				if (viewContainerModel.activeViewDescriptors.length === 0 && this.compositeBar.getPinnedComposites().length > 1) {
+				if (viewContainerModel.activeViewDescriptors.length === 0) {
 					this.hideComposite(panelDescriptor.id); // Update the composite bar by hiding
 				}
 			}
@@ -476,13 +476,13 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 
 		const container = assertIsDefined(this.getContainer());
 		container.style.backgroundColor = this.getColor(this.backgroundColor) || '';
-		const borderColor = this.getColor(PANEL_BORDER) || this.getColor(contrastBorder) || '';
+		const borderColor = this.getColor(contrastBorder) || '';
 		container.style.borderLeftColor = borderColor;
 		container.style.borderRightColor = borderColor;
 
 		const title = this.getTitleArea();
 		if (title) {
-			title.style.borderTopColor = this.getColor(PANEL_BORDER) || this.getColor(contrastBorder) || '';
+			title.style.borderTopColor = this.getColor(contrastBorder) || '';
 		}
 	}
 
@@ -596,7 +596,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 		this.layoutCompositeBar();
 	}
 
-	override layout(width: number, height: number): void {
+	override layout(width: number, height: number, top: number, left: number): void {
 		if (!this.layoutService.isVisible(this.partId)) {
 			return;
 		}
@@ -604,7 +604,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 		this.contentDimension = new Dimension(width, height);
 
 		// Layout contents
-		super.layout(this.contentDimension.width, this.contentDimension.height);
+		super.layout(this.contentDimension.width, this.contentDimension.height, top, left);
 
 		// Layout composite bar
 		this.layoutCompositeBar();
@@ -840,6 +840,7 @@ export class PanelPart extends BasePanelPart {
 			ViewContainerLocation.Panel,
 			ActivePanelContext.bindTo(contextKeyService),
 			PanelFocusContext.bindTo(contextKeyService),
+			undefined,
 			notificationService,
 			storageService,
 			telemetryService,
@@ -856,6 +857,20 @@ export class PanelPart extends BasePanelPart {
 		// Global Panel Actions
 		this.globalActions = this._register(this.instantiationService.createInstance(CompositeMenuActions, MenuId.PanelTitle, undefined, undefined));
 		this._register(this.globalActions.onDidChange(() => this.updateGlobalToolbarActions()));
+	}
+
+	override updateStyles(): void {
+		super.updateStyles();
+
+		const container = assertIsDefined(this.getContainer());
+		const borderColor = this.getColor(PANEL_BORDER) || this.getColor(contrastBorder) || '';
+		container.style.borderLeftColor = borderColor;
+		container.style.borderRightColor = borderColor;
+
+		const title = this.getTitleArea();
+		if (title) {
+			title.style.borderTopColor = this.getColor(PANEL_BORDER) || this.getColor(contrastBorder) || '';
+		}
 	}
 
 	protected getActivityHoverOptions(): IActivityHoverOptions {
@@ -897,7 +912,7 @@ export class PanelPart extends BasePanelPart {
 		return super.getToolbarWidth() + (this.globalToolBar?.getItemsWidth() ?? 0);
 	}
 
-	override layout(width: number, height: number): void {
+	override layout(width: number, height: number, top: number, left: number): void {
 		let dimensions: Dimension;
 		if (this.layoutService.getPanelPosition() === Position.RIGHT) {
 			dimensions = new Dimension(width - 1, height); // Take into account the 1px border when layouting
@@ -906,7 +921,7 @@ export class PanelPart extends BasePanelPart {
 		}
 
 		// Layout contents
-		super.layout(dimensions.width, dimensions.height);
+		super.layout(dimensions.width, dimensions.height, top, left);
 	}
 
 	private updateGlobalToolbarActions(): void {

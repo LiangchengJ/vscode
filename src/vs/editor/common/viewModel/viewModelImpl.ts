@@ -13,15 +13,15 @@ import { ISelection, Selection } from 'vs/editor/common/core/selection';
 import { IRange, Range } from 'vs/editor/common/core/range';
 import { IConfiguration, IViewState, ScrollType, ICursorState, ICommand, INewScrollPosition } from 'vs/editor/common/editorCommon';
 import { EndOfLinePreference, IActiveIndentGuideInfo, ITextModel, TrackedRangeStickiness, TextModelResolvedOptions, IIdentifiedSingleEditOperation, ICursorStateComputer, PositionAffinity, IndentGuide, BracketGuideOptions } from 'vs/editor/common/model';
-import { ModelDecorationOverviewRulerOptions, ModelDecorationMinimapOptions } from 'vs/editor/common/model/textModel';
+import { ModelDecorationOverviewRulerOptions, ModelDecorationMinimapOptions, ModelDecorationOptions } from 'vs/editor/common/model/textModel';
 import * as textModelEvents from 'vs/editor/common/model/textModelEvents';
 import { ColorId, TokenizationRegistry } from 'vs/editor/common/modes';
 import { tokenizeLineToHTML } from 'vs/editor/common/modes/textToHtmlTokenizer';
 import { MinimapTokensColorTracker } from 'vs/editor/common/viewModel/minimapTokensColorTracker';
 import * as viewEvents from 'vs/editor/common/view/viewEvents';
 import { ViewLayout } from 'vs/editor/common/viewLayout/viewLayout';
-import { IViewModelLinesCollection, IdentityLinesCollection, SplitLinesCollection, ILineBreaksComputerFactory } from 'vs/editor/common/viewModel/splitLinesCollection';
-import { ICoordinatesConverter, InjectedText, ILineBreaksComputer, IOverviewRulerDecorations, IViewModel, MinimapLinesRenderingData, ViewLineData, ViewLineRenderingData, ViewModelDecoration } from 'vs/editor/common/viewModel/viewModel';
+import { IViewModelLines, ViewModelLinesFromModelAsIs, ViewModelLinesFromProjectedModel } from 'vs/editor/common/viewModel/viewModelLines';
+import { ICoordinatesConverter, IViewModel, MinimapLinesRenderingData, ViewLineData, ViewLineRenderingData, ViewModelDecoration, OverviewRulerDecorationsGroup } from 'vs/editor/common/viewModel/viewModel';
 import { ViewModelDecorations } from 'vs/editor/common/viewModel/viewModelDecorations';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import * as platform from 'vs/base/common/platform';
@@ -33,6 +33,8 @@ import { IWhitespaceChangeAccessor } from 'vs/editor/common/viewLayout/linesLayo
 import { ViewModelEventDispatcher, OutgoingViewModelEvent, FocusChangedEvent, ScrollChangedEvent, ViewZonesChangedEvent, ViewModelEventsCollector, ReadOnlyEditAttemptEvent } from 'vs/editor/common/viewModel/viewModelEventDispatcher';
 import { ViewEventHandler } from 'vs/editor/common/viewModel/viewEventHandler';
 import { PLAINTEXT_MODE_ID } from 'vs/editor/common/modes/modesRegistry';
+import { ArrayQueue } from 'vs/base/common/arrays';
+import { ILineBreaksComputerFactory, ILineBreaksComputer, InjectedText } from 'vs/editor/common/viewModel/modelLineProjectionData';
 
 const USE_IDENTITY_LINES_COLLECTION = true;
 
@@ -50,7 +52,7 @@ export class ViewModel extends Disposable implements IViewModel {
 	private _viewportStartLine: number;
 	private _viewportStartLineTrackedRange: string | null;
 	private _viewportStartLineDelta: number;
-	private readonly _lines: IViewModelLinesCollection;
+	private readonly _lines: IViewModelLines;
 	public readonly coordinatesConverter: ICoordinatesConverter;
 	public readonly viewLayout: ViewLayout;
 	private readonly _cursor: CursorsController;
@@ -81,7 +83,7 @@ export class ViewModel extends Disposable implements IViewModel {
 
 		if (USE_IDENTITY_LINES_COLLECTION && this.model.isTooLargeForTokenization()) {
 
-			this._lines = new IdentityLinesCollection(this.model);
+			this._lines = new ViewModelLinesFromModelAsIs(this.model);
 
 		} else {
 			const options = this._configuration.options;
@@ -90,7 +92,7 @@ export class ViewModel extends Disposable implements IViewModel {
 			const wrappingInfo = options.get(EditorOption.wrappingInfo);
 			const wrappingIndent = options.get(EditorOption.wrappingIndent);
 
-			this._lines = new SplitLinesCollection(
+			this._lines = new ViewModelLinesFromProjectedModel(
 				this._editorId,
 				this.model,
 				domLineBreaksComputerFactory,
@@ -173,9 +175,17 @@ export class ViewModel extends Disposable implements IViewModel {
 
 	public tokenizeViewport(): void {
 		const linesViewportData = this.viewLayout.getLinesViewportData();
-		const startPosition = this.coordinatesConverter.convertViewPositionToModelPosition(new Position(linesViewportData.startLineNumber, 1));
-		const endPosition = this.coordinatesConverter.convertViewPositionToModelPosition(new Position(linesViewportData.endLineNumber, 1));
-		this.model.tokenizeViewport(startPosition.lineNumber, endPosition.lineNumber);
+		const viewVisibleRange = new Range(
+			linesViewportData.startLineNumber,
+			this.getLineMinColumn(linesViewportData.startLineNumber),
+			linesViewportData.endLineNumber,
+			this.getLineMaxColumn(linesViewportData.endLineNumber)
+		);
+		const modelVisibleRanges = this._toModelVisibleRanges(viewVisibleRange);
+
+		for (const modelVisibleRange of modelVisibleRanges) {
+			this.model.tokenizeViewport(modelVisibleRange.startLineNumber, modelVisibleRange.endLineNumber);
+		}
 	}
 
 	public setHasFocus(hasFocus: boolean): void {
@@ -288,10 +298,9 @@ export class ViewModel extends Disposable implements IViewModel {
 					}
 				}
 				const lineBreaks = lineBreaksComputer.finalize();
-				let lineBreaksOffset = 0;
+				const lineBreakQueue = new ArrayQueue(lineBreaks);
 
 				for (const change of changes) {
-
 					switch (change.changeType) {
 						case textModelEvents.RawContentChangedType.Flush: {
 							this._lines.onModelFlushed();
@@ -311,9 +320,7 @@ export class ViewModel extends Disposable implements IViewModel {
 							break;
 						}
 						case textModelEvents.RawContentChangedType.LinesInserted: {
-							const insertedLineBreaks = lineBreaks.slice(lineBreaksOffset, lineBreaksOffset + change.detail.length);
-							lineBreaksOffset += change.detail.length;
-
+							const insertedLineBreaks = lineBreakQueue.takeCount(change.detail.length);
 							const linesInsertedEvent = this._lines.onModelLinesInserted(versionId, change.fromLineNumber, change.toLineNumber, insertedLineBreaks);
 							if (linesInsertedEvent !== null) {
 								eventsCollector.emitViewEvent(linesInsertedEvent);
@@ -323,10 +330,9 @@ export class ViewModel extends Disposable implements IViewModel {
 							break;
 						}
 						case textModelEvents.RawContentChangedType.LineChanged: {
-							const changedLineBreakData = lineBreaks[lineBreaksOffset];
-							lineBreaksOffset++;
-
-							const [lineMappingChanged, linesChangedEvent, linesInsertedEvent, linesDeletedEvent] = this._lines.onModelLineChanged(versionId, change.lineNumber, changedLineBreakData);
+							const changedLineBreakData = lineBreakQueue.dequeue()!;
+							const [lineMappingChanged, linesChangedEvent, linesInsertedEvent, linesDeletedEvent] =
+								this._lines.onModelLineChanged(versionId, change.lineNumber, changedLineBreakData);
 							hadModelLineChangeThatChangedLineMapping = lineMappingChanged;
 							if (linesChangedEvent) {
 								eventsCollector.emitViewEvent(linesChangedEvent);
@@ -707,8 +713,26 @@ export class ViewModel extends Disposable implements IViewModel {
 		);
 	}
 
-	public getAllOverviewRulerDecorations(theme: EditorTheme): IOverviewRulerDecorations {
-		return this._lines.getAllOverviewRulerDecorations(this._editorId, filterValidationDecorations(this._configuration.options), theme);
+	public getAllOverviewRulerDecorations(theme: EditorTheme): OverviewRulerDecorationsGroup[] {
+		const decorations = this.model.getOverviewRulerDecorations(this._editorId, filterValidationDecorations(this._configuration.options));
+		const result = new OverviewRulerDecorations();
+		for (const decoration of decorations) {
+			const decorationOptions = <ModelDecorationOptions>decoration.options;
+			const opts = decorationOptions.overviewRuler;
+			if (!opts) {
+				continue;
+			}
+			const lane = <number>opts.position;
+			if (lane === 0) {
+				continue;
+			}
+			const color = opts.getColor(theme);
+			const viewStartLineNumber = this.coordinatesConverter.getViewLineNumberOfModelPosition(decoration.range.startLineNumber, decoration.range.startColumn);
+			const viewEndLineNumber = this.coordinatesConverter.getViewLineNumberOfModelPosition(decoration.range.endLineNumber, decoration.range.endColumn);
+
+			result.accept(color, decorationOptions.zIndex, viewStartLineNumber, viewEndLineNumber, lane);
+		}
+		return result.asArray;
 	}
 
 	public invalidateOverviewRulerColorCache(): void {
@@ -1086,3 +1110,34 @@ export class ViewModel extends Disposable implements IViewModel {
 		return this._lines.getLineIndentColumn(lineNumber);
 	}
 }
+
+class OverviewRulerDecorations {
+
+	private readonly _asMap: { [color: string]: OverviewRulerDecorationsGroup; } = Object.create(null);
+	readonly asArray: OverviewRulerDecorationsGroup[] = [];
+
+	public accept(color: string, zIndex: number, startLineNumber: number, endLineNumber: number, lane: number): void {
+		const prevGroup = this._asMap[color];
+
+		if (prevGroup) {
+			const prevData = prevGroup.data;
+			const prevLane = prevData[prevData.length - 3];
+			const prevEndLineNumber = prevData[prevData.length - 1];
+			if (prevLane === lane && prevEndLineNumber + 1 >= startLineNumber) {
+				// merge into prev
+				if (endLineNumber > prevEndLineNumber) {
+					prevData[prevData.length - 1] = endLineNumber;
+				}
+				return;
+			}
+
+			// push
+			prevData.push(lane, startLineNumber, endLineNumber);
+		} else {
+			const group = new OverviewRulerDecorationsGroup(color, zIndex, [lane, startLineNumber, endLineNumber]);
+			this._asMap[color] = group;
+			this.asArray.push(group);
+		}
+	}
+}
+
