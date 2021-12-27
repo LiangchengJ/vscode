@@ -31,14 +31,14 @@ product["win32UserAppId"] = vsProduct["win32UserAppId"];
 product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
 product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
 product["win32ShellNameShort"] = replaceName(product["win32ShellNameShort"]);
-// product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
-// product["darwinExecutable"] = "CodeOSS";
+product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
+product["darwinExecutable"] = "CodeOSS";
 product["dataFolderName"] = ".codeoss";
 product["serverDataFolderName"] = `${product["dataFolderName"]}-server`;
 product["webviewContentExternalBaseUrlTemplate"] =
   vsProduct["webviewContentExternalBaseUrlTemplate"];
 product["urlProtocol"] = "vscode";
-product["serverGreeting"] = vsProduct["serverGreeting"];
+// product["serverGreeting"] = vsProduct["serverGreeting"];
 product["quality"] = vsProduct["quality"];
 product["extensionsGallery"] = vsProduct["extensionsGallery"];
 product["extensionTips"] = vsProduct["extensionTips"];
@@ -79,13 +79,13 @@ product["date"] = new Date().toJSON();
 // product["settingsSearchBuildId"] = vsProduct["settingsSearchBuildId"];
 // product["darwinUniversalAssetId"] = vsProduct["darwinUniversalAssetId"];
 
-for (let i in product["serverGreeting"]) {
-  let item = product["serverGreeting"][i];
-  product["serverGreeting"][i] = item.replace(
-    vsProduct["nameLong"],
-    product["nameLong"],
-  );
-}
+// for (let i in product["serverGreeting"]) {
+//   let item = product["serverGreeting"][i];
+//   product["serverGreeting"][i] = item.replace(
+//     vsProduct["nameLong"],
+//     product["nameLong"],
+//   );
+// }
 
 const fs = require("fs");
 const writeStream = fs.createWriteStream(outputFileName);
