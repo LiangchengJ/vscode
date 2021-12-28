@@ -92,7 +92,11 @@ jobs:
           mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
           yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
           cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
-          yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
+          # yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
+
+      - name: Delete product.json
+        if: ${{ matrix.arch != 'x64' }}
+        run: rm -f ./product.json
 
       - name: Package AppImage for arch x64
         if: ${{ matrix.arch == 'x64' }}
@@ -103,6 +107,7 @@ jobs:
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
           echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
+          deno fmt ./product.json
           deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > dfserv.log 2>&1 &
           sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
 
@@ -137,11 +142,15 @@ jobs:
               sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
           fi
 
+          if [ -f "product.json" ] ; then
+              sha512sum product.json | awk '{print $1}' > product.json.sha512
+          fi
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part11
-          tag_name: dev_test_part11
+          name: dev_test_part12
+          tag_name: dev_test_part12
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -152,6 +161,8 @@ jobs:
             CodeOSS-linux-*.deb.sha512
             CodeOSS-linux-${{ matrix.arch }}.AppImage
             CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+            product.json
+            product.json.sha512
 
   darwin:
     name: macOS
@@ -227,8 +238,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part11
-          tag_name: dev_test_part11
+          name: dev_test_part12
+          tag_name: dev_test_part12
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -339,8 +350,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part11
-          tag_name: dev_test_part11
+          name: dev_test_part12
+          tag_name: dev_test_part12
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
