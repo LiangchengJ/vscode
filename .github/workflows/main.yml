@@ -75,9 +75,9 @@ jobs:
           echo "PKGVER >>> $PKGVER"
           export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
           echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}'`
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
           echo "CURL_DO_URL >>> $CURL_DO_URL"
-          wget "$CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -223,9 +223,9 @@ jobs:
           echo "PKGVER >>> $PKGVER"
           export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
           echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}'`
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
           echo "CURL_DO_URL >>> $CURL_DO_URL"
-          wget "$CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -328,9 +328,9 @@ jobs:
           echo "PKGVER >>> $PKGVER"
           export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
           echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}'`
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
           echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -O "$CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
