@@ -16,8 +16,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SPLIT_LINE: =============================
+      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
       VS_ZIP_FNAME: VSCode-darwin-universal.zip
-      VS_ZIP_HASH: 899d46d82c4c95423fb7e10e68eba52050e30ba3
 
     strategy:
       matrix:
@@ -71,8 +71,8 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
-          curl -L -O $VS_ZIP_URL
+          export PKGVER="$(node -p "require('./package.json')['version']")"
+          curl -L -O $(curl -is "${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}')
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -170,8 +170,8 @@ jobs:
     runs-on: macos-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
       VS_ZIP_FNAME: VSCode-darwin-universal.zip
-      VS_ZIP_HASH: 899d46d82c4c95423fb7e10e68eba52050e30ba3
 
     strategy:
       matrix:
@@ -214,8 +214,8 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
-          curl -L -O $VS_ZIP_URL
+          export PKGVER="$(node -p "require('./package.json')['version']")"
+          curl -L -O $(curl -is "${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}')
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
@@ -257,8 +257,8 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
       CSH_BEG: cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "
+      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
       VS_ZIP_FNAME: VSCode-darwin-universal.zip
-      VS_ZIP_HASH: 899d46d82c4c95423fb7e10e68eba52050e30ba3
 
     strategy:
       matrix:
@@ -314,8 +314,8 @@ jobs:
 
       - name: Update Configurations
         run: |
-          export VS_ZIP_URL="https://az764295.vo.msecnd.net/stable/${{ env.VS_ZIP_HASH }}/${{ env.VS_ZIP_FNAME }}"
-          curl -L -O $VS_ZIP_URL
+          export PKGVER="$(node -p "require('./package.json')['version']")"
+          curl -L -O $(curl -is "${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable" | grep Location | awk -F ": " '{print $2}' | awk -F "?" '{print $1}')
           npm install extract-zip@2.0.1 -g
           extract-zip ${{ env.VS_ZIP_FNAME }}
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
