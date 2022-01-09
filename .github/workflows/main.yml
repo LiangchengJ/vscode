@@ -93,11 +93,13 @@ jobs:
 
           if [ "${{ matrix.arch }}" != "ia32" ] ; then
               yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-reh-linux-${{ matrix.arch }}"
+              bash -c "cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}"
+              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }}"
               mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
               yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-reh-web-linux-${{ matrix.arch }}"
+              bash -c "cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web"
+              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web"
               mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
 
               yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
@@ -267,11 +269,13 @@ jobs:
 
           if [ "${{ matrix.arch }}" == "x64" ] ; then
               yarn gulp vscode-reh-darwin-min
-              bash -c "cd .. && 7zz a vscode-server-darwin.zip vscode-reh-darwin-min -r -mx9"
+              bash -c "cd .. && mv vscode-reh-darwin-min vscode-server-darwin"
+              bash -c "cd .. && 7zz a vscode-server-darwin.zip vscode-server-darwin -r -mx9"
               mv ../vscode-server-darwin.zip .
 
               yarn gulp vscode-reh-web-darwin-min
-              bash -c "cd .. && 7zz a vscode-server-darwin-web.zip vscode-reh-web-darwin -r -mx9"
+              bash -c "cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web"
+              bash -c "cd .. && 7zz a vscode-server-darwin-web.zip vscode-server-darwin-web -r -mx9"
               mv ../vscode-server-darwin-web.zip .
           fi
         shell: bash
@@ -397,11 +401,13 @@ jobs:
 
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
               yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-reh-win32-${{ matrix.arch }} -r -mx9"
+              bash -c "cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}"
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9"
               mv ../vscode-server-win32-${{ matrix.arch }}.zip .
 
               yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-reh-web-win32-${{ matrix.arch }} -r -mx9"
+              bash -c "cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web"
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9"
               mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
           fi
 
