@@ -90,12 +90,15 @@ jobs:
           bash -c "cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }}"
           bash -c "cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }}"
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
-          yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-          bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-reh-linux-${{ matrix.arch }}"
-          mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
-          yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-          bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-reh-web-linux-${{ matrix.arch }}"
-          mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+
+          if [ "${{ matrix.arch }}" != "ia32" ] ; then
+              yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
+              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-reh-linux-${{ matrix.arch }}"
+              mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
+              yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
+              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-reh-web-linux-${{ matrix.arch }}"
+              mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+          fi
 
       - name: Build and Package rpm, deb and snap
         if: ${{ matrix.arch != 'ia32' }}
