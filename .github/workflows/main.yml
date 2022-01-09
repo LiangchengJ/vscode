@@ -405,7 +405,6 @@ jobs:
               mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
           fi
 
-          yarn gulp vscode-win32-${{ matrix.arch }}-code-helper
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
           curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
