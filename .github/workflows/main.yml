@@ -311,7 +311,6 @@ jobs:
       CHILD_CONCURRENCY: "1"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
-      CSH_BEG: cmd.exe /c '"C:\Program Files\Git\bin\bash.exe" -c "
       VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
       VS_ZIP_FNAME: VSCode-darwin-universal.zip
 
@@ -386,29 +385,34 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-win32-${{ matrix.arch }}-min
-          ${{ env.CSH_BEG }} cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} "'
-          ${{ env.CSH_BEG }} cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} "'
-          mv ..\CodeOSS-win32-${{ matrix.arch }}.tar.xz .
+          bash -c "cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }}"
+          bash -c "cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }}"
+          mv ../CodeOSS-win32-${{ matrix.arch }}.tar.xz .
 
-          cmd.exe /c 'cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9'
-          mv ..\CodeOSS-win32-${{ matrix.arch }}.zip .
+          bash -c "cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9"
+          mv ../CodeOSS-win32-${{ matrix.arch }}.zip .
 
-          ${{ env.CSH_BEG }} [ ''${{ matrix.arch }}'' != ''x64'' ] && yarn gulp vscode-reh-win32-${{ matrix.arch }}-min "'
-          cmd.exe /c 'cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-reh-win32-${{ matrix.arch }} -r -mx9'
-          mv ..\vscode-server-win32-${{ matrix.arch }}.zip .
+          if [ "${{ matrix.arch }}" != "arm64" ] ; then
+              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-reh-win32-${{ matrix.arch }} -r -mx9"
+              mv ../vscode-server-win32-${{ matrix.arch }}.zip .
 
-          ${{ env.CSH_BEG }} [ ''${{ matrix.arch }}'' != ''x64'' ] && yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min "'
-          cmd.exe /c 'cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-reh-web-win32-${{ matrix.arch }} -r -mx9'
-          mv ..\vscode-server-win32-${{ matrix.arch }}-web.zip .
+              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-reh-web-win32-${{ matrix.arch }} -r -mx9"
+              mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
+          fi
 
           yarn gulp vscode-win32-${{ matrix.arch }}-code-helper
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -o resources\win32\code.ico ${{ env.CODE_ICO_URL }}
+          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
           yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
-          mv .build\win32-${{ matrix.arch }}\user-setup\VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+          mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
-          mv .build\win32-${{ matrix.arch }}\system-setup\VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+          mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
