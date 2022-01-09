@@ -259,14 +259,20 @@ jobs:
           bash -c "cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }}"
           bash -c "cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }}"
           mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
-          bash -c "cd .. && zip -r -9 -o CodeOSS-darwin-${{ matrix.arch }}.zip CodeOSS-darwin-${{ matrix.arch }}"
+
+          brew install sevenzip
+          bash -c "cd .. && 7zz a CodeOSS-darwin-${{ matrix.arch }}.zip CodeOSS-darwin-${{ matrix.arch }} -r -mx9"
           mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
-          [ "${{ matrix.arch }}" == "x64" ] && yarn gulp vscode-reh-darwin-min
-          [ "${{ matrix.arch }}" == "x64" ] && bash -c "cd .. && zip -r -9 -o vscode-server-darwin.zip vscode-reh-darwin-min"
-          [ "${{ matrix.arch }}" == "x64" ] && mv ../vscode-server-darwin.zip .
-          [ "${{ matrix.arch }}" == "x64" ] && yarn gulp vscode-reh-web-darwin-min
-          [ "${{ matrix.arch }}" == "x64" ] && bash -c "cd .. && zip -r -9 -o vscode-server-darwin-web.zip vscode-reh-web-darwin"
-          [ "${{ matrix.arch }}" == "x64" ] && mv ../vscode-server-darwin-web.zip .
+
+          if [ "${{ matrix.arch }}" == "x64" ] ; then
+              yarn gulp vscode-reh-darwin-min
+              bash -c "cd .. && 7zz a vscode-server-darwin.zip vscode-reh-darwin-min -r -mx9"
+              mv ../vscode-server-darwin.zip .
+
+              yarn gulp vscode-reh-web-darwin-min
+              bash -c "cd .. && 7zz a vscode-server-darwin-web.zip vscode-reh-web-darwin -r -mx9"
+              mv ../vscode-server-darwin-web.zip .
+          fi
 
       - name: Generate SHA512 checksum files
         run: |
