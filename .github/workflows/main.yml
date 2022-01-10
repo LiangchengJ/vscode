@@ -263,19 +263,19 @@ jobs:
           bash -c "cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }}"
           mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
 
-          brew install sevenzip
-          bash -c "cd .. && 7zz a CodeOSS-darwin-${{ matrix.arch }}.zip CodeOSS-darwin-${{ matrix.arch }} -r -mx9"
+          npm i -g @ffflorian/jszip-cli@3.1.6
+          bash -c "cd .. && jszip-cli add CodeOSS-darwin-${{ matrix.arch }} --output CodeOSS-darwin-${{ matrix.arch }}.zip"
           mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
 
           if [ "${{ matrix.arch }}" == "x64" ] ; then
               yarn gulp vscode-reh-darwin-min
               bash -c "cd .. && mv vscode-reh-darwin-min vscode-server-darwin"
-              bash -c "cd .. && 7zz a vscode-server-darwin.zip vscode-server-darwin -r -mx9"
+              bash -c "cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip"
               mv ../vscode-server-darwin.zip .
 
               yarn gulp vscode-reh-web-darwin-min
               bash -c "cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web"
-              bash -c "cd .. && 7zz a vscode-server-darwin-web.zip vscode-server-darwin-web -r -mx9"
+              bash -c "cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip"
               mv ../vscode-server-darwin-web.zip .
           fi
         shell: bash
