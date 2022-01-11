@@ -269,7 +269,7 @@ jobs:
 
           if [ "${{ matrix.arch }}" == "x64" ] ; then
               yarn gulp vscode-reh-darwin-min
-              bash -c "cd .. && mv vscode-reh-darwin-min vscode-server-darwin"
+              bash -c "cd .. && mv vscode-reh-darwin vscode-server-darwin"
               bash -c "cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip"
               mv ../vscode-server-darwin.zip .
 
