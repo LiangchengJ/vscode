@@ -38,7 +38,7 @@ product["serverDataFolderName"] = `${product["dataFolderName"]}-server`;
 product["webviewContentExternalBaseUrlTemplate"] =
   vsProduct["webviewContentExternalBaseUrlTemplate"];
 product["urlProtocol"] = "vscode";
-product["serverGreeting"] = vsProduct["serverGreeting"];
+// product["serverGreeting"] = vsProduct["serverGreeting"];
 product["quality"] = vsProduct["quality"];
 product["extensionsGallery"] = vsProduct["extensionsGallery"];
 product["extensionTips"] = vsProduct["extensionTips"];
@@ -79,13 +79,13 @@ product["date"] = new Date().toJSON();
 // product["settingsSearchBuildId"] = vsProduct["settingsSearchBuildId"];
 // product["darwinUniversalAssetId"] = vsProduct["darwinUniversalAssetId"];
 
-for (let i in product["serverGreeting"]) {
-  let item = product["serverGreeting"][i];
-  product["serverGreeting"][i] = item.replace(
-    vsProduct["nameLong"],
-    product["nameLong"],
-  );
-}
+// for (let i in product["serverGreeting"]) {
+//   let item = product["serverGreeting"][i];
+//   product["serverGreeting"][i] = item.replace(
+//     vsProduct["nameLong"],
+//     product["nameLong"],
+//   );
+// }
 
 const fs = require("fs");
 const writeStream = fs.createWriteStream(outputFileName);
