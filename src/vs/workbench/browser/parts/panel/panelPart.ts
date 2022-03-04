@@ -52,7 +52,7 @@ interface ICachedPanel {
 	pinned: boolean;
 	order?: number;
 	visible: boolean;
-	views?: { when?: string; }[];
+	views?: { when?: string }[];
 }
 
 interface IPlaceholderViewContainer {
@@ -61,8 +61,8 @@ interface IPlaceholderViewContainer {
 }
 
 interface IPanelPartOptions extends IPartOptions {
-	hasTitle: true,
-	borderWidth?: (() => number),
+	hasTitle: true;
+	borderWidth?: (() => number);
 	useIcons?: boolean;
 }
 
@@ -107,7 +107,10 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 	readonly onDidPaneCompositeClose = this.onDidCompositeClose.event as Event<IPaneComposite>;
 
 	private compositeBar: CompositeBar;
-	private readonly compositeActions = new Map<string, { activityAction: PanelActivityAction, pinnedAction: ToggleCompositePinnedAction; }>();
+	private readonly compositeActions = new Map<string, { activityAction: PanelActivityAction; pinnedAction: ToggleCompositePinnedAction }>();
+
+	private globalToolBar: ToolBar | undefined;
+	private globalActions: CompositeMenuActions;
 
 	private readonly panelDisposables: Map<string, IDisposable> = new Map<string, IDisposable>();
 
@@ -201,6 +204,10 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 
 		this.registerListeners();
 		this.onDidRegisterPanels([...this.getPaneComposites()]);
+
+		// Global Panel Actions
+		this.globalActions = this._register(this.instantiationService.createInstance(CompositeMenuActions, partId === Parts.PANEL_PART ? MenuId.PanelTitle : MenuId.AuxiliaryBarTitle, undefined, undefined));
+		this._register(this.globalActions.onDidChange(() => this.updateGlobalToolbarActions()));
 	}
 
 	protected abstract getActivityHoverOptions(): IActivityHoverOptions;
@@ -520,6 +527,24 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 		}));
 	}
 
+	override createTitleArea(parent: HTMLElement): HTMLElement {
+		const element = super.createTitleArea(parent);
+		const globalTitleActionsContainer = element.appendChild($('.global-actions'));
+
+		// Global Actions Toolbar
+		this.globalToolBar = this._register(new ToolBar(globalTitleActionsContainer, this.contextMenuService, {
+			actionViewItemProvider: action => this.actionViewItemProvider(action),
+			orientation: ActionsOrientation.HORIZONTAL,
+			getKeyBinding: action => this.keybindingService.lookupKeybinding(action.id),
+			anchorAlignmentProvider: () => this.getTitleAreaDropDownAnchorAlignment(),
+			toggleMenuTitle: localize('moreActions', "More Actions...")
+		}));
+
+		this.updateGlobalToolbarActions();
+
+		return element;
+	}
+
 	override updateStyles(): void {
 		super.updateStyles();
 
@@ -685,7 +710,16 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 		return viewContainer && this.viewDescriptorService.getViewContainerLocation(viewContainer) === this.viewContainerLocation ? viewContainer : undefined;
 	}
 
-	private getCompositeActions(compositeId: string): { activityAction: PanelActivityAction, pinnedAction: ToggleCompositePinnedAction; } {
+	private updateGlobalToolbarActions(): void {
+		const primaryActions = this.globalActions.getPrimaryActions();
+		const secondaryActions = this.globalActions.getSecondaryActions();
+
+		if (this.globalToolBar) {
+			this.globalToolBar.setActions(prepareActions(primaryActions), prepareActions(secondaryActions));
+		}
+	}
+
+	private getCompositeActions(compositeId: string): { activityAction: PanelActivityAction; pinnedAction: ToggleCompositePinnedAction } {
 		let compositeActions = this.compositeActions.get(compositeId);
 		if (!compositeActions) {
 			// const panel = this.getPaneComposite(compositeId);
@@ -732,7 +766,7 @@ export abstract class BasePanelPart extends CompositePart<PaneComposite> impleme
 			return 0;
 		}
 
-		return this.toolBar.getItemsWidth();
+		return this.toolBar.getItemsWidth() + (this.globalToolBar?.getItemsWidth() ?? 0);
 	}
 
 	private onDidStorageValueChange(e: IStorageValueChangeEvent): void {
@@ -866,9 +900,6 @@ export class PanelPart extends BasePanelPart {
 	static readonly pinnedPanelsKey = 'workbench.panel.pinnedPanels';
 	static readonly placeholdeViewContainersKey = 'workbench.panel.placeholderPanels';
 
-	private globalToolBar: ToolBar | undefined;
-	private globalActions: CompositeMenuActions;
-
 	constructor(
 		@INotificationService notificationService: INotificationService,
 		@IStorageService storageService: IStorageService,
@@ -908,10 +939,6 @@ export class PanelPart extends BasePanelPart {
 				hasTitle: true
 			},
 		);
-
-		// Global Panel Actions
-		this.globalActions = this._register(this.instantiationService.createInstance(CompositeMenuActions, MenuId.PanelTitle, undefined, undefined));
-		this._register(this.globalActions.onDidChange(() => this.updateGlobalToolbarActions()));
 	}
 
 	override updateStyles(): void {
@@ -942,31 +969,9 @@ export class PanelPart extends BasePanelPart {
 			...PositionPanelActionConfigs
 				// show the contextual menu item if it is not in that position
 				.filter(({ when }) => this.contextKeyService.contextMatchesRules(when))
-				.map(({ id, label }) => this.instantiationService.createInstance(SetPanelPositionAction, id, label)),
+				.map(({ id, title }) => this.instantiationService.createInstance(SetPanelPositionAction, id, title.value)),
 			this.instantiationService.createInstance(TogglePanelAction, TogglePanelAction.ID, localize('hidePanel', "Hide Panel"))
 		]);
-	}
-
-	override createTitleArea(parent: HTMLElement): HTMLElement {
-		const element = super.createTitleArea(parent);
-		const globalTitleActionsContainer = element.appendChild($('.global-actions'));
-
-		// Global Actions Toolbar
-		this.globalToolBar = this._register(new ToolBar(globalTitleActionsContainer, this.contextMenuService, {
-			actionViewItemProvider: action => this.actionViewItemProvider(action),
-			orientation: ActionsOrientation.HORIZONTAL,
-			getKeyBinding: action => this.keybindingService.lookupKeybinding(action.id),
-			anchorAlignmentProvider: () => this.getTitleAreaDropDownAnchorAlignment(),
-			toggleMenuTitle: localize('moreActions', "More Actions...")
-		}));
-
-		this.updateGlobalToolbarActions();
-
-		return element;
-	}
-
-	override getToolbarWidth(): number {
-		return super.getToolbarWidth() + (this.globalToolBar?.getItemsWidth() ?? 0);
 	}
 
 	override layout(width: number, height: number, top: number, left: number): void {
@@ -979,15 +984,6 @@ export class PanelPart extends BasePanelPart {
 
 		// Layout contents
 		super.layout(dimensions.width, dimensions.height, top, left);
-	}
-
-	private updateGlobalToolbarActions(): void {
-		const primaryActions = this.globalActions.getPrimaryActions();
-		const secondaryActions = this.globalActions.getSecondaryActions();
-
-		if (this.globalToolBar) {
-			this.globalToolBar.setActions(prepareActions(primaryActions), prepareActions(secondaryActions));
-		}
 	}
 
 	toJSON(): object {

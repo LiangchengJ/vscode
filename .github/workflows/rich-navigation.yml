@@ -10,7 +10,7 @@ on:
 
 jobs:
   richnav:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v2
 
@@ -36,6 +36,5 @@ jobs:
         with:
           languages: typescript
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          typescriptVersion: 0.6.0-next.21
           configFiles: .lsifrc.json
         continue-on-error: true

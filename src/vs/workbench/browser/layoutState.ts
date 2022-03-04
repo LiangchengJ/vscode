@@ -12,12 +12,12 @@ import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/
 import { PanelAlignment, Position, positionFromString, positionToString } from 'vs/workbench/services/layout/browser/layoutService';
 
 interface IWorkbenchLayoutStateKey {
-	name: string,
-	runtime: boolean,
-	defaultValue: any,
-	scope: StorageScope,
-	target: StorageTarget
-	zenModeIgnore?: boolean,
+	name: string;
+	runtime: boolean;
+	defaultValue: any;
+	scope: StorageScope;
+	target: StorageTarget;
+	zenModeIgnore?: boolean;
 }
 
 type StorageKeyType = string | boolean | number | object;
@@ -64,17 +64,17 @@ export const LayoutStateKeys = {
 	PANEL_WAS_LAST_MAXIMIZED: new RuntimeStateKey<boolean>('panel.wasLastMaximized', StorageScope.WORKSPACE, StorageTarget.USER, false),
 
 	// Part Positions
-	SIDEBAR_POSITON: new RuntimeStateKey<Position>('sideBar.position', StorageScope.GLOBAL, StorageTarget.USER, Position.LEFT),
+	SIDEBAR_POSITON: new RuntimeStateKey<Position>('sideBar.position', StorageScope.WORKSPACE, StorageTarget.USER, Position.LEFT),
 	PANEL_POSITION: new RuntimeStateKey<Position>('panel.position', StorageScope.WORKSPACE, StorageTarget.USER, Position.BOTTOM),
 	PANEL_ALIGNMENT: new RuntimeStateKey<PanelAlignment>('panel.alignment', StorageScope.GLOBAL, StorageTarget.USER, 'center'),
 
 	// Part Visibility
-	ACTIVITYBAR_HIDDEN: new RuntimeStateKey<boolean>('activityBar.hidden', StorageScope.GLOBAL, StorageTarget.USER, false, true),
+	ACTIVITYBAR_HIDDEN: new RuntimeStateKey<boolean>('activityBar.hidden', StorageScope.WORKSPACE, StorageTarget.USER, false, true),
 	SIDEBAR_HIDDEN: new RuntimeStateKey<boolean>('sideBar.hidden', StorageScope.WORKSPACE, StorageTarget.USER, false),
 	EDITOR_HIDDEN: new RuntimeStateKey<boolean>('editor.hidden', StorageScope.WORKSPACE, StorageTarget.USER, false),
 	PANEL_HIDDEN: new RuntimeStateKey<boolean>('panel.hidden', StorageScope.WORKSPACE, StorageTarget.USER, true),
 	AUXILIARYBAR_HIDDEN: new RuntimeStateKey<boolean>('auxiliaryBar.hidden', StorageScope.WORKSPACE, StorageTarget.USER, true),
-	STATUSBAR_HIDDEN: new RuntimeStateKey<boolean>('statusBar.hidden', StorageScope.GLOBAL, StorageTarget.USER, false, true),
+	STATUSBAR_HIDDEN: new RuntimeStateKey<boolean>('statusBar.hidden', StorageScope.WORKSPACE, StorageTarget.USER, false, true),
 } as const;
 
 

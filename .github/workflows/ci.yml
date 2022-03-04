@@ -13,7 +13,7 @@ on:
 jobs:
   windows:
     name: Windows
-    runs-on: windows-latest
+    runs-on: windows-2019
     timeout-minutes: 60
     env:
       CHILD_CONCURRENCY: "1"
@@ -123,8 +123,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+          key: ${{ runner.os }}-cacheNodeModules20-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules20-
       - name: Get yarn cache directory path
         id: yarnCacheDirPath
         if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
@@ -195,8 +195,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+          key: ${{ runner.os }}-cacheNodeModules20-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules20-
       - name: Get yarn cache directory path
         id: yarnCacheDirPath
         if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
@@ -269,8 +269,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: ${{ runner.os }}-cacheNodeModules14-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-cacheNodeModules14-
+          key: ${{ runner.os }}-cacheNodeModules20-${{ steps.nodeModulesCacheKey.outputs.value }}
+          restore-keys: ${{ runner.os }}-cacheNodeModules20-
       - name: Get yarn cache directory path
         id: yarnCacheDirPath
         if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
@@ -297,6 +297,12 @@ jobs:
 
       - name: Run Valid Layers Checks
         run: yarn valid-layers-check
+
+      - name: Compile /build/
+        run: yarn --cwd build compile
+
+      - name: Check clean git state
+        run: ./.github/workflows/check-clean-git-state.sh
 
       - name: Run eslint
         run: yarn eslint

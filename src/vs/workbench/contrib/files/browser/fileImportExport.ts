@@ -23,7 +23,7 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { extractEditorsDropData } from 'vs/workbench/browser/dnd';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspaces/common/workspaceEditing';
 import { isWeb } from 'vs/base/common/platform';
-import { triggerDownload, WebFileSystemAccess } from 'vs/base/browser/dom';
+import { triggerDownload } from 'vs/base/browser/dom';
 import { ILogService } from 'vs/platform/log/common/log';
 import { FileAccess, Schemas } from 'vs/base/common/network';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
@@ -33,6 +33,7 @@ import { once } from 'vs/base/common/functional';
 import { coalesce } from 'vs/base/common/arrays';
 import { canceled } from 'vs/base/common/errors';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { WebFileSystemAccess } from 'vs/platform/files/browser/webFileSystemAccess';
 
 //#region Browser File Upload (drag and drop, input element)
 
@@ -64,7 +65,7 @@ interface IWebkitDataTransferItemEntry {
 }
 
 interface IWebkitDataTransferItemEntryReader {
-	readEntries(resolve: (file: IWebkitDataTransferItemEntry[]) => void, reject: () => void): void
+	readEntries(resolve: (file: IWebkitDataTransferItemEntry[]) => void, reject: () => void): void;
 }
 
 export class BrowserFileUpload {
@@ -140,7 +141,7 @@ export class BrowserFileUpload {
 			entries.push(item.webkitGetAsEntry());
 		}
 
-		const results: { isFile: boolean, resource: URI }[] = [];
+		const results: { isFile: boolean; resource: URI }[] = [];
 		const operation: IBrowserUploadOperation = {
 			startTime: Date.now(),
 			progressScheduler: new RunOnceWorker<IProgressStep>(steps => { progress.report(steps[steps.length - 1]); }, 1000),
@@ -194,7 +195,7 @@ export class BrowserFileUpload {
 		}
 	}
 
-	private async doUploadEntry(entry: IWebkitDataTransferItemEntry, parentResource: URI, target: ExplorerItem | undefined, progress: IProgress<IProgressStep>, operation: IBrowserUploadOperation, token: CancellationToken): Promise<{ isFile: boolean, resource: URI } | undefined> {
+	private async doUploadEntry(entry: IWebkitDataTransferItemEntry, parentResource: URI, target: ExplorerItem | undefined, progress: IProgress<IProgressStep>, operation: IBrowserUploadOperation, token: CancellationToken): Promise<{ isFile: boolean; resource: URI } | undefined> {
 		if (token.isCancellationRequested || !entry.name || (!entry.isFile && !entry.isDirectory)) {
 			return undefined;
 		}

@@ -21,8 +21,7 @@ import { IEditorService } from 'vs/workbench/services/editor/common/editorServic
 import { assertIsDefined, assertAllDefined } from 'vs/base/common/types';
 import { Schemas } from 'vs/base/common/network';
 import { URI } from 'vs/base/common/uri';
-import { ITreeViewsDragAndDropService } from 'vs/workbench/services/views/common/treeViewsDragAndDropService';
-import { ITreeDataTransfer } from 'vs/workbench/common/views';
+import { ITreeViewsService } from 'vs/workbench/services/views/browser/treeViewsService';
 
 interface IDropOperation {
 	splitDirection?: GroupDirection;
@@ -51,7 +50,7 @@ class DropOverlay extends Themable {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
-		@ITreeViewsDragAndDropService private readonly treeViewsDragAndDropService: ITreeViewsDragAndDropService<ITreeDataTransfer>
+		@ITreeViewsService private readonly treeViewsDragAndDropService: ITreeViewsService
 	) {
 		super(themeService);
 
@@ -483,7 +482,7 @@ class DropOverlay extends Themable {
 		this.currentDropOperation = { splitDirection };
 	}
 
-	private doPositionOverlay(options: { top: string, left: string, width: string, height: string }): void {
+	private doPositionOverlay(options: { top: string; left: string; width: string; height: string }): void {
 		const [container, overlay] = assertAllDefined(this.container, this.overlay);
 
 		// Container
