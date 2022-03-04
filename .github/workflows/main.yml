@@ -12,7 +12,7 @@ on:
 jobs:
   linux:
     name: Linux
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SPLIT_LINE: =============================
@@ -313,7 +313,7 @@ jobs:
 
   windows:
     name: Windows
-    runs-on: windows-2016
+    runs-on: windows-2022
     env:
       CHILD_CONCURRENCY: "1"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
