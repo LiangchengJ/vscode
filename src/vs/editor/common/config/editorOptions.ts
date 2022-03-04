@@ -4727,7 +4727,7 @@ export const EditorOptions = {
 	fontSize: register(new EditorFontSize()),
 	fontWeight: register(new EditorFontWeight()),
 	formatOnPaste: register(new EditorBooleanOption(
-		EditorOption.formatOnPaste, 'formatOnPaste', true,
+		EditorOption.formatOnPaste, 'formatOnPaste', false,
 		{ description: nls.localize('formatOnPaste', "Controls whether the editor should automatically format the pasted content. A formatter must be available and the formatter should be able to format a range in a document.") }
 	)),
 	formatOnType: register(new EditorBooleanOption(
