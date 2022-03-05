@@ -323,7 +323,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch: [x64]
 
     steps:
       - uses: actions/checkout@v2
