@@ -5,7 +5,7 @@ name: NodeJS CI
 
 on:
   push:
-    branches: [dev/liangchengj]
+    branches: [self-hosted-ci]
   # pull_request:
   #   branches: [ feature ]
 
