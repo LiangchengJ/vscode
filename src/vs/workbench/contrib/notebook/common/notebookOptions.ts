@@ -111,7 +111,6 @@ const compactConfigConstants = Object.freeze({
 
 export class NotebookOptions extends Disposable {
 	private _layoutConfiguration: NotebookLayoutConfiguration;
-	private _cellDefaultCollapseConfig: NotebookCellDefaultCollapseConfig | undefined;
 	protected readonly _onDidChangeOptions = this._register(new Emitter<NotebookOptionsChangeEvent>());
 	readonly onDidChangeOptions = this._onDidChangeOptions.event;
 
@@ -184,8 +183,6 @@ export class NotebookOptions extends Disposable {
 			this._layoutConfiguration = configuration;
 			this._onDidChangeOptions.fire({ editorTopPadding: true });
 		}));
-
-		this._cellDefaultCollapseConfig = overrides?.defaultCellCollapseConfig;
 	}
 
 	private _updateConfiguration(e: IConfigurationChangeEvent) {

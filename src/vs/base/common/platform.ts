@@ -40,7 +40,6 @@ export interface INodeProcess {
 	platform: string;
 	arch: string;
 	env: IProcessEnvironment;
-	nextTick?: (callback: (...args: any[]) => void) => void;
 	versions?: {
 		electron?: string;
 	};
@@ -198,10 +197,6 @@ export const locale = _locale;
  */
 export const translationsConfigFile = _translationsConfigFile;
 
-interface ISetImmediate {
-	(callback: (...args: unknown[]) => void): void;
-}
-
 /**
  * See https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#:~:text=than%204%2C%20then-,set%20timeout%20to%204,-.
  *
@@ -238,20 +233,6 @@ export const setTimeout0 = (() => {
 		};
 	}
 	return (callback: () => void) => setTimeout(callback);
-})();
-
-export const setImmediate: ISetImmediate = (function defineSetImmediate() {
-	if (globals.setImmediate) {
-		return globals.setImmediate.bind(globals);
-	}
-	if (typeof globals.postMessage === 'function' && !globals.importScripts) {
-		return setTimeout0;
-	}
-	if (typeof nodeProcess?.nextTick === 'function') {
-		return nodeProcess.nextTick.bind(nodeProcess);
-	}
-	const _promise = Promise.resolve();
-	return (callback: (...args: unknown[]) => void) => _promise.then(callback);
 })();
 
 export const enum OperatingSystem {

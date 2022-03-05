@@ -316,10 +316,6 @@ export class NativeWindow extends Disposable {
 		this._register(this.layoutService.onDidChangePanelPosition(pos => this.onDidChangePanelPosition(positionFromString(pos))));
 		this.onDidChangePanelPosition(this.layoutService.getPanelPosition());
 
-		// Detect panel position to determine minimum width
-		this._register(this.layoutService.onDidChangePanelPosition(pos => this.onDidChangePanelPosition(positionFromString(pos))));
-		this.onDidChangePanelPosition(this.layoutService.getPanelPosition());
-
 		// Lifecycle
 		this._register(this.lifecycleService.onBeforeShutdown(e => this.onBeforeShutdown(e)));
 		this._register(this.lifecycleService.onBeforeShutdownError(e => this.onBeforeShutdownError(e)));

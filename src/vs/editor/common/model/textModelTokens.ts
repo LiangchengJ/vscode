@@ -236,7 +236,7 @@ export class TextModelTokenization extends Disposable {
 		}
 
 		this._isScheduled = true;
-		setImmediate(() => {
+		runWhenIdle((deadline) => {
 			this._isScheduled = false;
 
 			this._backgroundTokenizeWithDeadline(deadline);
