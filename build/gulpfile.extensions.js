@@ -29,6 +29,7 @@ const extensionsPath = path.join(path.dirname(__dirname), 'extensions');
 // 	ignore: ['**/out/**', '**/node_modules/**']
 // });
 const compilations = [
+	'authentication-proxy/tsconfig.json',
 	'configuration-editing/build/tsconfig.json',
 	'configuration-editing/tsconfig.json',
 	'css-language-features/client/tsconfig.json',
@@ -238,6 +239,9 @@ const watchWebExtensionsTask = task.define('watch-web', () => buildWebExtensions
 gulp.task(watchWebExtensionsTask);
 exports.watchWebExtensionsTask = watchWebExtensionsTask;
 
+/**
+ * @param {boolean} isWatch
+ */
 async function buildWebExtensions(isWatch) {
 	const webpackConfigLocations = await nodeUtil.promisify(glob)(
 		path.join(extensionsPath, '**', 'extension-browser.webpack.config.js'),

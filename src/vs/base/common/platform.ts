@@ -13,6 +13,7 @@ let _isNative = false;
 let _isWeb = false;
 let _isElectron = false;
 let _isIOS = false;
+let _isCI = false;
 let _locale: string | undefined = undefined;
 let _language: string = LANGUAGE_DEFAULT;
 let _translationsConfigFile: string | undefined = undefined;
@@ -20,7 +21,7 @@ let _userAgent: string | undefined = undefined;
 
 interface NLSConfig {
 	locale: string;
-	availableLanguages: { [key: string]: string; };
+	availableLanguages: { [key: string]: string };
 	_translationsConfigFile: string;
 }
 
@@ -39,7 +40,6 @@ export interface INodeProcess {
 	platform: string;
 	arch: string;
 	env: IProcessEnvironment;
-	nextTick?: (callback: (...args: any[]) => void) => void;
 	versions?: {
 		electron?: string;
 	};
@@ -93,6 +93,7 @@ else if (typeof nodeProcess === 'object') {
 	_isLinux = (nodeProcess.platform === 'linux');
 	_isLinuxSnap = _isLinux && !!nodeProcess.env['SNAP'] && !!nodeProcess.env['SNAP_REVISION'];
 	_isElectron = isElectronProcess;
+	_isCI = !!nodeProcess.env['CI'] || !!nodeProcess.env['BUILD_ARTIFACTSTAGINGDIRECTORY'];
 	_locale = LANGUAGE_DEFAULT;
 	_language = LANGUAGE_DEFAULT;
 	const rawNlsConfig = nodeProcess.env['VSCODE_NLS_CONFIG'];
@@ -146,7 +147,13 @@ export const isLinuxSnap = _isLinuxSnap;
 export const isNative = _isNative;
 export const isElectron = _isElectron;
 export const isWeb = _isWeb;
+export const isWebWorker = (_isWeb && typeof globals.importScripts === 'function');
 export const isIOS = _isIOS;
+/**
+ * Whether we run inside a CI environment, such as
+ * GH actions or Azure Pipelines.
+ */
+export const isCI = _isCI;
 export const platform = _platform;
 export const userAgent = _userAgent;
 
@@ -190,10 +197,6 @@ export const locale = _locale;
  */
 export const translationsConfigFile = _translationsConfigFile;
 
-interface ISetImmediate {
-	(callback: (...args: unknown[]) => void): void;
-}
-
 /**
  * See https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#:~:text=than%204%2C%20then-,set%20timeout%20to%204,-.
  *
@@ -232,20 +235,6 @@ export const setTimeout0 = (() => {
 	return (callback: () => void) => setTimeout(callback);
 })();
 
-export const setImmediate: ISetImmediate = (function defineSetImmediate() {
-	if (globals.setImmediate) {
-		return globals.setImmediate.bind(globals);
-	}
-	if (typeof globals.postMessage === 'function' && !globals.importScripts) {
-		return setTimeout0;
-	}
-	if (typeof nodeProcess?.nextTick === 'function') {
-		return nodeProcess.nextTick.bind(nodeProcess);
-	}
-	const _promise = Promise.resolve();
-	return (callback: (...args: unknown[]) => void) => _promise.then(callback);
-})();
-
 export const enum OperatingSystem {
 	Windows = 1,
 	Macintosh = 2,
@@ -266,3 +255,9 @@ export function isLittleEndian(): boolean {
 	}
 	return _isLittleEndian;
 }
+
+export const isChrome = !!(userAgent && userAgent.indexOf('Chrome') >= 0);
+export const isFirefox = !!(userAgent && userAgent.indexOf('Firefox') >= 0);
+export const isSafari = !!(!isChrome && (userAgent && userAgent.indexOf('Safari') >= 0));
+export const isEdge = !!(userAgent && userAgent.indexOf('Edg/') >= 0);
+export const isAndroid = !!(userAgent && userAgent.indexOf('Android') >= 0);

@@ -68,6 +68,7 @@ export class CommentsPanel extends ViewPane {
 
 		let domContainer = dom.append(container, dom.$('.comments-panel-container'));
 		this.treeContainer = dom.append(domContainer, dom.$('.tree-container'));
+		this.treeContainer.classList.add('file-icon-themable-tree', 'show-file-icons');
 		this.commentsModel = new CommentsModel();
 
 		this.createTree();
@@ -183,7 +184,7 @@ export class CommentsPanel extends ViewPane {
 							element.range.startLineNumber,
 							element.range.startColumn,
 							basename(element.resource),
-							element.comment.body.value
+							(typeof element.comment.body === 'string') ? element.comment.body : element.comment.body.value
 						);
 					}
 					return '';
@@ -218,7 +219,7 @@ export class CommentsPanel extends ViewPane {
 			const control = this.editorService.activeTextEditorControl;
 			if (threadToReveal && isCodeEditor(control)) {
 				const controller = CommentController.get(control);
-				controller.revealCommentThread(threadToReveal, commentToReveal, false);
+				controller?.revealCommentThread(threadToReveal, commentToReveal, false);
 			}
 
 			return true;
@@ -239,7 +240,7 @@ export class CommentsPanel extends ViewPane {
 				const control = editor.getControl();
 				if (threadToReveal && isCodeEditor(control)) {
 					const controller = CommentController.get(control);
-					controller.revealCommentThread(threadToReveal, commentToReveal.uniqueIdInThread, true);
+					controller?.revealCommentThread(threadToReveal, commentToReveal.uniqueIdInThread, true);
 				}
 			}
 		});

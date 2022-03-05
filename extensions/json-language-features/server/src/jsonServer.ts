@@ -27,7 +27,7 @@ namespace VSCodeContentRequest {
 }
 
 namespace SchemaContentChangeNotification {
-	export const type: NotificationType<string> = new NotificationType('json/schemaContent');
+	export const type: NotificationType<string | string[]> = new NotificationType('json/schemaContent');
 }
 
 namespace ResultLimitReachedNotification {
@@ -56,12 +56,12 @@ export interface RequestService {
 
 export interface RuntimeEnvironment {
 	file?: RequestService;
-	http?: RequestService
+	http?: RequestService;
 	configureHttpRequests?(proxy: string, strictSSL: boolean): void;
 	readonly timer: {
 		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
 		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
-	}
+	};
 }
 
 export function startServer(connection: Connection, runtime: RuntimeEnvironment) {
@@ -168,7 +168,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	interface Settings {
 		json: {
 			schemas: JSONSchemaSettings[];
-			format: { enable: boolean; };
+			format: { enable: boolean };
 			resultLimit?: number;
 		};
 		http: {
@@ -185,7 +185,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 
 
 	const limitExceededWarnings = function () {
-		const pendingWarnings: { [uri: string]: { features: { [name: string]: string }; timeout?: Disposable; } } = {};
+		const pendingWarnings: { [uri: string]: { features: { [name: string]: string }; timeout?: Disposable } } = {};
 
 		const showLimitedNotification = (uri: string, resultLimit: number) => {
 			const warning = pendingWarnings[uri];
@@ -264,8 +264,18 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	});
 
 	// A schema has changed
-	connection.onNotification(SchemaContentChangeNotification.type, uri => {
-		if (languageService.resetSchema(uri)) {
+	connection.onNotification(SchemaContentChangeNotification.type, uriOrUris => {
+		let needsRevalidation = false;
+		if (Array.isArray(uriOrUris)) {
+			for (const uri of uriOrUris) {
+				if (languageService.resetSchema(uri)) {
+					needsRevalidation = true;
+				}
+			}
+		} else {
+			needsRevalidation = languageService.resetSchema(uriOrUris);
+		}
+		if (needsRevalidation) {
 			for (const doc of documents.all()) {
 				triggerValidation(doc);
 			}
@@ -348,7 +358,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 	});
 
-	const pendingValidationRequests: { [uri: string]: Disposable; } = {};
+	const pendingValidationRequests: { [uri: string]: Disposable } = {};
 	const validationDelayMs = 300;
 
 	function cleanPendingValidation(textDocument: TextDocument): void {

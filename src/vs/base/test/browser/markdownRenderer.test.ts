@@ -148,7 +148,7 @@ suite('MarkdownRenderer', () => {
 			mds.appendMarkdown(`[$(zap)-link](#link)`);
 
 			let result: HTMLElement = renderMarkdown(mds).element;
-			assert.strictEqual(result.innerHTML, `<p><a href="#" data-href="#link" title="#link"><span class="codicon codicon-zap"></span>-link</a></p>`);
+			assert.strictEqual(result.innerHTML, `<p><a data-href="#link" title="#link"><span class="codicon codicon-zap"></span>-link</a></p>`);
 		});
 
 		test('render icon in table', () => {
@@ -168,7 +168,7 @@ suite('MarkdownRenderer', () => {
 </thead>
 <tbody><tr>
 <td><span class="codicon codicon-zap"></span></td>
-<td><a href="#" data-href="#link" title="#link"><span class="codicon codicon-zap"></span>-link</a></td>
+<td><a data-href="#link" title="#link"><span class="codicon codicon-zap"></span>-link</a></td>
 </tr>
 </tbody></table>
 `);
@@ -205,7 +205,7 @@ suite('MarkdownRenderer', () => {
 
 		const uri = URI.parse(anchor.dataset['href']!);
 
-		const data = <{ script: string, documentUri: URI }>parse(decodeURIComponent(uri.query));
+		const data = <{ script: string; documentUri: URI }>parse(decodeURIComponent(uri.query));
 		assert.ok(data);
 		assert.strictEqual(data.script, 'echo');
 		assert.ok(data.documentUri.toString().startsWith('file:///c%3A/'));

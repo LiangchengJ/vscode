@@ -27,7 +27,7 @@ namespace VSCodeContentRequest {
 }
 
 namespace SchemaContentChangeNotification {
-	export const type: NotificationType<string> = new NotificationType('json/schemaContent');
+	export const type: NotificationType<string | string[]> = new NotificationType('json/schemaContent');
 }
 
 namespace ForceValidateRequest {
@@ -59,7 +59,7 @@ namespace ResultLimitReachedNotification {
 interface Settings {
 	json?: {
 		schemas?: JSONSchemaSettings[];
-		format?: { enable: boolean; };
+		format?: { enable: boolean };
 		resultLimit?: number;
 	};
 	http?: {
@@ -96,11 +96,12 @@ export type LanguageClientConstructor = (name: string, description: string, clie
 
 export interface Runtime {
 	schemaRequests: SchemaRequestService;
-	telemetry?: TelemetryReporter
+	telemetry?: TelemetryReporter;
 }
 
 export interface SchemaRequestService {
 	getContent(uri: string): Promise<string>;
+	clearCache?(): Promise<string[]>;
 }
 
 export const languageServerDescription = localize('jsonserver.name', 'JSON Language Server');
@@ -111,7 +112,6 @@ export function startClient(context: ExtensionContext, newLanguageClient: Langua
 
 	let rangeFormatting: Disposable | undefined = undefined;
 
-
 	const documentSelector = ['json', 'jsonc'];
 
 	const schemaResolutionErrorStatusBarItem = window.createStatusBarItem('status.json.resolveError', StatusBarAlignment.Right, 0);
@@ -121,6 +121,16 @@ export function startClient(context: ExtensionContext, newLanguageClient: Langua
 
 	const fileSchemaErrors = new Map<string, string>();
 	let schemaDownloadEnabled = true;
+
+	let isClientReady = false;
+
+	toDispose.push(commands.registerCommand('json.clearCache', async () => {
+		if (isClientReady && runtime.schemaRequests.clearCache) {
+			const cachedSchemas = await runtime.schemaRequests.clearCache();
+			await client.sendNotification(SchemaContentChangeNotification.type, cachedSchemas);
+		}
+		window.showInformationMessage(localize('json.clearCache.completed', "JSON schema cache cleared."));
+	}));
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
@@ -209,6 +219,8 @@ export function startClient(context: ExtensionContext, newLanguageClient: Langua
 	const disposable = client.start();
 	toDispose.push(disposable);
 	client.onReady().then(() => {
+		isClientReady = true;
+
 		const schemaDocuments: { [uri: string]: boolean } = {};
 
 		// handle content request
@@ -294,9 +306,9 @@ export function startClient(context: ExtensionContext, newLanguageClient: Langua
 
 		client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations(context));
 
-		extensions.onDidChange(_ => {
+		toDispose.push(extensions.onDidChange(_ => {
 			client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations(context));
-		});
+		}));
 
 		// manually register / deregister format provider based on the `json.format.enable` setting avoiding issues with late registration. See #71652.
 		updateFormatterRegistration();

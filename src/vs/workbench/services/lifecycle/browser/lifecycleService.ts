@@ -115,24 +115,33 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 
 		let veto = false;
 
+		function handleVeto(vetoResult: boolean | Promise<boolean>, id: string) {
+			if (typeof vetoShutdown !== 'function') {
+				return; // veto handling disabled
+			}
+
+			if (vetoResult instanceof Promise) {
+				logService.error(`[lifecycle] Long running operations before shutdown are unsupported in the web (id: ${id})`);
+
+				veto = true; // implicitly vetos since we cannot handle promises in web
+			}
+
+			if (vetoResult === true) {
+				logService.info(`[lifecycle]: Unload was prevented (id: ${id})`);
+
+				veto = true;
+			}
+		}
+
 		// Before Shutdown
 		this._onBeforeShutdown.fire({
+			reason: ShutdownReason.QUIT,
 			veto(value, id) {
-				if (typeof vetoShutdown === 'function') {
-					if (value instanceof Promise) {
-						logService.error(`[lifecycle] Long running operations before shutdown are unsupported in the web (id: ${id})`);
-
-						value = true; // implicitly vetos since we cannot handle promises in web
-					}
-
-					if (value === true) {
-						logService.info(`[lifecycle]: Unload was prevented (id: ${id})`);
-
-						veto = true;
-					}
-				}
+				handleVeto(value, id);
 			},
-			reason: ShutdownReason.QUIT
+			finalVeto(valueFn, id) {
+				handleVeto(valueFn(), id); // in browser, trigger instantly because we do not support async anyway
+			}
 		});
 
 		// Veto: handle if provided
@@ -157,10 +166,11 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 		// First indicate will-shutdown
 		const logService = this.logService;
 		this._onWillShutdown.fire({
+			reason: ShutdownReason.QUIT,
 			join(promise, id) {
 				logService.error(`[lifecycle] Long running operations during shutdown are unsupported in the web (id: ${id})`);
 			},
-			reason: ShutdownReason.QUIT
+			force: () => { /* No-Op in web */ },
 		});
 
 		// Finally end with did-shutdown

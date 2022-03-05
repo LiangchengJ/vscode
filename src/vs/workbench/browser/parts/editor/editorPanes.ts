@@ -13,7 +13,7 @@ import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/la
 import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IEditorProgressService, LongRunningOperation } from 'vs/platform/progress/common/progress';
-import { IEditorGroupView, DEFAULT_EDITOR_MIN_DIMENSIONS, DEFAULT_EDITOR_MAX_DIMENSIONS, IEditorGroupsAccessor } from 'vs/workbench/browser/parts/editor/editor';
+import { IEditorGroupView, DEFAULT_EDITOR_MIN_DIMENSIONS, DEFAULT_EDITOR_MAX_DIMENSIONS } from 'vs/workbench/browser/parts/editor/editor';
 import { Emitter } from 'vs/base/common/event';
 import { assertIsDefined } from 'vs/base/common/types';
 import { IWorkspaceTrustManagementService } from 'vs/platform/workspace/common/workspaceTrust';
@@ -28,7 +28,7 @@ export interface IOpenEditorResult {
 	 * placeholder in certain cases, e.g. when workspace trust
 	 * is required, or an editor fails to restore.
 	 *
-	 * Will be `undefined` if an error occured while trying to
+	 * Will be `undefined` if an error occurred while trying to
 	 * open the editor and in cases where no placeholder is being
 	 * used.
 	 */
@@ -62,7 +62,7 @@ export class EditorPanes extends Disposable {
 	private readonly _onDidFocus = this._register(new Emitter<void>());
 	readonly onDidFocus = this._onDidFocus.event;
 
-	private _onDidChangeSizeConstraints = this._register(new Emitter<{ width: number; height: number; } | undefined>());
+	private _onDidChangeSizeConstraints = this._register(new Emitter<{ width: number; height: number } | undefined>());
 	readonly onDidChangeSizeConstraints = this._onDidChangeSizeConstraints.event;
 
 	//#endregion
@@ -84,7 +84,6 @@ export class EditorPanes extends Disposable {
 
 	constructor(
 		private parent: HTMLElement,
-		private accessor: IEditorGroupsAccessor,
 		private groupView: IEditorGroupView,
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
@@ -252,7 +251,7 @@ export class EditorPanes extends Disposable {
 		this._onDidChangeSizeConstraints.fire(undefined);
 	}
 
-	private async doSetInput(editorPane: EditorPane, editor: EditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext): Promise<{ changed: boolean, cancelled: boolean }> {
+	private async doSetInput(editorPane: EditorPane, editor: EditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext): Promise<{ changed: boolean; cancelled: boolean }> {
 
 		// If the input did not change, return early and only
 		// apply the options unless the options instruct us to
@@ -276,9 +275,7 @@ export class EditorPanes extends Disposable {
 			// This ensures that a slow loading input will not
 			// be visible for the duration of the new input to
 			// load (https://github.com/microsoft/vscode/issues/34697)
-			if (this.accessor.partOptions.experimentalDisableClearInputOnSetInput !== true) {
-				editorPane.clearInput();
-			}
+			editorPane.clearInput();
 
 			// Set the input to the editor pane
 			await editorPane.setInput(editor, options, context, operation.token);
