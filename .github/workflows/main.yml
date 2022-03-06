@@ -400,7 +400,7 @@ jobs:
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
           node ./.github/updateProduct.js
           node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+        shell: C:\Git\usr\bin\bash.exe --login "{0}"
 
       - name: Build and Package
         run: |
@@ -433,7 +433,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
           mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
 
-        shell: bash
+        shell: C:\Git\usr\bin\bash.exe --login "{0}"
 
       - name: Generate SHA512 checksum files
         run: |
@@ -449,7 +449,7 @@ jobs:
           if [ -f "vscode-server-win32-${{ matrix.arch }}-web.zip" ] ; then
               sha512sum vscode-server-win32-${{ matrix.arch }}-web.zip | awk '{print $1}' > vscode-server-win32-${{ matrix.arch }}-web.zip.sha512
           fi
-        shell: bash
+        shell: C:\Git\usr\bin\bash.exe --login "{0}"
 
       - name: Release
         uses: softprops/action-gh-release@v1
