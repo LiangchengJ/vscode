@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import 'vs/workbench/contrib/welcomeGettingStarted/common/media/example_markdown_media';
+import 'vs/workbench/contrib/welcomeGettingStarted/common/media/theme_picker';
 import 'vs/workbench/contrib/welcomeGettingStarted/common/media/notebookProfile';
 import { localize } from 'vs/nls';
 import { Codicon } from 'vs/base/common/codicons';
@@ -117,7 +117,7 @@ export const startEntries: GettingStartedStartEntryContent = [
 		when: '!openFolderWorkspaceSupport && workbenchState == \'workspace\'',
 		content: {
 			type: 'startEntry',
-			command: 'command:workbench.action.setRootFolder',
+			command: 'command:workbench.action.files.openFolderViaWorkspace',
 		}
 	},
 	{
@@ -199,7 +199,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 						'onSettingChanged:workbench.colorTheme',
 						'onCommand:workbench.action.selectTheme'
 					],
-					media: { type: 'markdown', path: 'example_markdown_media', }
+					media: { type: 'markdown', path: 'theme_picker', }
 				},
 				{
 					id: 'settingsSync',
@@ -285,7 +285,7 @@ export const walkthroughs: GettingStartedWalkthroughContent = [
 						'onSettingChanged:workbench.colorTheme',
 						'onCommand:workbench.action.selectTheme'
 					],
-					media: { type: 'markdown', path: 'example_markdown_media', }
+					media: { type: 'markdown', path: 'theme_picker', }
 				},
 				{
 					id: 'settingsSyncWeb',
