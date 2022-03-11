@@ -322,8 +322,8 @@ jobs:
       VS_ZIP_FNAME: VSCode-darwin-universal.zip
 
     strategy:
-      matrix:
-        arch: [x64, arm64, ia32]
+      matrix: 
+        arch: [x64, arm64]
 
     steps:
       - uses: actions/checkout@v2
