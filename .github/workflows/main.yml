@@ -332,9 +332,9 @@ jobs:
         with:
           node-version: 16
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.x"
+      # - uses: actions/setup-python@v2
+      #   with:
+      #     python-version: "3.x"
 
       - name: Compute node modules cache key
         id: nodeModulesCacheKey
