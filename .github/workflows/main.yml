@@ -5,7 +5,7 @@ name: NodeJS CI
 
 on:
   push:
-    branches: [self-hosted-ci]
+    branches: [dev/liangchengj]
   # pull_request:
   #   branches: [ feature ]
 
@@ -313,7 +313,7 @@ jobs:
 
   windows:
     name: Windows
-    runs-on: self-hosted
+    runs-on: windows-2022
     env:
       CHILD_CONCURRENCY: "1"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -323,7 +323,7 @@ jobs:
 
     strategy:
       matrix:
-        arch: [x64]
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -387,7 +387,7 @@ jobs:
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
           node ./.github/updateProduct.js
           node ./.github/updateWin32VisualElementsManifest.js
-        shell: C:\Git\usr\bin\bash.exe --login "{0}"
+        shell: bash
 
       - name: Build and Package
         run: |
@@ -420,7 +420,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
           mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
 
-        shell: C:\Git\usr\bin\bash.exe --login "{0}"
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -436,7 +436,7 @@ jobs:
           if [ -f "vscode-server-win32-${{ matrix.arch }}-web.zip" ] ; then
               sha512sum vscode-server-win32-${{ matrix.arch }}-web.zip | awk '{print $1}' > vscode-server-win32-${{ matrix.arch }}-web.zip.sha512
           fi
-        shell: C:\Git\usr\bin\bash.exe --login "{0}"
+        shell: bash
 
       - name: Release
         uses: softprops/action-gh-release@v1
