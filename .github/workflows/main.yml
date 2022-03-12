@@ -23,7 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [x64, arm64, ia32, armhf]
+        arch:
+          - x64
+          - arm64
+          # - ia32
+          - armhf
 
     steps:
       - uses: actions/checkout@v2
@@ -259,7 +263,10 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch:
+          - x64
+          - arm64
+          # - ia32
 
     steps:
       - uses: actions/checkout@v2
@@ -323,7 +330,10 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch:
+          - x64
+          - arm64
+          # - ia32
 
     steps:
       - uses: actions/checkout@v2
@@ -384,7 +394,10 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch:
+          - x64
+          - arm64
+          # - ia32
 
     steps:
       - uses: actions/checkout@v2
@@ -445,7 +458,10 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch:
+          - x64
+          - arm64
+          # - ia32
 
     steps:
       - uses: actions/checkout@v2
@@ -507,7 +523,10 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        arch:
+          - x64
+          - arm64
+          # - ia32
 
     steps:
       - uses: actions/checkout@v2
