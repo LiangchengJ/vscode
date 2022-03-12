@@ -10,16 +10,17 @@ on:
   # pull_request:
   #   branches: [ feature ]
 
-jobs:
-  linux:
-    name: Linux
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      SPLIT_LINE: =============================
-      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
-      VS_ZIP_FNAME: VSCode-darwin-universal.zip
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SPLIT_LINE: =============================
+  VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
+  VS_ZIP_FNAME: VSCode-darwin-universal.zip
+  CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
 
+jobs:
+  build-packages-for-linux:
+    name: Build packages for linux
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: [x64, arm64, ia32, armhf]
@@ -42,7 +43,7 @@ jobs:
         with:
           node-version: 16
 
-      - name: Update Configurations
+      - name: Update configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
           echo "PKGVER >>> $PKGVER"
@@ -149,8 +150,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part15
+          tag_name: dev_test_part15
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -168,14 +169,9 @@ jobs:
             product.json
             product.json.sha512
 
-  darwin:
-    name: macOS
+  build-packages-for-macos:
+    name: Build packages for macOS
     runs-on: macos-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
-      VS_ZIP_FNAME: VSCode-darwin-universal.zip
-
     strategy:
       matrix:
         arch: [x64, arm64]
@@ -187,7 +183,7 @@ jobs:
         with:
           node-version: 16
 
-      - name: Update Configurations
+      - name: Update configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
           echo "PKGVER >>> $PKGVER"
@@ -245,8 +241,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part15
+          tag_name: dev_test_part15
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -258,16 +254,9 @@ jobs:
             vscode-server-darwin-web.zip
             vscode-server-darwin-web.zip.sha512
 
-  windows:
-    name: Windows
+  build-binary-packages-for-windows:
+    name: Build binary packages for Windows
     runs-on: windows-2022
-    env:
-      CHILD_CONCURRENCY: "1"
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
-      VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
-      VS_ZIP_FNAME: VSCode-darwin-universal.zip
-
     strategy:
       matrix:
         arch: [x64, arm64, ia32]
@@ -283,7 +272,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update Configurations
+      - name: Update configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
           echo "PKGVER >>> $PKGVER"
@@ -299,7 +288,7 @@ jobs:
           node ./.github/updateWin32VisualElementsManifest.js
         shell: bash
 
-      - name: Build and Package
+      - name: Build binary packages
         run: |
           yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
@@ -309,37 +298,201 @@ jobs:
 
           ( cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9 )
           mv ../CodeOSS-win32-${{ matrix.arch }}.zip .
-
-          if [ "${{ matrix.arch }}" != "arm64" ] ; then
-              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
-              ( cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }} )
-              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9 )
-              mv ../vscode-server-win32-${{ matrix.arch }}.zip .
-
-              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
-              ( cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web )
-              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9 )
-              mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
-          fi
-
-          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
-
-          yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
-          mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
-
-          yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
-          mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
-
         shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
           sha512sum CodeOSS-win32-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
           sha512sum CodeOSS-win32-${{ matrix.arch }}.zip | awk '{print $1}' > CodeOSS-win32-${{ matrix.arch }}.zip.sha512
-          sha512sum CodeOSSUserSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
-          sha512sum CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+        shell: bash
 
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-win32-${{ matrix.arch }}.zip
+            CodeOSS-win32-${{ matrix.arch }}.zip.sha512
+
+  build-user-installer-for-windows:
+    name: Build user installer for Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update configurations
+        run: |
+          export PKGVER=`node -p "require('./package.json')['version']"`
+          echo "PKGVER >>> $PKGVER"
+          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
+          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
+          echo "CURL_DO_URL >>> $CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
+          npm install extract-zip@2.0.1 -g
+          extract-zip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build user installer
+        run: |
+          yarn
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
+          mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          sha512sum CodeOSSUserSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
+
+  build-system-installer-for-windows:
+    name: Build system installer for Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update configurations
+        run: |
+          export PKGVER=`node -p "require('./package.json')['version']"`
+          echo "PKGVER >>> $PKGVER"
+          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
+          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
+          echo "CURL_DO_URL >>> $CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
+          npm install extract-zip@2.0.1 -g
+          extract-zip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build system installer
+        run: |
+          yarn
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
+          mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          sha512sum CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+
+  build-vscode-server-packages-for-windows:
+    name: Build vscode server packages for Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update configurations
+        run: |
+          export PKGVER=`node -p "require('./package.json')['version']"`
+          echo "PKGVER >>> $PKGVER"
+          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
+          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
+          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
+          echo "CURL_DO_URL >>> $CURL_DO_URL"
+          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
+          npm install extract-zip@2.0.1 -g
+          extract-zip ${{ env.VS_ZIP_FNAME }}
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build vscode server packages
+        run: |
+          yarn
+
+          if [ "${{ matrix.arch }}" != "arm64" ] ; then
+              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
+              bash -c "cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}"
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9"
+              mv ../vscode-server-win32-${{ matrix.arch }}.zip .
+
+              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
+              bash -c "cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web"
+              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9"
+              mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
+          fi
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
           if [ -f "vscode-server-win32-${{ matrix.arch }}.zip" ] ; then
               sha512sum vscode-server-win32-${{ matrix.arch }}.zip | awk '{print $1}' > vscode-server-win32-${{ matrix.arch }}.zip.sha512
           fi
@@ -352,18 +505,10 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part15
+          tag_name: dev_test_part15
           prerelease: true
           files: |
-            CodeOSS-win32-${{ matrix.arch }}.tar.xz
-            CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
-            CodeOSS-win32-${{ matrix.arch }}.zip
-            CodeOSS-win32-${{ matrix.arch }}.zip.sha512
-            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
-            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
-            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
-            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
             vscode-server-win32-${{ matrix.arch }}.zip
             vscode-server-win32-${{ matrix.arch }}.zip.sha512
             vscode-server-win32-${{ matrix.arch }}-web.zip
