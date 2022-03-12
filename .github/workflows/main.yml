@@ -5,7 +5,7 @@ name: NodeJS CI
 
 on:
   push:
-    branches: [dev/liangchengj]
+    branches: [setup-dev-parts]
   # pull_request:
   #   branches: [ feature ]
 
@@ -175,8 +175,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part14
+          tag_name: dev_test_part14
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -298,8 +298,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part14
+          tag_name: dev_test_part14
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -399,17 +399,17 @@ jobs:
           bash -c "cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9"
           mv ../CodeOSS-win32-${{ matrix.arch }}.zip .
 
-          if [ "${{ matrix.arch }}" != "arm64" ] ; then
-              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}"
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9"
-              mv ../vscode-server-win32-${{ matrix.arch }}.zip .
+          # if [ "${{ matrix.arch }}" != "arm64" ] ; then
+          #     yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
+          #     bash -c "cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}"
+          #     bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9"
+          #     mv ../vscode-server-win32-${{ matrix.arch }}.zip .
 
-              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web"
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9"
-              mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
-          fi
+          #     yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
+          #     bash -c "cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web"
+          #     bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9"
+          #     mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
+          # fi
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
           curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
@@ -441,8 +441,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part13
-          tag_name: dev_test_part13
+          name: dev_test_part14
+          tag_name: dev_test_part14
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
