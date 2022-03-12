@@ -61,18 +61,18 @@ jobs:
       - name: Build and Package
         run: |
           yarn
-          yarn gulp vscode-linux-${{ matrix.arch }}-min
+          yarn gulp vscode-linux-${{ matrix.arch }}-min-ci
           ( cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }} )
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
           if [ "${{ matrix.arch }}" != "ia32" ] ; then
-              yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
+              yarn gulp vscode-reh-linux-${{ matrix.arch }}-min-ci
               ( cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }} )
               ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }} )
               mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
-              yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
+              yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min-ci
               ( cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web )
               ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web )
               mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
@@ -201,7 +201,7 @@ jobs:
       - name: Build and Package
         run: |
           yarn
-          yarn gulp vscode-darwin-${{ matrix.arch }}-min
+          yarn gulp vscode-darwin-${{ matrix.arch }}-min-ci
           ( cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
           mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
@@ -211,12 +211,12 @@ jobs:
           mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
 
           if [ "${{ matrix.arch }}" == "x64" ] ; then
-              yarn gulp vscode-reh-darwin-min
+              yarn gulp vscode-reh-darwin-min-ci
               ( cd .. && mv vscode-reh-darwin vscode-server-darwin )
               ( cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip )
               mv ../vscode-server-darwin.zip .
 
-              yarn gulp vscode-reh-web-darwin-min
+              yarn gulp vscode-reh-web-darwin-min-ci
               ( cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web )
               ( cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip )
               mv ../vscode-server-darwin-web.zip .
@@ -291,7 +291,7 @@ jobs:
       - name: Build binary packages
         run: |
           yarn
-          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          yarn gulp vscode-win32-${{ matrix.arch }}-min-ci
           ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
           mv ../CodeOSS-win32-${{ matrix.arch }}.tar.xz .
@@ -355,7 +355,7 @@ jobs:
       - name: Build user installer
         run: |
           yarn
-          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          yarn gulp vscode-win32-${{ matrix.arch }}-min-ci
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
           curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
@@ -416,7 +416,7 @@ jobs:
       - name: Build system installer
         run: |
           yarn
-          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          yarn gulp vscode-win32-${{ matrix.arch }}-min-ci
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
           curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
@@ -478,7 +478,7 @@ jobs:
         run: |
           yarn
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
-              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
+              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min-ci
               ( cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }} )
               ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9 )
               mv ../vscode-server-win32-${{ matrix.arch }}.zip .
@@ -540,7 +540,7 @@ jobs:
         run: |
           yarn
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
-              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
+              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min-ci
               ( cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web )
               ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9 )
               mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
