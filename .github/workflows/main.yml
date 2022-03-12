@@ -41,34 +41,6 @@ jobs:
         with:
           node-version: 16
 
-      - name: Compute node modules cache key
-        id: nodeModulesCacheKey
-        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
-      - name: Cache node modules
-        id: cacheNodeModules
-        uses: actions/cache@v2
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-cacheNodeModules21-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-cacheNodeModules21-
-      - name: Get yarn cache directory path
-        id: yarnCacheDirPath
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - name: Cache yarn directory
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
-          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-yarnCacheDir-
-      - name: Execute yarn
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-        run: yarn --frozen-lockfile --network-timeout 180000
-
       - name: Update Configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
@@ -87,19 +59,19 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-linux-${{ matrix.arch }}-min
-          bash -c "cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }}"
-          bash -c "cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }}"
+          ( cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }} )
+          ( cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }} )
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
           if [ "${{ matrix.arch }}" != "ia32" ] ; then
               yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}"
-              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }}"
+              ( cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }} )
+              ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }} )
               mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
               yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web"
-              bash -c "cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web"
+              ( cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web )
+              ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web )
               mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
 
               yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
@@ -213,34 +185,6 @@ jobs:
         with:
           node-version: 16
 
-      - name: Compute node modules cache key
-        id: nodeModulesCacheKey
-        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
-      - name: Cache node modules
-        id: cacheNodeModules
-        uses: actions/cache@v2
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-cacheNodeModules21-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-cacheNodeModules21-
-      - name: Get yarn cache directory path
-        id: yarnCacheDirPath
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - name: Cache yarn directory
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
-          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-yarnCacheDir-
-      - name: Execute yarn
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-        run: yarn --frozen-lockfile --network-timeout 180000
-
       - name: Update Configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
@@ -259,23 +203,23 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
-          bash -c "cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }}"
-          bash -c "cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }}"
+          ( cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }} )
+          ( cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
           mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
 
           npm i -g @ffflorian/jszip-cli@3.1.6
-          bash -c "cd .. && jszip-cli add CodeOSS-darwin-${{ matrix.arch }} --output CodeOSS-darwin-${{ matrix.arch }}.zip"
+          ( cd .. && jszip-cli add CodeOSS-darwin-${{ matrix.arch }} --output CodeOSS-darwin-${{ matrix.arch }}.zip )
           mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
 
           if [ "${{ matrix.arch }}" == "x64" ] ; then
               yarn gulp vscode-reh-darwin-min
-              bash -c "cd .. && mv vscode-reh-darwin vscode-server-darwin"
-              bash -c "cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip"
+              ( cd .. && mv vscode-reh-darwin vscode-server-darwin )
+              ( cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip )
               mv ../vscode-server-darwin.zip .
 
               yarn gulp vscode-reh-web-darwin-min
-              bash -c "cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web"
-              bash -c "cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip"
+              ( cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web )
+              ( cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip )
               mv ../vscode-server-darwin-web.zip .
           fi
         shell: bash
@@ -336,43 +280,6 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Compute node modules cache key
-        id: nodeModulesCacheKey
-        run: echo "::set-output name=value::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js)"
-      - name: Cache node_modules archive
-        id: cacheNodeModules
-        uses: actions/cache@v2
-        with:
-          path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-cacheNodeModulesArchive-${{ steps.nodeModulesCacheKey.outputs.value }}"
-      - name: Extract node_modules archive
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit == 'true' }}
-        run: 7z.exe x .build/node_modules_cache/cache.7z -aos
-      - name: Get yarn cache directory path
-        id: yarnCacheDirPath
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - name: Cache yarn directory
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.yarnCacheDirPath.outputs.dir }}
-          key: ${{ runner.os }}-yarnCacheDir-${{ steps.nodeModulesCacheKey.outputs.value }}
-          restore-keys: ${{ runner.os }}-yarnCacheDir-
-      - name: Execute yarn
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-        run: yarn --frozen-lockfile --network-timeout 180000
-      - name: Create node_modules archive
-        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
-        run: |
-          mkdir -Force .build
-          node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          mkdir -Force .build/node_modules_cache
-          7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
-
       - name: Update Configurations
         run: |
           export PKGVER=`node -p "require('./package.json')['version']"`
@@ -392,22 +299,22 @@ jobs:
       - name: Build and Package
         run: |
           yarn gulp vscode-win32-${{ matrix.arch }}-min
-          bash -c "cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }}"
-          bash -c "cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }}"
+          ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
+          ( cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
           mv ../CodeOSS-win32-${{ matrix.arch }}.tar.xz .
 
-          bash -c "cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9"
+          ( cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9 )
           mv ../CodeOSS-win32-${{ matrix.arch }}.zip .
 
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
               yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}"
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9"
+              ( cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }} )
+              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9 )
               mv ../vscode-server-win32-${{ matrix.arch }}.zip .
 
               yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
-              bash -c "cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web"
-              bash -c "cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9"
+              ( cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web )
+              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9 )
               mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
           fi
 
