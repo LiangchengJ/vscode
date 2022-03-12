@@ -58,6 +58,7 @@ jobs:
 
       - name: Build and Package
         run: |
+          yarn
           yarn gulp vscode-linux-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }} )
@@ -202,6 +203,7 @@ jobs:
 
       - name: Build and Package
         run: |
+          yarn
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
@@ -298,6 +300,7 @@ jobs:
 
       - name: Build and Package
         run: |
+          yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
           ( cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
