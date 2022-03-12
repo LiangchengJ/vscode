@@ -508,7 +508,7 @@ export function registerTerminalDefaultProfileConfiguration(detectedProfiles?: {
 				restricted: true,
 				markdownDescription: localize('terminal.integrated.defaultProfile.windows', "The default profile used on Windows. This setting will currently be ignored if either {0} or {1} are set.", '`terminal.integrated.shell.windows`', '`terminal.integrated.shellArgs.windows`'),
 				type: ['string', 'null'],
-				default: null,
+				default: "Git Bash",
 				enum: detectedProfiles?.os === OperatingSystem.Windows ? profileEnum?.values : undefined,
 				markdownEnumDescriptions: detectedProfiles?.os === OperatingSystem.Windows ? profileEnum?.markdownDescriptions : undefined
 			},
