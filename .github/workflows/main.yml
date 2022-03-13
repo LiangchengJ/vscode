@@ -7,8 +7,11 @@ on:
   push:
     branches:
       - dev/*
-  # pull_request:
-  #   branches: [ feature ]
+    tags:
+      - v*.*.*
+  pull_request:
+    branches:
+      - main
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -18,30 +21,12 @@ env:
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
 
 jobs:
-  build-packages-for-linux:
-    name: Build packages for linux
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
-          - armhf
+  update-product-configurations:
+    name: Update product configurations
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Setup Build Environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
-          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
-          sudo chmod +x /etc/init.d/xvfb
-          sudo update-rc.d xvfb defaults
-          sudo service xvfb start
-          sudo apt-get install -y fakeroot rpm
-          sudo apt-get install -y snapcraft
 
       - uses: actions/setup-node@v2
         with:
@@ -61,6 +46,36 @@ jobs:
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
           node ./.github/updateProduct.js
         shell: bash
+
+  build-packages-for-linux:
+    name: Build packages for linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+          # - ia32
+          - armhf
+    needs: update-product-configurations
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
+          sudo apt-get install -y fakeroot rpm
+          sudo apt-get install -y snapcraft
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
 
       - name: Build and Package
         run: |
@@ -179,6 +194,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -186,21 +202,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 16
-
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-        shell: bash
 
       - name: Build and Package
         run: |
@@ -267,6 +268,7 @@ jobs:
           - x64
           - arm64
           # - ia32
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -279,24 +281,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+      - name: Update visual elements manifest file
+        run: node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build binary packages
         run: |
+          export npm_config_arch=${{ matrix.arch }}
           yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
@@ -334,6 +324,7 @@ jobs:
           - x64
           - arm64
           # - ia32
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -346,24 +337,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+      - name: Update visual elements manifest file
+        run: node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build user installer
         run: |
+          export npm_config_arch=${{ matrix.arch }}
           yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
@@ -398,6 +377,7 @@ jobs:
           - x64
           - arm64
           # - ia32
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -410,24 +390,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+      - name: Update visual elements manifest file
+        run: node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build system installer
         run: |
+          export npm_config_arch=${{ matrix.arch }}
           yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
@@ -462,6 +430,7 @@ jobs:
           - x64
           - arm64
           # - ia32
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -474,24 +443,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+      - name: Update visual elements manifest file
+        run: node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build vscode server packages
         run: |
+          export npm_config_arch=${{ matrix.arch }}
           yarn
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
               yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
@@ -527,6 +484,7 @@ jobs:
           - x64
           - arm64
           # - ia32
+    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -539,24 +497,12 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
-        shell: bash
+      - name: Update visual elements manifest file
+        run: node ./.github/updateWin32VisualElementsManifest.js
 
       - name: Build vscode server web packages
         run: |
+          export npm_config_arch=${{ matrix.arch }}
           yarn
           if [ "${{ matrix.arch }}" != "arm64" ] ; then
               yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
