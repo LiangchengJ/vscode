@@ -15,38 +15,23 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  NODE_VERSION: 16
   SPLIT_LINE: =============================
-  VS_UPDATE_URL_PREFIX: https://update.code.visualstudio.com
-  VS_ZIP_FNAME: VSCode-darwin-universal.zip
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
+  UPDATE_PRODUCT_CONFIGURATION_SH: |
+    PKG_VER=$(node -p "require('./package.json')['version']")
+    VS_ZIP_URL="https://update.code.visualstudio.com/${PKG_VER}/darwin-universal/stable"
+    CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
+    echo "CURL_DO_URL >>> $CURL_DO_URL"
+
+    VS_ZIP_FNAME=VSCode-darwin-universal.zip
+    curl -L -s -o $VS_ZIP_FNAME "$CURL_DO_URL"
+    npm install extract-zip@2.0.1 -g
+    extract-zip $VS_ZIP_FNAME
+    cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+    node ./.github/updateProduct.js
 
 jobs:
-  update-product-configurations:
-    name: Update product configurations
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 16
-
-      - name: Update configurations
-        run: |
-          export PKGVER=`node -p "require('./package.json')['version']"`
-          echo "PKGVER >>> $PKGVER"
-          export VS_ZIP_URL="${{ env.VS_UPDATE_URL_PREFIX }}/${PKGVER}/darwin-universal/stable"
-          echo "VS_ZIP_URL >>> $VS_ZIP_URL"
-          export CURL_DO_URL=`curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n"`
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
-          curl -L -o ${{ env.VS_ZIP_FNAME }} "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip ${{ env.VS_ZIP_FNAME }}
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-        shell: bash
-
   build-packages-for-linux:
     name: Build packages for linux
     runs-on: ubuntu-latest
@@ -57,7 +42,6 @@ jobs:
           - arm64
           # - ia32
           - armhf
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
@@ -75,63 +59,74 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+        shell: bash
 
       - name: Build and Package
         run: |
           yarn
           yarn gulp vscode-linux-${{ matrix.arch }}-min
-          ( cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }} )
-          ( cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }} )
+          (cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }})
+          (cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
-          if [ "${{ matrix.arch }}" != "ia32" ] ; then
-              yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-              ( cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }} )
-              ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }} )
-              mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
+          if [ "${{ matrix.arch }}" != "ia32" ]; then
+          	yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
+          	(cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
+          	(cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
+          	mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
-              yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-              ( cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web )
-              ( cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web )
-              mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+          	yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
+          	(cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
+          	(cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
+          	mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
 
-              yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
-              mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          	yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          	# shellcheck disable=SC2046
+          	# shellcheck disable=SC2012
+          	mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
 
-              yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
-              cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
+          	yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
+          	cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
 
-              # yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
+          	# yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
           fi
 
-          if [ "${{ matrix.arch }}" != "x64" ] ; then
-              rm -f ./product.json
+          if [ "${{ matrix.arch }}" != "x64" ]; then
+          	rm -f ./product.json
           fi
 
-          if [ "${{ matrix.arch }}" == "x64" ] ; then
-              curl -fsSL https://deno.land/x/install/install.sh | sh
-              export DENO_INSTALL="/home/$(whoami)/.deno" && export PATH="$DENO_INSTALL/bin:$PATH"
+          if [ "${{ matrix.arch }}" == "x64" ]; then
+          	curl -fsSL https://deno.land/x/install/install.sh | sh
+          	DENO_INSTALL="/home/$(whoami)/.deno"
+          	export DENO_INSTALL
+          	PATH="$DENO_INSTALL/bin:$PATH"
+          	export PATH
 
-              echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
-              echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-              deno fmt ./product.json
-              deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts > dfserv.log 2>&1 &
-              sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
+          	deno fmt ./product.json
+          	deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
+          	sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
 
-              echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
-              echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-              mv .build/linux/deb/*/deb/*.deb . && export DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo $DOWNLOAD_URL
-              export APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo $APPLICATION_NAME
-              export LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo $LINUX_ICON_NAME
+          	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo "$DOWNLOAD_URL"
+          	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo "$APPLICATION_NAME"
+          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo "$LINUX_ICON_NAME"
 
-              URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
-              wget -c "https://github.com/${URI}"
+          	URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
+          	wget -c "https://github.com/${URI}"
 
-              chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
-              mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
+          	# shellcheck disable=SC2211
+          	chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
+          	mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
           fi
         shell: bash
 
@@ -194,14 +189,18 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64]
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+        shell: bash
 
       - name: Build and Package
         run: |
@@ -268,21 +267,23 @@ jobs:
           - x64
           - arm64
           # - ia32
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Update visual elements manifest file
-        run: node ./.github/updateWin32VisualElementsManifest.js
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build binary packages
         run: |
@@ -324,21 +325,23 @@ jobs:
           - x64
           - arm64
           # - ia32
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Update visual elements manifest file
-        run: node ./.github/updateWin32VisualElementsManifest.js
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build user installer
         run: |
@@ -377,21 +380,23 @@ jobs:
           - x64
           - arm64
           # - ia32
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Update visual elements manifest file
-        run: node ./.github/updateWin32VisualElementsManifest.js
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build system installer
         run: |
@@ -430,21 +435,23 @@ jobs:
           - x64
           - arm64
           # - ia32
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Update visual elements manifest file
-        run: node ./.github/updateWin32VisualElementsManifest.js
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build vscode server packages
         run: |
@@ -484,21 +491,23 @@ jobs:
           - x64
           - arm64
           # - ia32
-    needs: update-product-configurations
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
-      - name: Update visual elements manifest file
-        run: node ./.github/updateWin32VisualElementsManifest.js
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
 
       - name: Build vscode server web packages
         run: |
