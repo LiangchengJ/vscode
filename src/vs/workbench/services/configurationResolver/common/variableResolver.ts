@@ -28,7 +28,7 @@ export interface IVariableResolveContext {
 	getLineNumber(): string | undefined;
 }
 
-type Environment = { env: IProcessEnvironment | undefined; userHome: string | undefined };
+type Environment = { env?: IProcessEnvironment; userHome?: string };
 
 export class AbstractVariableResolverService implements IConfigurationResolverService {
 
