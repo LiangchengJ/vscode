@@ -1,7 +1,7 @@
 # This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-name: NodeJS CI
+name: CodeOSS CI
 
 on:
   push:
@@ -260,7 +260,7 @@ jobs:
 
   build-binary-packages-for-windows:
     name: Build binary packages for Windows
-    runs-on: windows-2022
+    runs-on: windows-2019
     strategy:
       matrix:
         arch:
@@ -318,7 +318,7 @@ jobs:
 
   build-user-installer-for-windows:
     name: Build user installer for Windows
-    runs-on: windows-2022
+    runs-on: windows-2019
     strategy:
       matrix:
         arch:
@@ -373,7 +373,7 @@ jobs:
 
   build-system-installer-for-windows:
     name: Build system installer for Windows
-    runs-on: windows-2022
+    runs-on: windows-2019
     strategy:
       matrix:
         arch:
@@ -428,7 +428,7 @@ jobs:
 
   build-vscode-server-packages-for-windows:
     name: Build vscode server packages for Windows
-    runs-on: windows-2022
+    runs-on: windows-2019
     strategy:
       matrix:
         arch:
@@ -484,7 +484,7 @@ jobs:
 
   build-vscode-server-web-packages-for-windows:
     name: Build vscode server web packages for Windows
-    runs-on: windows-2022
+    runs-on: windows-2019
     strategy:
       matrix:
         arch:
