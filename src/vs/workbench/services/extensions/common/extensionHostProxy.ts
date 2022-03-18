@@ -27,10 +27,7 @@ export type IResolveAuthorityResult = IResolveAuthorityErrorResult | IResolveAut
 
 export interface IExtensionHostProxy {
 	resolveAuthority(remoteAuthority: string, resolveAttempt: number): Promise<IResolveAuthorityResult>;
-	/**
-	 * Returns `null` if no resolver for `remoteAuthority` is found.
-	 */
-	getCanonicalURI(remoteAuthority: string, uri: URI): Promise<URI | null>;
+	getCanonicalURI(remoteAuthority: string, uri: URI): Promise<URI>;
 	startExtensionHost(enabledExtensionIds: ExtensionIdentifier[]): Promise<void>;
 	extensionTestsExecute(): Promise<number>;
 	extensionTestsExit(code: number): Promise<void>;

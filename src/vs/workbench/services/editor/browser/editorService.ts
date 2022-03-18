@@ -907,13 +907,18 @@ export class EditorService extends Disposable implements EditorServiceImpl {
 			// Replace editor preserving viewstate (either across all groups or
 			// only selected group) if the resulting editor is different from the
 			// current one.
-			if (!editor.matches(result)) {
+			if (!result.matches(editor)) {
 				const targetGroups = editor.hasCapability(EditorInputCapabilities.Untitled) ? this.editorGroupService.groups.map(group => group.id) /* untitled replaces across all groups */ : [groupId];
 				for (const targetGroup of targetGroups) {
-					if (result instanceof EditorInput) {
-						await this.replaceEditors([{ editor, replacement: result, options: editorOptions }], targetGroup);
+					const resolvedEditor = await this.editorResolverService.resolveEditor({ resource: result.resource, }, targetGroup);
+					const group = this.editorGroupService.getGroup(targetGroup);
+					if (isEditorInputWithOptionsAndGroup(resolvedEditor)) {
+						// dispose the previous result before replacing with the resolved editor
+						saveResults.pop();
+						saveResults.push(resolvedEditor.editor);
+						await group?.replaceEditors([{ editor, replacement: resolvedEditor.editor, options: editorOptions }]);
 					} else {
-						await this.replaceEditors([{ editor, replacement: { ...result, options: editorOptions } }], targetGroup);
+						await group?.replaceEditors([{ editor, replacement: result, options: editorOptions }]);
 					}
 				}
 			}

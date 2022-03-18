@@ -128,7 +128,7 @@ export class BracketPairsTree extends Disposable {
 		const endOffset = toLength(range.endLineNumber - 1, range.endColumn - 1);
 		const result = new Array<BracketInfo>();
 		const node = this.initialAstWithoutTokens || this.astWithTokens!;
-		collectBrackets(node, lengthZero, node.length, startOffset, endOffset, result, 0, new Map());
+		collectBrackets(node, lengthZero, node.length, startOffset, endOffset, result);
 		return result;
 	}
 
@@ -146,35 +146,25 @@ export class BracketPairsTree extends Disposable {
 	}
 }
 
-function collectBrackets(node: AstNode, nodeOffsetStart: Length, nodeOffsetEnd: Length, startOffset: Length, endOffset: Length, result: BracketInfo[], level: number = 0, levelPerBracketType?: Map<string, number>): void {
+function collectBrackets(node: AstNode, nodeOffsetStart: Length, nodeOffsetEnd: Length, startOffset: Length, endOffset: Length, result: BracketInfo[], level: number = 0): void {
 	if (node.kind === AstNodeKind.List) {
 		for (const child of node.children) {
 			nodeOffsetEnd = lengthAdd(nodeOffsetStart, child.length);
 			if (lengthLessThanEqual(nodeOffsetStart, endOffset) && lengthGreaterThanEqual(nodeOffsetEnd, startOffset)) {
-				collectBrackets(child, nodeOffsetStart, nodeOffsetEnd, startOffset, endOffset, result, level, levelPerBracketType);
+				collectBrackets(child, nodeOffsetStart, nodeOffsetEnd, startOffset, endOffset, result, level);
 			}
 			nodeOffsetStart = nodeOffsetEnd;
 		}
 	} else if (node.kind === AstNodeKind.Pair) {
-
-		let levelPerBracket = 0;
-		if (levelPerBracketType) {
-			let existing = levelPerBracketType.get(node.openingBracket.text);
-			if (existing === undefined) {
-				existing = 0;
-			}
-			levelPerBracket = existing;
-			existing++;
-			levelPerBracketType.set(node.openingBracket.text, existing);
-		}
-
 		// Don't use node.children here to improve performance
+		level++;
+
 		{
 			const child = node.openingBracket;
 			nodeOffsetEnd = lengthAdd(nodeOffsetStart, child.length);
 			if (lengthLessThanEqual(nodeOffsetStart, endOffset) && lengthGreaterThanEqual(nodeOffsetEnd, startOffset)) {
 				const range = lengthsToRange(nodeOffsetStart, nodeOffsetEnd);
-				result.push(new BracketInfo(range, level, levelPerBracket, !node.closingBracket));
+				result.push(new BracketInfo(range, level - 1, !node.closingBracket));
 			}
 			nodeOffsetStart = nodeOffsetEnd;
 		}
@@ -183,7 +173,7 @@ function collectBrackets(node: AstNode, nodeOffsetStart: Length, nodeOffsetEnd: 
 			const child = node.child;
 			nodeOffsetEnd = lengthAdd(nodeOffsetStart, child.length);
 			if (lengthLessThanEqual(nodeOffsetStart, endOffset) && lengthGreaterThanEqual(nodeOffsetEnd, startOffset)) {
-				collectBrackets(child, nodeOffsetStart, nodeOffsetEnd, startOffset, endOffset, result, level + 1, levelPerBracketType);
+				collectBrackets(child, nodeOffsetStart, nodeOffsetEnd, startOffset, endOffset, result, level);
 			}
 			nodeOffsetStart = nodeOffsetEnd;
 		}
@@ -192,20 +182,16 @@ function collectBrackets(node: AstNode, nodeOffsetStart: Length, nodeOffsetEnd: 
 			nodeOffsetEnd = lengthAdd(nodeOffsetStart, child.length);
 			if (lengthLessThanEqual(nodeOffsetStart, endOffset) && lengthGreaterThanEqual(nodeOffsetEnd, startOffset)) {
 				const range = lengthsToRange(nodeOffsetStart, nodeOffsetEnd);
-				result.push(new BracketInfo(range, level, levelPerBracket, false));
+				result.push(new BracketInfo(range, level - 1, false));
 			}
 			nodeOffsetStart = nodeOffsetEnd;
 		}
-
-		if (levelPerBracketType) {
-			levelPerBracketType.set(node.openingBracket.text, levelPerBracket);
-		}
 	} else if (node.kind === AstNodeKind.UnexpectedClosingBracket) {
 		const range = lengthsToRange(nodeOffsetStart, nodeOffsetEnd);
-		result.push(new BracketInfo(range, level - 1, 0, true));
+		result.push(new BracketInfo(range, level - 1, true));
 	} else if (node.kind === AstNodeKind.Bracket) {
 		const range = lengthsToRange(nodeOffsetStart, nodeOffsetEnd);
-		result.push(new BracketInfo(range, level - 1, 0, false));
+		result.push(new BracketInfo(range, level - 1, false));
 	}
 }
 

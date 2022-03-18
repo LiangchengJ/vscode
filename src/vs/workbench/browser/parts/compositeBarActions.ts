@@ -417,8 +417,7 @@ export class ActivityActionViewItem extends BaseActionViewItem {
 			content: this.computeTitle(),
 			showPointer: true,
 			compact: true,
-			hideOnKeyDown: true,
-			skipFadeInAnimation,
+			skipFadeInAnimation
 		});
 	}
 

@@ -95,7 +95,9 @@ export class ExtHostTesting implements ExtHostTestingShape {
 					profileId++;
 				}
 
-				return new TestRunProfileImpl(this.proxy, profiles, controllerId, profileId, label, group, runHandler, isDefault, tag);
+				const profile = new TestRunProfileImpl(this.proxy, controllerId, profileId, label, group, runHandler, isDefault, tag);
+				profiles.set(profileId, profile);
+				return profile;
 			},
 			createTestItem(id, label, uri) {
 				return new TestItemImpl(controllerId, id, label, uri);
@@ -151,7 +153,7 @@ export class ExtHostTesting implements ExtHostTestingShape {
 		await this.proxy.$runTests({
 			isUiTriggered: false,
 			targets: [{
-				testIds: req.include?.map(t => TestId.fromExtHostTestItem(t, controller.collection.root.id).toString()) ?? [controller.collection.root.id],
+				testIds: req.include?.map(t => t.id) ?? [controller.collection.root.id],
 				profileGroup: profileGroupToBitset[profile.kind],
 				profileId: profile.profileId,
 				controllerId: profile.controllerId,
@@ -540,9 +542,9 @@ export class TestRunCoordinator {
 		this.proxy.$startedExtensionTestRun({
 			controllerId,
 			profile: profile && { group: profileGroupToBitset[profile.kind], id: profile.profileId },
-			exclude: request.exclude?.map(t => TestId.fromExtHostTestItem(t, collection.root.id).toString()) ?? [],
+			exclude: request.exclude?.map(t => t.id) ?? [],
 			id: dto.id,
-			include: request.include?.map(t => TestId.fromExtHostTestItem(t, collection.root.id).toString()) ?? [collection.root.id],
+			include: request.include?.map(t => t.id) ?? [collection.root.id],
 			persist
 		});
 
@@ -873,7 +875,6 @@ class TestObservers {
 
 export class TestRunProfileImpl implements vscode.TestRunProfile {
 	readonly #proxy: MainThreadTestingShape;
-	#profiles?: Map<number, vscode.TestRunProfile>;
 	private _configureHandler?: (() => void);
 
 	public get label() {
@@ -924,7 +925,6 @@ export class TestRunProfileImpl implements vscode.TestRunProfile {
 
 	constructor(
 		proxy: MainThreadTestingShape,
-		profiles: Map<number, vscode.TestRunProfile>,
 		public readonly controllerId: string,
 		public readonly profileId: number,
 		private _label: string,
@@ -934,8 +934,6 @@ export class TestRunProfileImpl implements vscode.TestRunProfile {
 		public _tag: vscode.TestTag | undefined = undefined,
 	) {
 		this.#proxy = proxy;
-		this.#profiles = profiles;
-		profiles.set(profileId, this);
 
 		const groupBitset = profileGroupToBitset[kind];
 		if (typeof groupBitset !== 'number') {
@@ -954,10 +952,7 @@ export class TestRunProfileImpl implements vscode.TestRunProfile {
 	}
 
 	dispose(): void {
-		if (this.#profiles?.delete(this.profileId)) {
-			this.#profiles = undefined;
-			this.#proxy.$removeTestProfile(this.controllerId, this.profileId);
-		}
+		this.#proxy.$removeTestProfile(this.controllerId, this.profileId);
 	}
 }
 

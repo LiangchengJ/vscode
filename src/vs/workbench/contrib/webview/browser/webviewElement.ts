@@ -30,7 +30,6 @@ import { IRemoteAuthorityResolverService } from 'vs/platform/remote/common/remot
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { ITunnelService } from 'vs/platform/tunnel/common/tunnel';
 import { WebviewPortMappingManager } from 'vs/platform/webview/common/webviewPortMapping';
-import { parentOriginHash } from 'vs/workbench/browser/webview';
 import { asWebviewUri, decodeAuthority, webviewGenericCspSource, webviewRootResourceAuthority } from 'vs/workbench/common/webview';
 import { loadLocalResource, WebviewResourceResponse } from 'vs/workbench/contrib/webview/browser/resourceLoading';
 import { WebviewThemeDataProvider } from 'vs/workbench/contrib/webview/browser/themeing';
@@ -100,10 +99,7 @@ namespace WebviewState {
 export class WebviewElement extends Disposable implements IWebview, WebviewFindDelegate {
 
 	public readonly id: string;
-
-	private readonly iframeId: string;
-	private readonly encodedWebviewOriginPromise: Promise<string>;
-	private encodedWebviewOrigin: string | undefined;
+	protected readonly iframeId: string;
 
 	protected get platform(): string { return 'browser'; }
 
@@ -148,8 +144,6 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	protected readonly _webviewFindWidget: WebviewFindWidget | undefined;
 	public readonly checkImeCompletionState = true;
 
-	private _disposed = false;
-
 	constructor(
 		id: string,
 		private readonly options: WebviewOptions,
@@ -172,7 +166,6 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 		this.id = id;
 		this.iframeId = generateUuid();
-		this.encodedWebviewOriginPromise = parentOriginHash(window.origin, this.iframeId).then(id => this.encodedWebviewOrigin = id);
 
 		this.content = {
 			html: '',
@@ -190,11 +183,11 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 
 		const subscription = this._register(addDisposableListener(window, 'message', (e: MessageEvent) => {
-			if (!this.encodedWebviewOrigin || e?.data?.target !== this.iframeId) {
+			if (e?.data?.target !== this.iframeId) {
 				return;
 			}
 
-			if (e.origin !== this.webviewContentOrigin(this.encodedWebviewOrigin)) {
+			if (e.origin !== this.webviewContentOrigin) {
 				console.log(`Skipped renderer receiving message due to mismatched origins: ${e.origin} ${this.webviewContentOrigin}`);
 				return;
 			}
@@ -335,6 +328,17 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 		this._register(Event.runAndSubscribe(webviewThemeDataProvider.onThemeDataChanged, () => this.style()));
 
+		/* __GDPR__
+			"webview.createWebview" : {
+				"extension": { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+				"webviewElementType": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
+			}
+		*/
+		this._telemetryService.publicLog('webview.createWebview', {
+			extension: extension?.id.value,
+			webviewElementType: 'iframe',
+		});
+
 		this._confirmBeforeClose = configurationService.getValue<string>('window.confirmBeforeClose');
 
 		this._register(configurationService.onDidChangeConfiguration(e => {
@@ -349,16 +353,10 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			this.styledFindWidget();
 		}
 
-		this.encodedWebviewOriginPromise.then(encodedWebviewOrigin => {
-			if (!this._disposed) {
-				this.initElement(encodedWebviewOrigin, extension, options);
-			}
-		});
+		this.initElement(extension, options);
 	}
 
 	override dispose(): void {
-		this._disposed = true;
-
 		this.element?.remove();
 		this._element = undefined;
 
@@ -438,7 +436,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		return element;
 	}
 
-	private initElement(encodedWebviewOrigin: string, extension: WebviewExtensionDescription | undefined, options: WebviewOptions) {
+	private initElement(extension: WebviewExtensionDescription | undefined, options: WebviewOptions) {
 		// The extensionId and purpose in the URL are used for filtering in js-debug:
 		const params: { [key: string]: string } = {
 			id: this.iframeId,
@@ -462,7 +460,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		// Workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1754872
 		const fileName = isFirefox ? 'index-no-csp.html' : 'index.html';
 
-		this.element!.setAttribute('src', `${this.webviewContentEndpoint(encodedWebviewOrigin)}/${fileName}?${queryString}`);
+		this.element!.setAttribute('src', `${this.webviewContentEndpoint}/${fileName}?${queryString}`);
 	}
 
 	public mountTo(parent: HTMLElement) {
@@ -476,17 +474,22 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		parent.appendChild(this.element);
 	}
 
-	protected webviewContentEndpoint(encodedWebviewOrigin: string): string {
-		const endpoint = this._environmentService.webviewExternalEndpoint!.replace('{{uuid}}', encodedWebviewOrigin);
+	protected get webviewContentEndpoint(): string {
+		const endpoint = this._environmentService.webviewExternalEndpoint!.replace('{{uuid}}', this.id);
 		if (endpoint[endpoint.length - 1] === '/') {
 			return endpoint.slice(0, endpoint.length - 1);
 		}
 		return endpoint;
 	}
 
-	private webviewContentOrigin(encodedWebviewOrigin: string): string {
-		const uri = URI.parse(this.webviewContentEndpoint(encodedWebviewOrigin));
-		return uri.scheme + '://' + uri.authority.toLowerCase();
+	private _webviewContentOrigin?: string;
+
+	private get webviewContentOrigin(): string {
+		if (!this._webviewContentOrigin) {
+			const uri = URI.parse(this.webviewContentEndpoint);
+			this._webviewContentOrigin = uri.scheme + '://' + uri.authority.toLowerCase();
+		}
+		return this._webviewContentOrigin;
 	}
 
 	private doPostMessage(channel: string, data?: any, transferable: Transferable[] = []): void {
@@ -520,15 +523,16 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 				this._onMissingCsp.fire(this.extension.id);
 			}
 
-			const payload = {
-				extension: this.extension.id.value
-			} as const;
-
-			type Classification = {
-				extension: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; owner: 'mjbvz'; comment: 'The id of the extension that created the webview.' };
+			type TelemetryClassification = {
+				extension?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight' };
+			};
+			type TelemetryData = {
+				extension?: string;
 			};
 
-			this._telemetryService.publicLog2<typeof payload, Classification>('webviewMissingCsp', payload);
+			this._telemetryService.publicLog2<TelemetryData, TelemetryClassification>('webviewMissingCsp', {
+				extension: this.extension.id.value
+			});
 		}
 	}
 

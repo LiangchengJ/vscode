@@ -50,7 +50,7 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 							return arg;
 						}
 
-						return commentController.value;
+						return commentController;
 					} else if (arg && arg.$mid === MarshalledId.CommentThread) {
 						const commentController = this._commentControllers.get(arg.commentControlHandle);
 
@@ -64,7 +64,7 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 							return arg;
 						}
 
-						return commentThread.value;
+						return commentThread;
 					} else if (arg && arg.$mid === MarshalledId.CommentThreadReply) {
 						const commentController = this._commentControllers.get(arg.thread.commentControlHandle);
 
@@ -79,7 +79,7 @@ export function createExtHostComments(mainContext: IMainContext, commands: ExtHo
 						}
 
 						return {
-							thread: commentThread.value,
+							thread: commentThread,
 							text: arg.text
 						};
 					} else if (arg && arg.$mid === MarshalledId.CommentNode) {

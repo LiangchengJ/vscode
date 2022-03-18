@@ -473,11 +473,6 @@ export interface ITerminalInstance {
 	 */
 	readonly isDisconnected: boolean;
 
-	/*
-	 * Whether this terminal has been disposed of
-	 */
-	readonly isDisposed: boolean;
-
 	/**
 	 * Whether the terminal's pty is hosted on a remote.
 	 */
@@ -837,7 +832,7 @@ export interface ITerminalInstance {
 
 	/**
 	 * Triggers a quick pick that displays recent commands or cwds. Selecting one will
-	 * rerun it in the active terminal.
+	 * re-run it in the active terminal.
 	 */
 	runRecent(type: 'command' | 'cwd'): Promise<void>;
 
@@ -896,11 +891,6 @@ export interface IXtermTerminal {
 	 * viewport.
 	 */
 	clearBuffer(): void;
-
-	/**
-	 * Clears decorations - for example, when shell integration is disabled.
-	 */
-	clearDecorations(): void;
 }
 
 export interface IRequestAddInstanceToGroupEvent {

@@ -121,7 +121,7 @@ export class ExceptionWidget extends ZoneWidget {
 		this.container?.focus();
 	}
 
-	hasFocus(): boolean {
+	hasfocus(): boolean {
 		return dom.isAncestor(document.activeElement, this.container);
 	}
 }

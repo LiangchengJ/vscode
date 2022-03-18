@@ -627,10 +627,9 @@ export class BracketAstNode extends ImmutableLeafAstNode {
 	public static create(
 		length: Length,
 		languageId: string,
-		text: string,
 		bracketIds: SmallImmutableSet<OpeningBracketId>
 	): BracketAstNode {
-		const node = new BracketAstNode(length, languageId, text, bracketIds);
+		const node = new BracketAstNode(length, languageId, bracketIds);
 		return node;
 	}
 
@@ -645,7 +644,6 @@ export class BracketAstNode extends ImmutableLeafAstNode {
 	private constructor(
 		length: Length,
 		public readonly languageId: string,
-		public readonly text: string,
 		/**
 		 * In case of a opening bracket, this is the id of the opening bracket.
 		 * In case of a closing bracket, this contains the ids of all opening brackets it can close.

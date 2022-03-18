@@ -8,6 +8,8 @@ import * as nls from 'vscode-nls';
 import type * as Proto from '../../protocol';
 import { CachedResponse } from '../../tsServer/cachedResponse';
 import { ITypeScriptServiceClient } from '../../typescriptService';
+import { escapeRegExp } from '../../utils/regexp';
+import * as typeConverters from '../../utils/typeConverters';
 
 const localize = nls.loadMessageBundle();
 
@@ -34,11 +36,16 @@ export abstract class TypeScriptBaseCodeLensProvider implements vscode.CodeLensP
 		command: ''
 	};
 
+	private onDidChangeCodeLensesEmitter = new vscode.EventEmitter<void>();
+
 	public constructor(
 		protected client: ITypeScriptServiceClient,
 		private cachedResponse: CachedResponse<Proto.NavTreeResponse>
 	) { }
 
+	public get onDidChangeCodeLenses(): vscode.Event<void> {
+		return this.onDidChangeCodeLensesEmitter.event;
+	}
 
 	async provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<ReferencesCodeLens[]> {
 		const filepath = this.client.toOpenedFilePath(document);
@@ -51,27 +58,61 @@ export abstract class TypeScriptBaseCodeLensProvider implements vscode.CodeLensP
 			return [];
 		}
 
+		const tree = response.body;
 		const referenceableSpans: vscode.Range[] = [];
-		response.body?.childItems?.forEach(item => this.walkNavTree(document, item, undefined, referenceableSpans));
+		if (tree && tree.childItems) {
+			tree.childItems.forEach(item => this.walkNavTree(document, item, null, referenceableSpans));
+		}
 		return referenceableSpans.map(span => new ReferencesCodeLens(document.uri, filepath, span));
 	}
 
 	protected abstract extractSymbol(
+		document: vscode.TextDocument,
 		item: Proto.NavigationTree,
-		parent: Proto.NavigationTree | undefined
-	): vscode.Range | undefined;
+		parent: Proto.NavigationTree | null
+	): vscode.Range | null;
 
 	private walkNavTree(
 		document: vscode.TextDocument,
 		item: Proto.NavigationTree,
-		parent: Proto.NavigationTree | undefined,
+		parent: Proto.NavigationTree | null,
 		results: vscode.Range[]
 	): void {
-		const range = this.extractSymbol(item, parent);
+		if (!item) {
+			return;
+		}
+
+		const range = this.extractSymbol(document, item, parent);
 		if (range) {
 			results.push(range);
 		}
 
-		item.childItems?.forEach(child => this.walkNavTree(document, child, item, results));
+		(item.childItems || []).forEach(child => this.walkNavTree(document, child, item, results));
 	}
+}
+
+export function getSymbolRange(
+	document: vscode.TextDocument,
+	item: Proto.NavigationTree
+): vscode.Range | null {
+	if (item.nameSpan) {
+		return typeConverters.Range.fromTextSpan(item.nameSpan);
+	}
+
+	// In older versions, we have to calculate this manually. See #23924
+	const span = item.spans && item.spans[0];
+	if (!span) {
+		return null;
+	}
+
+	const range = typeConverters.Range.fromTextSpan(span);
+	const text = document.getText(range);
+
+	const identifierMatch = new RegExp(`^(.*?(\\b|\\W))${escapeRegExp(item.text || '')}(\\b|\\W)`, 'gm');
+	const match = identifierMatch.exec(text);
+	const prefixLength = match ? match.index + match[1].length : 0;
+	const startOffset = document.offsetAt(new vscode.Position(range.start.line, range.start.character)) + prefixLength;
+	return new vscode.Range(
+		document.positionAt(startOffset),
+		document.positionAt(startOffset + item.text.length));
 }

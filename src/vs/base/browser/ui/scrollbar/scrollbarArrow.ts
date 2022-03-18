@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GlobalPointerMoveMonitor, standardPointerMoveMerger } from 'vs/base/browser/globalPointerMoveMonitor';
+import { GlobalMouseMoveMonitor, IStandardMouseMoveEventData, standardMouseMoveMerger } from 'vs/base/browser/globalMouseMoveMonitor';
+import { IMouseEvent } from 'vs/base/browser/mouseEvent';
 import { Widget } from 'vs/base/browser/ui/widget';
 import { IntervalTimer, TimeoutTimer } from 'vs/base/common/async';
 import { Codicon } from 'vs/base/common/codicons';
-import * as dom from 'vs/base/browser/dom';
 
 /**
  * The arrow image size.
@@ -33,9 +33,9 @@ export class ScrollbarArrow extends Widget {
 	private _onActivate: () => void;
 	public bgDomNode: HTMLElement;
 	public domNode: HTMLElement;
-	private _pointerdownRepeatTimer: IntervalTimer;
-	private _pointerdownScheduleRepeatTimer: TimeoutTimer;
-	private _pointerMoveMonitor: GlobalPointerMoveMonitor;
+	private _mousedownRepeatTimer: IntervalTimer;
+	private _mousedownScheduleRepeatTimer: TimeoutTimer;
+	private _mouseMoveMonitor: GlobalMouseMoveMonitor<IStandardMouseMoveEventData>;
 
 	constructor(opts: ScrollbarArrowOptions) {
 		super();
@@ -79,35 +79,33 @@ export class ScrollbarArrow extends Widget {
 			this.domNode.style.right = opts.right + 'px';
 		}
 
-		this._pointerMoveMonitor = this._register(new GlobalPointerMoveMonitor());
-		this._register(dom.addStandardDisposableListener(this.bgDomNode, dom.EventType.POINTER_DOWN, (e) => this._arrowPointerDown(e)));
-		this._register(dom.addStandardDisposableListener(this.domNode, dom.EventType.POINTER_DOWN, (e) => this._arrowPointerDown(e)));
+		this._mouseMoveMonitor = this._register(new GlobalMouseMoveMonitor<IStandardMouseMoveEventData>());
+		this.onmousedown(this.bgDomNode, (e) => this._arrowMouseDown(e));
+		this.onmousedown(this.domNode, (e) => this._arrowMouseDown(e));
 
-		this._pointerdownRepeatTimer = this._register(new IntervalTimer());
-		this._pointerdownScheduleRepeatTimer = this._register(new TimeoutTimer());
+		this._mousedownRepeatTimer = this._register(new IntervalTimer());
+		this._mousedownScheduleRepeatTimer = this._register(new TimeoutTimer());
 	}
 
-	private _arrowPointerDown(e: PointerEvent): void {
-		if (!e.target || !(e.target instanceof Element)) {
-			return;
-		}
+	private _arrowMouseDown(e: IMouseEvent): void {
 		const scheduleRepeater = () => {
-			this._pointerdownRepeatTimer.cancelAndSet(() => this._onActivate(), 1000 / 24);
+			this._mousedownRepeatTimer.cancelAndSet(() => this._onActivate(), 1000 / 24);
 		};
 
 		this._onActivate();
-		this._pointerdownRepeatTimer.cancel();
-		this._pointerdownScheduleRepeatTimer.cancelAndSet(scheduleRepeater, 200);
+		this._mousedownRepeatTimer.cancel();
+		this._mousedownScheduleRepeatTimer.cancelAndSet(scheduleRepeater, 200);
 
-		this._pointerMoveMonitor.startMonitoring(
+		this._mouseMoveMonitor.startMonitoring(
 			e.target,
-			e.pointerId,
 			e.buttons,
-			standardPointerMoveMerger,
-			(pointerMoveData) => { /* Intentional empty */ },
+			standardMouseMoveMerger,
+			(mouseMoveData: IStandardMouseMoveEventData) => {
+				/* Intentional empty */
+			},
 			() => {
-				this._pointerdownRepeatTimer.cancel();
-				this._pointerdownScheduleRepeatTimer.cancel();
+				this._mousedownRepeatTimer.cancel();
+				this._mousedownScheduleRepeatTimer.cancel();
 			}
 		);
 

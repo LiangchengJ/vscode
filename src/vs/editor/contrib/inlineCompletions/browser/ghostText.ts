@@ -56,10 +56,6 @@ export class GhostText {
 
 		return text.substring(this.parts[0].column - 1);
 	}
-
-	isEmpty(): boolean {
-		return this.parts.every(p => p.lines.length === 0);
-	}
 }
 
 class PositionOffsetTransformer {

@@ -48,13 +48,10 @@ declare module 'vscode' {
 		readonly selectedCompletionInfo: SelectedCompletionInfo | undefined;
 	}
 
-	// TODO@API remove kind, snippet properties
-	// TODO@API find a better name, xyzFilter, xyzConstraint
+	// TODO@API strongly consider to use vscode.TextEdit instead
 	export interface SelectedCompletionInfo {
 		range: Range;
 		text: string;
-
-
 		completionKind: CompletionItemKind;
 		isSnippetText: boolean;
 	}
@@ -84,13 +81,8 @@ declare module 'vscode' {
 	*/
 	// TODO@API We could keep this and allow for `vscode.Command` instances that explain
 	// the result. That would replace the existing proposed menu-identifier and be more LSP friendly
-	// TODO@API maybe use MarkdownString
 	export class InlineCompletionList<T extends InlineCompletionItem = InlineCompletionItem> {
 		items: T[];
-
-		// command: Command; "Show More..."
-
-		// description: MarkdownString
 
 		/**
 		 * @deprecated Return an array of Inline Completion items directly. Will be removed eventually.
@@ -109,7 +101,8 @@ declare module 'vscode' {
 		 * However, any indentation of the text to replace does not matter for the subword constraint.
 		 * Thus, `  B` can be replaced with ` ABC`, effectively removing a whitespace and inserting `A` and `C`.
 		*/
-		insertText?: string | SnippetString;
+		// TODO@API support vscode.SnippetString in addition to string, see CompletionItem#insertText
+		insertText?: string;
 
 		/**
 		 * @deprecated Use `insertText` instead. Will be removed eventually.
@@ -136,7 +129,6 @@ declare module 'vscode' {
 	}
 
 
-	// TODO@API move "never" API into new proposal
 
 	export interface InlineCompletionItem {
 		/**
@@ -150,7 +142,6 @@ declare module 'vscode' {
 	 * Be aware that this API will not ever be finalized.
 	 */
 	export namespace window {
-		// TODO@API move into provider (just like internal API). Only read property if proposal is enabled!
 		export function getInlineCompletionItemController<T extends InlineCompletionItem>(provider: InlineCompletionItemProvider<T>): InlineCompletionController<T>;
 	}
 

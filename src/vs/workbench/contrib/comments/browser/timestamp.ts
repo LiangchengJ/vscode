@@ -7,7 +7,8 @@ import * as dom from 'vs/base/browser/dom';
 import { fromNow } from 'vs/base/common/date';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { COMMENTS_SECTION, ICommentsConfiguration } from 'vs/workbench/contrib/comments/common/commentsConfiguration';
+
+const USE_RELATIVE_TIME_CONFIGURATION = 'comments.useRelativeTime';
 
 export class TimestampWidget extends Disposable {
 	private _date: HTMLElement;
@@ -23,7 +24,7 @@ export class TimestampWidget extends Disposable {
 	}
 
 	private get useRelativeTimeSetting(): boolean {
-		return this.configurationService.getValue<ICommentsConfiguration>(COMMENTS_SECTION).useRelativeTime;
+		return this.configurationService.getValue<boolean>(USE_RELATIVE_TIME_CONFIGURATION);
 	}
 
 	public async setTimestamp(timestamp: Date | undefined) {

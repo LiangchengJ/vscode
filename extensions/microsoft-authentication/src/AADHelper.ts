@@ -164,7 +164,6 @@ export class AzureActiveDirectoryService {
 						sessionId: session.id
 					});
 				} else {
-					vscode.window.showErrorMessage(localize('signOut', "You have been signed out because reading stored authentication information failed."));
 					Logger.error(e);
 					await this.removeSession(session.id);
 				}
@@ -190,7 +189,7 @@ export class AzureActiveDirectoryService {
 			return sessions;
 		}
 
-		let modifiedScopes = [...scopes];
+		const modifiedScopes = [...scopes];
 		if (!modifiedScopes.includes('openid')) {
 			modifiedScopes.push('openid');
 		}
@@ -200,10 +199,9 @@ export class AzureActiveDirectoryService {
 		if (!modifiedScopes.includes('profile')) {
 			modifiedScopes.push('profile');
 		}
-		modifiedScopes = modifiedScopes.sort();
 
-		let modifiedScopesStr = modifiedScopes.join(' ');
-		Logger.info(`Getting sessions for the following scopes: ${modifiedScopesStr}`);
+		let orderedScopes = modifiedScopes.sort().join(' ');
+		Logger.info(`Getting sessions for the following scopes: ${orderedScopes}`);
 
 		if (this._refreshingPromise) {
 			Logger.info('Refreshing in progress. Waiting for completion before continuing.');
@@ -214,51 +212,18 @@ export class AzureActiveDirectoryService {
 			}
 		}
 
-		let matchingTokens = this._tokens.filter(token => token.scope === modifiedScopesStr);
+		let matchingTokens = this._tokens.filter(token => token.scope === orderedScopes);
 
 		// The user may still have a token that doesn't have the openid & email scopes so check for that as well.
 		// Eventually, we should remove this and force the user to re-log in so that we don't have any sessions
 		// without an idtoken.
 		if (!matchingTokens.length) {
-			const fallbackOrderedScopes = scopes.sort().join(' ');
-			Logger.trace(`No session found with idtoken scopes... Using fallback scope list of: ${fallbackOrderedScopes}`);
-			matchingTokens = this._tokens.filter(token => token.scope === fallbackOrderedScopes);
-			if (matchingTokens.length) {
-				modifiedScopesStr = fallbackOrderedScopes;
-			}
+			orderedScopes = scopes.sort().join(' ');
+			Logger.trace(`No session found with idtoken scopes... Using fallback scope list of: ${orderedScopes}`);
+			matchingTokens = this._tokens.filter(token => token.scope === orderedScopes);
 		}
 
-		// If we still don't have a matching token try to get a new token from an existing token by using
-		// the refreshToken. This is documented here:
-		// https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#refresh-the-access-token
-		// "Refresh tokens are valid for all permissions that your client has already received consent for."
-		if (!matchingTokens.length) {
-			const clientId = this.getClientId(modifiedScopes);
-			// Get a token with the correct client id.
-			const token = clientId === DEFAULT_CLIENT_ID
-				? this._tokens.find(t => t.refreshToken && !t.scope.includes('VSCODE_CLIENT_ID'))
-				: this._tokens.find(t => t.refreshToken && t.scope.includes(`VSCODE_CLIENT_ID:${clientId}`));
-
-			if (token) {
-				const scopeData: IScopeData = {
-					clientId,
-					scopes: modifiedScopes,
-					scopeStr: modifiedScopesStr,
-					// filter our special scopes
-					scopesToSend: modifiedScopes.filter(s => !s.startsWith('VSCODE_')).join(' '),
-					tenant: this.getTenantId(modifiedScopes),
-				};
-
-				try {
-					const itoken = await this.refreshToken(token.refreshToken, scopeData);
-					matchingTokens.push(itoken);
-				} catch (err) {
-					Logger.error(`Attempted to get a new session for scopes '${scopeData.scopeStr}' using the existing session with scopes '${token.scope}' but it failed due to: ${err.message ?? err}`);
-				}
-			}
-		}
-
-		Logger.info(`Got ${matchingTokens.length} sessions for scopes: ${modifiedScopesStr}`);
+		Logger.info(`Got ${matchingTokens.length} sessions for scopes: ${orderedScopes}`);
 		return Promise.all(matchingTokens.map(token => this.convertToSession(token)));
 	}
 
@@ -437,7 +402,6 @@ export class AzureActiveDirectoryService {
 				onDidChangeSessions.fire({ added: [], removed: [], changed: [this.convertToSessionSync(refreshedToken)] });
 			} catch (e) {
 				if (e.message !== REFRESH_NETWORK_FAILURE) {
-					vscode.window.showErrorMessage(localize('signOut', "You have been signed out because reading stored authentication information failed."));
 					await this.removeSession(sessionId);
 				}
 			}
@@ -553,7 +517,7 @@ export class AzureActiveDirectoryService {
 
 	//#region refresh logic
 
-	private async refreshToken(refreshToken: string, scopeData: IScopeData, sessionId?: string): Promise<IToken> {
+	private async refreshToken(refreshToken: string, scopeData: IScopeData, sessionId: string): Promise<IToken> {
 		this._refreshingPromise = this.doRefreshToken(refreshToken, scopeData, sessionId);
 		try {
 			const result = await this._refreshingPromise;
@@ -563,7 +527,7 @@ export class AzureActiveDirectoryService {
 		}
 	}
 
-	private async doRefreshToken(refreshToken: string, scopeData: IScopeData, sessionId?: string): Promise<IToken> {
+	private async doRefreshToken(refreshToken: string, scopeData: IScopeData, sessionId: string): Promise<IToken> {
 		Logger.info(`Refreshing token for scopes: ${scopeData.scopeStr}`);
 		const postData = querystring.stringify({
 			refresh_token: refreshToken,
@@ -588,14 +552,13 @@ export class AzureActiveDirectoryService {
 		} catch (e) {
 			if (e.message === REFRESH_NETWORK_FAILURE) {
 				// We were unable to refresh because of a network failure (i.e. the user lost internet access).
-				// so set up a timeout to try again later. We only do this if we have a session id to reference later.
-				if (sessionId) {
-					this.setSessionTimeout(sessionId, refreshToken, scopeData, AzureActiveDirectoryService.POLLING_CONSTANT);
-				}
+				// so set up a timeout to try again later.
+				this.setSessionTimeout(sessionId, refreshToken, scopeData, AzureActiveDirectoryService.POLLING_CONSTANT);
 				throw e;
 			}
+			vscode.window.showErrorMessage(localize('signOut', "You have been signed out because reading stored authentication information failed."));
 			Logger.error(`Refreshing token failed (for scopes: ${scopeData.scopeStr}): ${e.message}`);
-			throw e;
+			throw new Error('Refreshing token failed');
 		}
 	}
 
@@ -780,7 +743,6 @@ export class AzureActiveDirectoryService {
 				} catch (e) {
 					// Network failures will automatically retry on next poll.
 					if (e.message !== REFRESH_NETWORK_FAILURE) {
-						vscode.window.showErrorMessage(localize('signOut', "You have been signed out because reading stored authentication information failed."));
 						await this.removeSession(session.id);
 					}
 					return;

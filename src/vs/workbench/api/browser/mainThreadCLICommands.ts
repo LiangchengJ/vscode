@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Schemas } from 'vs/base/common/network';
-import { isWeb } from 'vs/base/common/platform';
 import { isString } from 'vs/base/common/types';
 import { URI, UriComponents } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
@@ -112,9 +111,7 @@ class RemoteExtensionCLIManagementService extends ExtensionManagementCLIService 
 	}
 
 	protected override validateExtensionKind(manifest: IExtensionManifest, output: CLIOutput): boolean {
-		if (!this._extensionManifestPropertiesService.canExecuteOnWorkspace(manifest)
-			// Web extensions installed on remote can be run in web worker extension host
-			&& !(isWeb && this._extensionManifestPropertiesService.canExecuteOnWeb(manifest))) {
+		if (!this._extensionManifestPropertiesService.canExecuteOnWorkspace(manifest)) {
 			output.log(localize('cannot be installed', "Cannot install the '{0}' extension because it is declared to not run in this setup.", getExtensionId(manifest.publisher, manifest.name)));
 			return false;
 		}

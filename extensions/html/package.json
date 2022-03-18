@@ -9,7 +9,7 @@
     "vscode": "0.10.x"
   },
   "scripts": {
-    "update-grammar": "node ./build/update-grammar.mjs"
+    "update-grammar": "node ./build/update-grammar.js"
   },
   "contributes": {
     "languages": [

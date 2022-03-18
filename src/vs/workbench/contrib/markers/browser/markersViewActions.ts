@@ -411,6 +411,7 @@ export class MarkersFilterActionViewItem extends BaseActionViewItem {
 		if (event.equals(KeyCode.Space)
 			|| event.equals(KeyCode.LeftArrow)
 			|| event.equals(KeyCode.RightArrow)
+			|| event.equals(KeyCode.Escape)
 		) {
 			event.stopPropagation();
 		}
@@ -418,6 +419,10 @@ export class MarkersFilterActionViewItem extends BaseActionViewItem {
 
 	private onInputKeyDown(event: StandardKeyboardEvent, filterInputBox: HistoryInputBox) {
 		let handled = false;
+		if (event.equals(KeyCode.Escape)) {
+			this.clearFilterText();
+			handled = true;
+		}
 		if (event.equals(KeyCode.Tab)) {
 			this.actionbar?.focus();
 			handled = true;

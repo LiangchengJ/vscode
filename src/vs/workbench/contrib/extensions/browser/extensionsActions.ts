@@ -745,14 +745,14 @@ export class UpdateAction extends ExtensionAction {
 		if (!this.extension) {
 			this.enabled = false;
 			this.class = UpdateAction.DisabledClass;
-			this.label = this.getLabel();
+			this.label = this.getUpdateLabel();
 			return;
 		}
 
 		if (this.extension.type !== ExtensionType.User) {
 			this.enabled = false;
 			this.class = UpdateAction.DisabledClass;
-			this.label = this.getLabel();
+			this.label = this.getUpdateLabel();
 			return;
 		}
 
@@ -761,7 +761,7 @@ export class UpdateAction extends ExtensionAction {
 
 		this.enabled = canInstall && isInstalled && this.extension.outdated;
 		this.class = this.enabled ? UpdateAction.EnabledClass : UpdateAction.DisabledClass;
-		this.label = this.getLabel(this.extension);
+		this.label = this.extension.outdated ? this.getUpdateLabel(this.extension.latestVersion) : this.getUpdateLabel();
 	}
 
 	override async run(): Promise<any> {
@@ -781,14 +781,8 @@ export class UpdateAction extends ExtensionAction {
 		}
 	}
 
-	private getLabel(extension?: IExtension): string {
-		if (!extension?.outdated) {
-			return localize('updateAction', "Update");
-		}
-		if (extension.outdatedTargetPlatform) {
-			return localize('updateToTargetPlatformVersion', "Update to {0} version", TargetPlatformToString(extension.gallery!.properties.targetPlatform));
-		}
-		return localize('updateToLatestVersion', "Update to {0}", extension.latestVersion);
+	private getUpdateLabel(version?: string): string {
+		return version ? localize('updateTo', "Update to {0}", version) : localize('updateAction', "Update");
 	}
 }
 
@@ -1427,8 +1421,8 @@ export class ReloadAction extends ExtensionAction {
 					const runningExtensionServer = this.extensionManagementServerService.getExtensionManagementServer(toExtension(runningExtension));
 
 					if (isSameExtensionRunning) {
-						// Different version or target platform of same extension is running. Requires reload to run the current version
-						if (this.extension.version !== runningExtension.version || this.extension.local.targetPlatform !== runningExtension.targetPlatform) {
+						// Different version of same extension is running. Requires reload to run the current version
+						if (this.extension.version !== runningExtension.version) {
 							this.enabled = true;
 							this.label = localize('reloadRequired', "Reload Required");
 							this.tooltip = localize('postUpdateTooltip', "Please reload Visual Studio Code to enable the updated extension.");

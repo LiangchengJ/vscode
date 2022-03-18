@@ -6,9 +6,9 @@
 import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { IMouseEvent } from 'vs/base/browser/mouseEvent';
-import { IToggleStyles } from 'vs/base/browser/ui/toggle/toggle';
+import { ICheckboxStyles } from 'vs/base/browser/ui/checkbox/checkbox';
 import { IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview';
-import { CaseSensitiveToggle, RegexToggle, WholeWordsToggle } from 'vs/base/browser/ui/findinput/findInputToggles';
+import { CaseSensitiveCheckbox, RegexCheckbox, WholeWordsCheckbox } from 'vs/base/browser/ui/findinput/findInputCheckboxes';
 import { HistoryInputBox, IInputBoxStyles, IInputValidator, IMessage as InputBoxMessage } from 'vs/base/browser/ui/inputbox/inputBox';
 import { Widget } from 'vs/base/browser/ui/widget';
 import { Color } from 'vs/base/common/color';
@@ -71,9 +71,9 @@ export class FindInput extends Widget {
 	protected inputValidationErrorForeground?: Color;
 
 	protected controls: HTMLDivElement;
-	protected regex: RegexToggle;
-	protected wholeWords: WholeWordsToggle;
-	protected caseSensitive: CaseSensitiveToggle;
+	protected regex: RegexCheckbox;
+	protected wholeWords: WholeWordsCheckbox;
+	protected caseSensitive: CaseSensitiveCheckbox;
 	public domNode: HTMLElement;
 	public inputBox: HistoryInputBox;
 
@@ -158,7 +158,7 @@ export class FindInput extends Widget {
 			flexibleMaxHeight
 		}));
 
-		this.regex = this._register(new RegexToggle({
+		this.regex = this._register(new RegexCheckbox({
 			appendTitle: appendRegexLabel,
 			isChecked: false,
 			inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -176,7 +176,7 @@ export class FindInput extends Widget {
 			this._onRegexKeyDown.fire(e);
 		}));
 
-		this.wholeWords = this._register(new WholeWordsToggle({
+		this.wholeWords = this._register(new WholeWordsCheckbox({
 			appendTitle: appendWholeWordsLabel,
 			isChecked: false,
 			inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -191,7 +191,7 @@ export class FindInput extends Widget {
 			this.validate();
 		}));
 
-		this.caseSensitive = this._register(new CaseSensitiveToggle({
+		this.caseSensitive = this._register(new CaseSensitiveCheckbox({
 			appendTitle: appendCaseSensitiveLabel,
 			isChecked: false,
 			inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -349,14 +349,14 @@ export class FindInput extends Widget {
 
 	protected applyStyles(): void {
 		if (this.domNode) {
-			const toggleStyles: IToggleStyles = {
+			const checkBoxStyles: ICheckboxStyles = {
 				inputActiveOptionBorder: this.inputActiveOptionBorder,
 				inputActiveOptionForeground: this.inputActiveOptionForeground,
 				inputActiveOptionBackground: this.inputActiveOptionBackground,
 			};
-			this.regex.style(toggleStyles);
-			this.wholeWords.style(toggleStyles);
-			this.caseSensitive.style(toggleStyles);
+			this.regex.style(checkBoxStyles);
+			this.wholeWords.style(checkBoxStyles);
+			this.caseSensitive.style(checkBoxStyles);
 
 			const inputBoxStyles: IInputBoxStyles = {
 				inputBackground: this.inputBackground,

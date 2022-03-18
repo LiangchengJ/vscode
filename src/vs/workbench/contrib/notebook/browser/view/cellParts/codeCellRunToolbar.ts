@@ -66,10 +66,6 @@ export class RunToolbar extends CellPart {
 		};
 	}
 
-	override unrenderCell(element: ICellViewModel, templateData: BaseCellRenderTemplate): void {
-		this.cellDisposable.clear();
-	}
-
 	prepareLayout(): void {
 		// no op
 	}

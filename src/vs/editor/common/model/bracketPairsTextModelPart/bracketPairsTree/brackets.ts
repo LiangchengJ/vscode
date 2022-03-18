@@ -41,7 +41,7 @@ export class BracketTokens {
 				TokenKind.ClosingBracket,
 				info.first,
 				info.openingBrackets,
-				BracketAstNode.create(length, configuration.languageId, closingText, info.openingBrackets)
+				BracketAstNode.create(length, configuration.languageId, info.openingBrackets)
 			));
 		}
 
@@ -54,7 +54,7 @@ export class BracketTokens {
 				TokenKind.OpeningBracket,
 				openingTextId,
 				bracketIds,
-				BracketAstNode.create(length, configuration.languageId, openingText, bracketIds)
+				BracketAstNode.create(length, configuration.languageId, bracketIds)
 			));
 		}
 

@@ -97,9 +97,7 @@ export interface IFileService {
 	readonly onDidRunOperation: Event<FileOperationEvent>;
 
 	/**
-	 * Resolve the properties of a file/folder identified by the resource. For a folder, children
-	 * information is resolved as well depending on the provided options. Use `stat()` method if
-	 * you do not need children information.
+	 * Resolve the properties of a file/folder identified by the resource.
 	 *
 	 * If the optional parameter "resolveTo" is specified in options, the stat service is asked
 	 * to provide a stat object that should contain the full graph of folders up to all of the
@@ -164,8 +162,9 @@ export interface IFileService {
 	canMove(source: URI, target: URI, overwrite?: boolean): Promise<Error | true>;
 
 	/**
-	 * Copies the file/folder to a path identified by the resource. A folder is copied
-	 * recursively.
+	 * Copies the file/folder to a path identified by the resource.
+	 *
+	 * The optional parameter overwrite can be set to replace an existing file at the location.
 	 */
 	copy(source: URI, target: URI, overwrite?: boolean): Promise<IFileStatWithMetadata>;
 

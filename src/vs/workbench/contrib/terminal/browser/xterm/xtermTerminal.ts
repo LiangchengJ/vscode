@@ -167,7 +167,7 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 		this.raw.loadAddon(this._decorationAddon);
 	}
 
-	attachToElement(container: HTMLElement): HTMLElement {
+	attachToElement(container: HTMLElement) {
 		// Update the theme when attaching as the terminal location could have changed
 		this._updateTheme();
 		if (!this._container) {
@@ -177,8 +177,6 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 		if (this._shouldLoadWebgl()) {
 			this._enableWebglRenderer();
 		}
-		// Screen must be created at this point as xterm.open is called
-		return this._container.querySelector('.xterm-screen')!;
 	}
 
 	updateConfig(): void {
@@ -214,10 +212,6 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 	forceRedraw() {
 		this._webglAddon?.clearTextureAtlas();
 		this.raw.clearTextureAtlas();
-	}
-
-	clearDecorations(): void {
-		this._decorationAddon?.clearDecorations(true);
 	}
 
 
@@ -318,8 +312,6 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 
 	clearBuffer(): void {
 		this.raw.clear();
-		// hack so that the next placeholder shows
-		this._decorationAddon?.registerCommandDecoration({ marker: this.raw.registerMarker(0), hasOutput: false, timestamp: Date.now(), getOutput: () => { return undefined; }, command: '' }, true);
 	}
 
 	private _setCursorBlink(blink: boolean): void {

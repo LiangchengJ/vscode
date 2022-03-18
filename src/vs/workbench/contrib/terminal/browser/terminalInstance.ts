@@ -14,7 +14,6 @@ import { AutoOpenBarrier, Promises } from 'vs/base/common/async';
 import { Codicon } from 'vs/base/common/codicons';
 import { fromNow } from 'vs/base/common/date';
 import { debounce } from 'vs/base/common/decorators';
-import { ErrorNoTelemetry } from 'vs/base/common/errors';
 import { Emitter, Event } from 'vs/base/common/event';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { ISeparator, template } from 'vs/base/common/labels';
@@ -246,7 +245,6 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		}
 		return this._rows;
 	}
-	get isDisposed(): boolean { return this._isDisposed; }
 	get fixedCols(): number | undefined { return this._fixedCols; }
 	get fixedRows(): number | undefined { return this._fixedRows; }
 	get maxCols(): number { return this._cols; }
@@ -495,10 +493,6 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 				e.affectsConfiguration(TerminalSettingId.TerminalDescription)) {
 				this._labelComputer?.refreshLabel();
 			}
-			if ((e.affectsConfiguration(TerminalSettingId.ShellIntegrationDecorationsEnabled) && !this._configurationService.getValue(TerminalSettingId.ShellIntegrationDecorationsEnabled)) ||
-				(e.affectsConfiguration(TerminalSettingId.ShellIntegrationEnabled) && !this._configurationService.getValue(TerminalSettingId.ShellIntegrationEnabled))) {
-				this.xterm?.clearDecorations();
-			}
 		}));
 		this._workspaceContextService.onDidChangeWorkspaceFolders(() => this._labelComputer?.refreshLabel());
 
@@ -643,7 +637,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 	protected async _createXterm(): Promise<XtermTerminal> {
 		const Terminal = await getXtermConstructor();
 		if (this._isDisposed) {
-			throw new ErrorNoTelemetry('Terminal disposed of during xterm.js creation');
+			throw new Error('Terminal disposed of during xterm.js creation');
 		}
 
 		const xterm = this._instantiationService.createInstance(XtermTerminal, Terminal, this._configHelper, this._cols, this._rows, this.target || TerminalLocation.Panel, this.capabilities);
@@ -963,7 +957,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		// Attach the xterm object to the DOM, exposing it to the smoke tests
 		this._wrapperElement.xterm = xterm.raw;
 
-		const screenElement = xterm.attachToElement(xtermElement);
+		xterm.attachToElement(xtermElement);
 
 		if (!xterm.raw.element || !xterm.raw.textarea) {
 			throw new Error('xterm elements not set after open');
@@ -1089,7 +1083,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 
 		this._initDragAndDrop(container);
 
-		this._widgetManager.attachToElement(screenElement);
+		this._widgetManager.attachToElement(xterm.raw.element);
 		this._processManager.onProcessReady((e) => {
 			this._linkManager?.setWidgetManager(this._widgetManager);
 		});
@@ -1723,7 +1717,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 		try {
 			const cwd = await this.refreshProperty(ProcessPropertyType.Cwd);
 			if (typeof cwd !== 'string') {
-				throw new Error(`cwd is not a string ${cwd}`);
+				throw new Error('cwd is not a string');
 			}
 		} catch (e: unknown) {
 			// Swallow this as it means the process has been killed

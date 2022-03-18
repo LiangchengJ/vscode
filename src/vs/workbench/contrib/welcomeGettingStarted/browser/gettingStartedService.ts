@@ -16,7 +16,7 @@ import { IExtensionDescription } from 'vs/platform/extensions/common/extensions'
 import { URI } from 'vs/base/common/uri';
 import { joinPath } from 'vs/base/common/resources';
 import { FileAccess } from 'vs/base/common/network';
-import { IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { DefaultIconPath, IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { ThemeIcon } from 'vs/platform/theme/common/themeService';
 import { walkthroughs } from 'vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent';
 import { IWorkbenchAssignmentService } from 'vs/workbench/services/assignment/common/assignmentService';
@@ -33,7 +33,6 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { checkGlobFileExists } from 'vs/workbench/services/extensions/common/workspaceContains';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
-import { DefaultIconPath } from 'vs/workbench/services/extensionManagement/common/extensionManagement';
 
 export const HasMultipleNewFileEntries = new RawContextKey<boolean>('hasMultipleNewFileEntries', false);
 
@@ -427,11 +426,7 @@ export class WalkthroughsService extends Disposable implements IWalkthroughsServ
 
 		if (sectionToOpen && this.configurationService.getValue<string>('workbench.welcomePage.walkthroughs.openOnInstall')) {
 			type GettingStartedAutoOpenClassification = {
-				id: {
-					classification: 'PublicNonPersonalData'; purpose: 'FeatureInsight';
-					owner: 'JacksonKearl';
-					comment: 'Used to understand what walkthroughs are consulted most frequently';
-				};
+				id: { classification: 'PublicNonPersonalData'; purpose: 'FeatureInsight' };
 			};
 			type GettingStartedAutoOpenEvent = {
 				id: string;
@@ -664,7 +659,7 @@ export class WalkthroughsService extends Disposable implements IWalkthroughsServ
 const parseDescription = (desc: string): LinkedText[] => desc.split('\n').filter(x => x).map(text => parseLinkedText(text));
 
 
-export const convertInternalMediaPathToFileURI = (path: string) => path.startsWith('https://')
+const convertInternalMediaPathToFileURI = (path: string) => path.startsWith('https://')
 	? URI.parse(path, true)
 	: FileAccess.asFileUri('vs/workbench/contrib/welcomeGettingStarted/common/media/' + path, require);
 

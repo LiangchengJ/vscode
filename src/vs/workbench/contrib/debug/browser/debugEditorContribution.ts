@@ -506,7 +506,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 	closeExceptionWidget(): void {
 		if (this.exceptionWidget) {
-			const shouldFocusEditor = this.exceptionWidget.hasFocus();
+			const shouldFocusEditor = this.exceptionWidget.hasfocus();
 			this.exceptionWidget.dispose();
 			this.exceptionWidget = undefined;
 			this.exceptionWidgetVisible.set(false);

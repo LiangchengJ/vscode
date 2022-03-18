@@ -33,7 +33,6 @@ export const serverOptions: OptionDescriptions<ServerParsedArgs> = {
 	'user-data-dir': OPTIONS['user-data-dir'],
 	'driver': OPTIONS['driver'],
 	'disable-telemetry': OPTIONS['disable-telemetry'],
-	'disable-workspace-trust': OPTIONS['disable-workspace-trust'],
 	'file-watcher-polling': { type: 'string', deprecates: ['fileWatcherPolling'] },
 	'log': OPTIONS['log'],
 	'logsPath': OPTIONS['logsPath'],
@@ -130,8 +129,6 @@ export interface ServerParsedArgs {
 	'server-data-dir'?: string;
 
 	'telemetry-level'?: string;
-
-	'disable-workspace-trust'?: boolean;
 
 	/* ----- vs code options ----- */
 

@@ -384,18 +384,14 @@ export class MarkdownEngine {
 }
 
 async function getMarkdownOptions(md: () => MarkdownIt): Promise<MarkdownIt.Options> {
-	const hljs = (await import('highlight.js')).default;
+	const hljs = await import('highlight.js');
 	return {
 		html: true,
 		highlight: (str: string, lang?: string) => {
 			lang = normalizeHighlightLang(lang);
 			if (lang && hljs.getLanguage(lang)) {
 				try {
-					const highlighted = hljs.highlight(str, {
-						language: lang,
-						ignoreIllegals: true,
-					}).value;
-					return `<div>${highlighted}</div>`;
+					return `<div>${hljs.highlight(lang, str, true).value}</div>`;
 				}
 				catch (error) { }
 			}

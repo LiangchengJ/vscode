@@ -374,6 +374,7 @@ suite('NotebookCommon', () => {
 			assert.strictEqual(diffViewModels.viewModels[0].type, 'unchanged');
 			assert.strictEqual(diffViewModels.viewModels[0].checkIfOutputsModified(), false);
 			assert.strictEqual(diffViewModels.viewModels[1].type, 'modified');
+			assert.deepStrictEqual(diffViewModels.viewModels[1].checkIfOutputsModified(), { reason: undefined });
 		});
 	});
 

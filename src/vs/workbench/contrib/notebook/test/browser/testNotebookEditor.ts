@@ -266,7 +266,6 @@ function _createTestNotebookEditor(instantiationService: TestInstantiationServic
 			const findMatches = viewModel.find(query, options).filter(match => match.matches.length > 0);
 			return findMatches;
 		}
-		override deltaCellDecorations() { return []; }
 	};
 
 	return { editor: notebookEditor, viewModel };

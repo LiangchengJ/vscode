@@ -32,7 +32,6 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IWorkspaceTrustManagementService } from 'vs/platform/workspace/common/workspaceTrust';
 import { asWebviewUri, webviewGenericCspSource } from 'vs/workbench/common/webview';
 import { CellEditState, ICellOutputViewModel, ICellViewModel, ICommonCellInfo, IDisplayOutputLayoutUpdateRequest, IDisplayOutputViewModel, IFocusNotebookCellOptions, IGenericCellViewModel, IInsetRenderOutput, INotebookEditorCreationOptions, INotebookWebviewMessage, RenderOutputType } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
-import { NOTEBOOK_WEBVIEW_BOUNDARY } from 'vs/workbench/contrib/notebook/browser/view/notebookCellList';
 import { preloadsScriptStr, RendererMetadata } from 'vs/workbench/contrib/notebook/browser/view/renderers/webviewPreloads';
 import { transformWebviewThemeVars } from 'vs/workbench/contrib/notebook/browser/view/renderers/webviewThemeMapping';
 import { MarkupCellViewModel } from 'vs/workbench/contrib/notebook/browser/viewModel/markupCellViewModel';
@@ -564,250 +563,273 @@ var requirejs = (function() {
 			}
 
 			switch (data.type) {
-				case 'initialized': {
+				case 'initialized':
 					this.initializeWebViewState();
 					break;
-				}
-				case 'dimension': {
-					for (const update of data.updates) {
-						const height = update.height;
-						if (update.isOutput) {
-							const resolvedResult = this.resolveOutputId(update.id);
-							if (resolvedResult) {
-								const { cellInfo, output } = resolvedResult;
-								this.notebookEditor.updateOutputHeight(cellInfo, output, height, !!update.init, 'webview#dimension');
-								this.notebookEditor.scheduleOutputHeightAck(cellInfo, update.id, height);
-							}
-						} else {
-							this.notebookEditor.updateMarkupCellHeight(update.id, height, !!update.init);
-						}
-					}
-					break;
-				}
-				case 'mouseenter': {
-					const resolvedResult = this.resolveOutputId(data.id);
-					if (resolvedResult) {
-						const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
-						if (latestCell) {
-							latestCell.outputIsHovered = true;
-						}
-					}
-					break;
-				}
-				case 'mouseleave': {
-					const resolvedResult = this.resolveOutputId(data.id);
-					if (resolvedResult) {
-						const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
-						if (latestCell) {
-							latestCell.outputIsHovered = false;
-						}
-					}
-					break;
-				}
-				case 'outputFocus': {
-					const resolvedResult = this.resolveOutputId(data.id);
-					if (resolvedResult) {
-						const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
-						if (latestCell) {
-							latestCell.outputIsFocused = true;
-						}
-					}
-					break;
-				}
-				case 'outputBlur': {
-					const resolvedResult = this.resolveOutputId(data.id);
-					if (resolvedResult) {
-						const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
-						if (latestCell) {
-							latestCell.outputIsFocused = false;
-						}
-					}
-					break;
-				}
-				case 'scroll-ack': {
-					// const date = new Date();
-					// const top = data.data.top;
-					// console.log('ack top ', top, ' version: ', data.version, ' - ', date.getMinutes() + ':' + date.getSeconds() + ':' + date.getMilliseconds());
-					break;
-				}
-				case 'scroll-to-reveal': {
-					this.notebookEditor.setScrollTop(data.scrollTop - NOTEBOOK_WEBVIEW_BOUNDARY);
-					break;
-				}
-				case 'did-scroll-wheel': {
-					this.notebookEditor.triggerScroll({
-						...data.payload,
-						preventDefault: () => { },
-						stopPropagation: () => { }
-					});
-					break;
-				}
-				case 'focus-editor': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell) {
-						if (data.focusNext) {
-							this.notebookEditor.focusNextNotebookCell(cell, 'editor');
-						} else {
-							this.notebookEditor.focusNotebookCell(cell, 'editor');
-						}
-					}
-					break;
-				}
-				case 'clicked-data-url': {
-					this._onDidClickDataLink(data);
-					break;
-				}
-				case 'clicked-link': {
-					let linkToOpen: URI | string | undefined;
-					if (matchesScheme(data.href, Schemas.command)) {
-						const ret = /command\:workbench\.action\.openLargeOutput\?(.*)/.exec(data.href);
-						if (ret && ret.length === 2) {
-							const outputId = ret[1];
-							const group = this.editorGroupService.activeGroup;
-
-							if (group) {
-								if (group.activeEditor) {
-									group.pinEditor(group.activeEditor);
+				case 'dimension':
+					{
+						for (const update of data.updates) {
+							const height = update.height;
+							if (update.isOutput) {
+								const resolvedResult = this.resolveOutputId(update.id);
+								if (resolvedResult) {
+									const { cellInfo, output } = resolvedResult;
+									this.notebookEditor.updateOutputHeight(cellInfo, output, height, !!update.init, 'webview#dimension');
+									this.notebookEditor.scheduleOutputHeightAck(cellInfo, update.id, height);
 								}
+							} else {
+								this.notebookEditor.updateMarkupCellHeight(update.id, height, !!update.init);
 							}
-
-							this.openerService.open(CellUri.generateCellOutputUri(this.documentUri, outputId));
-							return;
 						}
+						break;
 					}
-					if (matchesSomeScheme(data.href, Schemas.http, Schemas.https, Schemas.mailto, Schemas.command, Schemas.vscodeNotebookCell, Schemas.vscodeNotebook)) {
-						linkToOpen = data.href;
-					} else if (!/^[\w\-]+:/.test(data.href)) {
-						if (this.documentUri.scheme === Schemas.untitled) {
-							const folders = this.workspaceContextService.getWorkspace().folders;
-							if (!folders.length) {
+				case 'mouseenter':
+					{
+						const resolvedResult = this.resolveOutputId(data.id);
+						if (resolvedResult) {
+							const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
+							if (latestCell) {
+								latestCell.outputIsHovered = true;
+							}
+						}
+						break;
+					}
+				case 'mouseleave':
+					{
+						const resolvedResult = this.resolveOutputId(data.id);
+						if (resolvedResult) {
+							const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
+							if (latestCell) {
+								latestCell.outputIsHovered = false;
+							}
+						}
+						break;
+					}
+				case 'outputFocus':
+					{
+						const resolvedResult = this.resolveOutputId(data.id);
+						if (resolvedResult) {
+							const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
+							if (latestCell) {
+								latestCell.outputIsFocused = true;
+							}
+						}
+						break;
+					}
+				case 'outputBlur':
+					{
+						const resolvedResult = this.resolveOutputId(data.id);
+						if (resolvedResult) {
+							const latestCell = this.notebookEditor.getCellByInfo(resolvedResult.cellInfo);
+							if (latestCell) {
+								latestCell.outputIsFocused = false;
+							}
+						}
+						break;
+					}
+				case 'scroll-ack':
+					{
+						// const date = new Date();
+						// const top = data.data.top;
+						// console.log('ack top ', top, ' version: ', data.version, ' - ', date.getMinutes() + ':' + date.getSeconds() + ':' + date.getMilliseconds());
+						break;
+					}
+				case 'scroll-to-reveal':
+					{
+						this.notebookEditor.setScrollTop(data.scrollTop);
+						break;
+					}
+				case 'did-scroll-wheel':
+					{
+						this.notebookEditor.triggerScroll({
+							...data.payload,
+							preventDefault: () => { },
+							stopPropagation: () => { }
+						});
+						break;
+					}
+				case 'focus-editor':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell) {
+							if (data.focusNext) {
+								this.notebookEditor.focusNextNotebookCell(cell, 'editor');
+							} else {
+								this.notebookEditor.focusNotebookCell(cell, 'editor');
+							}
+						}
+						break;
+					}
+				case 'clicked-data-url':
+					{
+						this._onDidClickDataLink(data);
+						break;
+					}
+				case 'clicked-link':
+					{
+						let linkToOpen: URI | string | undefined;
+						if (matchesScheme(data.href, Schemas.command)) {
+							const ret = /command\:workbench\.action\.openLargeOutput\?(.*)/.exec(data.href);
+							if (ret && ret.length === 2) {
+								const outputId = ret[1];
+								const group = this.editorGroupService.activeGroup;
+
+								if (group) {
+									if (group.activeEditor) {
+										group.pinEditor(group.activeEditor);
+									}
+								}
+
+								this.openerService.open(CellUri.generateCellOutputUri(this.documentUri, outputId));
 								return;
 							}
-							linkToOpen = URI.joinPath(folders[0].uri, data.href);
-						} else {
-							if (data.href.startsWith('/')) {
-								// Resolve relative to workspace
-								let folder = this.workspaceContextService.getWorkspaceFolder(this.documentUri);
-								if (!folder) {
-									const folders = this.workspaceContextService.getWorkspace().folders;
-									if (!folders.length) {
-										return;
-									}
-									folder = folders[0];
+						}
+						if (matchesSomeScheme(data.href, Schemas.http, Schemas.https, Schemas.mailto, Schemas.command, Schemas.vscodeNotebookCell, Schemas.vscodeNotebook)) {
+							linkToOpen = data.href;
+						} else if (!/^[\w\-]+:/.test(data.href)) {
+							if (this.documentUri.scheme === Schemas.untitled) {
+								const folders = this.workspaceContextService.getWorkspace().folders;
+								if (!folders.length) {
+									return;
 								}
-								linkToOpen = URI.joinPath(folder.uri, data.href);
+								linkToOpen = URI.joinPath(folders[0].uri, data.href);
 							} else {
-								// Resolve relative to notebook document
-								linkToOpen = URI.joinPath(dirname(this.documentUri), data.href);
+								if (data.href.startsWith('/')) {
+									// Resolve relative to workspace
+									let folder = this.workspaceContextService.getWorkspaceFolder(this.documentUri);
+									if (!folder) {
+										const folders = this.workspaceContextService.getWorkspace().folders;
+										if (!folders.length) {
+											return;
+										}
+										folder = folders[0];
+									}
+									linkToOpen = URI.joinPath(folder.uri, data.href);
+								} else {
+									// Resolve relative to notebook document
+									linkToOpen = URI.joinPath(dirname(this.documentUri), data.href);
+								}
 							}
 						}
-					}
 
-					if (linkToOpen) {
-						this.openerService.open(linkToOpen, { fromUserGesture: true, allowCommands: true });
-					}
-					break;
-				}
-				case 'customKernelMessage': {
-					this._onMessage.fire({ message: data.message });
-					break;
-				}
-				case 'customRendererMessage': {
-					this.rendererMessaging?.postMessage(data.rendererId, data.message);
-					break;
-				}
-				case 'clickMarkupCell': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell) {
-						if (data.shiftKey || (isMacintosh ? data.metaKey : data.ctrlKey)) {
-							// Modify selection
-							this.notebookEditor.toggleNotebookCellSelection(cell, /* fromPrevious */ data.shiftKey);
-						} else {
-							// Normal click
-							this.notebookEditor.focusNotebookCell(cell, 'container', { skipReveal: true });
+						if (linkToOpen) {
+							this.openerService.open(linkToOpen, { fromUserGesture: true, allowCommands: true });
 						}
+						break;
 					}
-					break;
-				}
-				case 'contextMenuMarkupCell': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell) {
-						// Focus the cell first
-						this.notebookEditor.focusNotebookCell(cell, 'container', { skipReveal: true });
+				case 'customKernelMessage':
+					{
+						this._onMessage.fire({ message: data.message });
+						break;
+					}
+				case 'customRendererMessage':
+					{
+						this.rendererMessaging?.postMessage(data.rendererId, data.message);
+						break;
+					}
+				case 'clickMarkupCell':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell) {
+							if (data.shiftKey || (isMacintosh ? data.metaKey : data.ctrlKey)) {
+								// Modify selection
+								this.notebookEditor.toggleNotebookCellSelection(cell, /* fromPrevious */ data.shiftKey);
+							} else {
+								// Normal click
+								this.notebookEditor.focusNotebookCell(cell, 'container', { skipReveal: true });
+							}
+						}
+						break;
+					}
+				case 'contextMenuMarkupCell':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell) {
+							// Focus the cell first
+							this.notebookEditor.focusNotebookCell(cell, 'container', { skipReveal: true });
 
-						// Then show the context menu
-						const webviewRect = this.element.getBoundingClientRect();
-						this.contextMenuService.showContextMenu({
-							getActions: () => {
-								const result: IAction[] = [];
-								const menu = this.menuService.createMenu(MenuId.NotebookCellTitle, this.contextKeyService);
-								createAndFillInContextMenuActions(menu, undefined, result);
-								menu.dispose();
-								return result;
-							},
-							getAnchor: () => ({
-								x: webviewRect.x + data.clientX,
-								y: webviewRect.y + data.clientY
-							})
+							// Then show the context menu
+							const webviewRect = this.element.getBoundingClientRect();
+							this.contextMenuService.showContextMenu({
+								getActions: () => {
+									const result: IAction[] = [];
+									const menu = this.menuService.createMenu(MenuId.NotebookCellTitle, this.contextKeyService);
+									createAndFillInContextMenuActions(menu, undefined, result);
+									menu.dispose();
+									return result;
+								},
+								getAnchor: () => ({
+									x: webviewRect.x + data.clientX,
+									y: webviewRect.y + data.clientY
+								})
+							});
+						}
+						break;
+					}
+				case 'toggleMarkupPreview':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell && !this.notebookEditor.creationOptions.isReadOnly) {
+							this.notebookEditor.setMarkupCellEditState(data.cellId, CellEditState.Editing);
+							this.notebookEditor.focusNotebookCell(cell, 'editor', { skipReveal: true });
+						}
+						break;
+					}
+				case 'mouseEnterMarkupCell':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell instanceof MarkupCellViewModel) {
+							cell.cellIsHovered = true;
+						}
+						break;
+					}
+				case 'mouseLeaveMarkupCell':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell instanceof MarkupCellViewModel) {
+							cell.cellIsHovered = false;
+						}
+						break;
+					}
+				case 'cell-drag-start':
+					{
+						this.notebookEditor.didStartDragMarkupCell(data.cellId, data);
+						break;
+					}
+				case 'cell-drag':
+					{
+						this.notebookEditor.didDragMarkupCell(data.cellId, data);
+						break;
+					}
+				case 'cell-drop':
+					{
+						this.notebookEditor.didDropMarkupCell(data.cellId, {
+							dragOffsetY: data.dragOffsetY,
+							ctrlKey: data.ctrlKey,
+							altKey: data.altKey,
 						});
+						break;
 					}
-					break;
-				}
-				case 'toggleMarkupPreview': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell && !this.notebookEditor.creationOptions.isReadOnly) {
-						this.notebookEditor.setMarkupCellEditState(data.cellId, CellEditState.Editing);
-						this.notebookEditor.focusNotebookCell(cell, 'editor', { skipReveal: true });
+				case 'cell-drag-end':
+					{
+						this.notebookEditor.didEndDragMarkupCell(data.cellId);
+						break;
 					}
-					break;
-				}
-				case 'mouseEnterMarkupCell': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell instanceof MarkupCellViewModel) {
-						cell.cellIsHovered = true;
-					}
-					break;
-				}
-				case 'mouseLeaveMarkupCell': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell instanceof MarkupCellViewModel) {
-						cell.cellIsHovered = false;
-					}
-					break;
-				}
-				case 'cell-drag-start': {
-					this.notebookEditor.didStartDragMarkupCell(data.cellId, data);
-					break;
-				}
-				case 'cell-drag': {
-					this.notebookEditor.didDragMarkupCell(data.cellId, data);
-					break;
-				}
-				case 'cell-drop': {
-					this.notebookEditor.didDropMarkupCell(data.cellId, {
-						dragOffsetY: data.dragOffsetY,
-						ctrlKey: data.ctrlKey,
-						altKey: data.altKey,
-					});
-					break;
-				}
-				case 'cell-drag-end': {
-					this.notebookEditor.didEndDragMarkupCell(data.cellId);
-					break;
-				}
-				case 'renderedMarkup': {
-					const cell = this.notebookEditor.getCellById(data.cellId);
-					if (cell instanceof MarkupCellViewModel) {
-						cell.renderedHtml = data.html;
-					}
+				case 'renderedMarkup':
+					{
+						const cell = this.notebookEditor.getCellById(data.cellId);
+						if (cell instanceof MarkupCellViewModel) {
+							cell.renderedHtml = data.html;
+						}
 
-					this._handleHighlightCodeBlock(data.codeBlocks);
-					break;
-				}
-				case 'renderedCellOutput': {
-					this._handleHighlightCodeBlock(data.codeBlocks);
-					break;
-				}
+						this._handleHighlightCodeBlock(data.codeBlocks);
+						break;
+					}
+				case 'renderedCellOutput':
+					{
+						this._handleHighlightCodeBlock(data.codeBlocks);
+						break;
+					}
 			}
 		}));
 	}

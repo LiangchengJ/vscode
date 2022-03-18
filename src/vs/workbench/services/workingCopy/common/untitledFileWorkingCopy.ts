@@ -243,16 +243,11 @@ export class UntitledFileWorkingCopy<M extends IUntitledFileWorkingCopyModel> ex
 	//#region Backup
 
 	async backup(token: CancellationToken): Promise<IWorkingCopyBackup> {
-		let content: VSBufferReadableStream | undefined = undefined;
 
-		// Make sure to check whether this working copy has been
-		// resolved or not and fallback to the initial value -
-		// if any - to prevent backing up an unresolved working
-		// copy and loosing the initial value.
+		// Fill in content if we are resolved
+		let content: VSBufferReadableStream | undefined = undefined;
 		if (this.isResolved()) {
 			content = await raceCancellation(this.model.snapshot(token), token);
-		} else if (this.initialContents) {
-			content = this.initialContents.value;
 		}
 
 		return { content };

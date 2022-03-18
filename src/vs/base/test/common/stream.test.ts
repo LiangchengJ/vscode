@@ -5,19 +5,11 @@
 
 import * as assert from 'assert';
 import { timeout } from 'vs/base/common/async';
-import { bufferToReadable, VSBuffer } from 'vs/base/common/buffer';
-import { consumeReadable, consumeStream, isReadable, isReadableBufferedStream, isReadableStream, listenStream, newWriteableStream, peekReadable, peekStream, prefixedReadable, prefixedStream, Readable, ReadableStream, toReadable, toStream, transform } from 'vs/base/common/stream';
+import { consumeReadable, consumeStream, isReadableBufferedStream, isReadableStream, listenStream, newWriteableStream, peekReadable, peekStream, prefixedReadable, prefixedStream, Readable, ReadableStream, toReadable, toStream, transform } from 'vs/base/common/stream';
 
 suite('Stream', () => {
 
-	test('isReadable', () => {
-		assert.ok(!isReadable(undefined));
-		assert.ok(!isReadable(Object.create(null)));
-		assert.ok(isReadable(bufferToReadable(VSBuffer.fromString(''))));
-	});
-
 	test('isReadableStream', () => {
-		assert.ok(!isReadableStream(undefined));
 		assert.ok(!isReadableStream(Object.create(null)));
 		assert.ok(isReadableStream(newWriteableStream(d => d)));
 	});

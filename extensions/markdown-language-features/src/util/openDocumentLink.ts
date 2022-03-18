@@ -5,10 +5,10 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as uri from 'vscode-uri';
 import { MarkdownEngine } from '../markdownEngine';
 import { TableOfContents } from '../tableOfContentsProvider';
 import { isMarkdownFile } from './file';
+import { extname } from './path';
 
 export interface OpenDocumentLinkArgs {
 	readonly parts: vscode.Uri;
@@ -53,7 +53,7 @@ export async function openDocumentLink(engine: MarkdownEngine, targetResource: v
 
 	if (typeof targetResourceStat === 'undefined') {
 		// We don't think the file exists. If it doesn't already have an extension, try tacking on a `.md` and using that instead
-		if (uri.Utils.extname(targetResource) === '') {
+		if (extname(targetResource.path) === '') {
 			const dotMdResource = targetResource.with({ path: targetResource.path + '.md' });
 			try {
 				const stat = await vscode.workspace.fs.stat(dotMdResource);
@@ -140,7 +140,7 @@ export async function resolveUriToMarkdownFile(resource: vscode.Uri): Promise<vs
 	}
 
 	// If no extension, try with `.md` extension
-	if (uri.Utils.extname(resource) === '') {
+	if (extname(resource.path) === '') {
 		return tryResolveUriToMarkdownFile(resource.with({ path: resource.path + '.md' }));
 	}
 

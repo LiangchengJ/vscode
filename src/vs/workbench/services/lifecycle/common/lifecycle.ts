@@ -97,25 +97,17 @@ export interface WillShutdownEvent {
 
 export const enum ShutdownReason {
 
-	/**
-	 * The window is closed.
-	 */
+	/** Window is closed */
 	CLOSE = 1,
 
-	/**
-	 * The window closes because the application quits.
-	 */
-	QUIT,
+	/** Application is quit */
+	QUIT = 2,
 
-	/**
-	 * The window is reloaded.
-	 */
-	RELOAD,
+	/** Window is reloaded */
+	RELOAD = 3,
 
-	/**
-	 * The window is loaded into a different workspace context.
-	 */
-	LOAD
+	/** Other configuration loaded into window */
+	LOAD = 4
 }
 
 export const enum StartupKind {

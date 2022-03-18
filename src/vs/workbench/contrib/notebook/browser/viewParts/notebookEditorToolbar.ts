@@ -317,7 +317,7 @@ export class NotebookEditorToolbar extends Disposable {
 			}
 		}));
 
-		this._registerNotebookActionsToolbar();
+		this._reigsterNotebookActionsToolbar();
 	}
 
 	private _buildBody() {
@@ -338,7 +338,7 @@ export class NotebookEditorToolbar extends Disposable {
 		DOM.append(this.domNode, this._notebookTopRightToolbarContainer);
 	}
 
-	private _registerNotebookActionsToolbar() {
+	private _reigsterNotebookActionsToolbar() {
 		this._notebookGlobalActionsMenu = this._register(this.menuService.createMenu(this.notebookEditor.creationOptions.menuIds.notebookToolbar, this.contextKeyService));
 		this._register(this._notebookGlobalActionsMenu);
 

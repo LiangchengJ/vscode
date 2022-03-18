@@ -90,7 +90,7 @@ export class ExtensionManagementCLIService implements IExtensionManagementCLISer
 		const checkIfNotInstalled = (id: string, version?: string): boolean => {
 			const installedExtension = installed.find(i => areSameExtensions(i.identifier, { id }));
 			if (installedExtension) {
-				if (!force && (!version || (version === 'prerelease' && installedExtension.preRelease))) {
+				if (!version && !force) {
 					output.log(localize('alreadyInstalled-checkAndUpdate', "Extension '{0}' v{1} is already installed. Use '--force' option to update to latest version or provide '@<version>' to install a specific version, for example: '{2}@1.2.3'.", id, installedExtension.manifest.version, id));
 					return false;
 				}
@@ -101,9 +101,6 @@ export class ExtensionManagementCLIService implements IExtensionManagementCLISer
 			}
 			return true;
 		};
-		const addInstallExtensionInfo = (id: string, version: string | undefined, isBuiltin: boolean) => {
-			installExtensionInfos.push({ id, version: version !== 'prerelease' ? version : undefined, installOptions: { ...installOptions, isBuiltin, installPreReleaseVersion: version === 'prerelease' || installOptions.installPreReleaseVersion } });
-		};
 		const vsixs: URI[] = [];
 		const installExtensionInfos: InstallExtensionInfo[] = [];
 		for (const extension of extensions) {
@@ -112,14 +109,14 @@ export class ExtensionManagementCLIService implements IExtensionManagementCLISer
 			} else {
 				const [id, version] = getIdAndVersion(extension);
 				if (checkIfNotInstalled(id, version)) {
-					addInstallExtensionInfo(id, version, false);
+					installExtensionInfos.push({ id, version, installOptions: { ...installOptions, isBuiltin: false } });
 				}
 			}
 		}
 		for (const extension of builtinExtensionIds) {
 			const [id, version] = getIdAndVersion(extension);
 			if (checkIfNotInstalled(id, version)) {
-				addInstallExtensionInfo(id, version, true);
+				installExtensionInfos.push({ id, version, installOptions: { ...installOptions, isBuiltin: true } });
 			}
 		}
 

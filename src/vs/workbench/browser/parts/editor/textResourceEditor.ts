@@ -6,7 +6,7 @@
 import { localize } from 'vs/nls';
 import { assertIsDefined, withNullAsUndefined } from 'vs/base/common/types';
 import { ICodeEditor, getCodeEditor, IPasteEvent } from 'vs/editor/browser/editorBrowser';
-import { IEditorOpenContext, isTextEditorViewState } from 'vs/workbench/common/editor';
+import { IEditorOpenContext } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { applyTextEditorOptions } from 'vs/workbench/common/editor/editorOptions';
 import { AbstractTextResourceEditorInput, TextResourceEditorInput } from 'vs/workbench/common/editor/textResourceEditorInput';
@@ -77,21 +77,15 @@ export class AbstractTextResourceEditor extends BaseTextEditor<ICodeEditorViewSt
 		const textEditorModel = resolvedModel.textEditorModel;
 		textEditor.setModel(textEditorModel);
 
-		// Restore view state (unless provided by options)
-		if (!isTextEditorViewState(options?.viewState)) {
-			const editorViewState = this.loadEditorViewState(input, context);
-			if (editorViewState) {
-				if (options?.selection) {
-					editorViewState.cursorState = []; // prevent duplicate selections via options
-				}
-
-				textEditor.restoreViewState(editorViewState);
-			}
+		// Apply options to editor if any
+		let optionsGotApplied = false;
+		if (options) {
+			optionsGotApplied = applyTextEditorOptions(options, textEditor, ScrollType.Immediate);
 		}
 
-		// Apply options to editor if any
-		if (options) {
-			applyTextEditorOptions(options, textEditor, ScrollType.Immediate);
+		// Otherwise restore View State unless disabled via settings
+		if (!optionsGotApplied) {
+			this.restoreTextResourceEditorViewState(input, context, textEditor);
 		}
 
 		// Since the resolved model provides information about being readonly
@@ -100,6 +94,13 @@ export class AbstractTextResourceEditor extends BaseTextEditor<ICodeEditorViewSt
 		// a resolved model might have more specific information about being
 		// readonly or not that the input did not have.
 		textEditor.updateOptions({ readOnly: resolvedModel.isReadonly() });
+	}
+
+	private restoreTextResourceEditorViewState(editor: AbstractTextResourceEditorInput, context: IEditorOpenContext, control: IEditor) {
+		const viewState = this.loadEditorViewState(editor, context);
+		if (viewState) {
+			control.restoreViewState(viewState);
+		}
 	}
 
 	/**
@@ -168,7 +169,7 @@ export class TextResourceEditor extends AbstractTextResourceEditor {
 		}
 
 		if (e.range.startLineNumber !== 1 || e.range.startColumn !== 1) {
-			return; // document had existing content before the pasted text, don't override.
+			return; // only when pasting into first line, first column (= empty document)
 		}
 
 		if (codeEditor.getOption(EditorOption.readOnly)) {
@@ -180,42 +181,29 @@ export class TextResourceEditor extends AbstractTextResourceEditor {
 			return; // require a live model
 		}
 
-		const pasteIsWholeContents = textModel.getLineCount() === e.range.endLineNumber && textModel.getLineMaxColumn(e.range.endLineNumber) === e.range.endColumn;
-		if (!pasteIsWholeContents) {
-			return; // document had existing content after the pasted text, don't override.
-		}
-
 		const currentLanguageId = textModel.getLanguageId();
 		if (currentLanguageId !== PLAINTEXT_LANGUAGE_ID) {
 			return; // require current languageId to be unspecific
 		}
 
-		let candidateLanguage: { id: string; source: 'event' | 'guess' } | undefined = undefined;
+		let candidateLanguageId: string | undefined = undefined;
 
 		// A languageId is provided via the paste event so text was copied using
 		// VSCode. As such we trust this languageId and use it if specific
 		if (e.languageId) {
-			candidateLanguage = { id: e.languageId, source: 'event' };
+			candidateLanguageId = e.languageId;
 		}
 
 		// A languageId was not provided, so the data comes from outside VSCode
 		// We can still try to guess a good languageId from the first line if
 		// the paste changed the first line
 		else {
-			const guess = withNullAsUndefined(this.languageService.guessLanguageIdByFilepathOrFirstLine(textModel.uri, textModel.getLineContent(1).substr(0, ModelConstants.FIRST_LINE_DETECTION_LENGTH_LIMIT)));
-			if (guess) {
-				candidateLanguage = { id: guess, source: 'guess' };
-			}
+			candidateLanguageId = withNullAsUndefined(this.languageService.guessLanguageIdByFilepathOrFirstLine(textModel.uri, textModel.getLineContent(1).substr(0, ModelConstants.FIRST_LINE_DETECTION_LENGTH_LIMIT)));
 		}
 
 		// Finally apply languageId to model if specified
-		if (candidateLanguage && candidateLanguage.id !== PLAINTEXT_LANGUAGE_ID) {
-			if (this.input instanceof UntitledTextEditorInput && candidateLanguage.source === 'event') {
-				// High confidence, set language id at TextEditorModel level to block future auto-detection
-				this.input.model.setLanguageId(candidateLanguage.id);
-			} else {
-				this.modelService.setMode(textModel, this.languageService.createById(candidateLanguage.id));
-			}
+		if (candidateLanguageId !== PLAINTEXT_LANGUAGE_ID) {
+			this.modelService.setMode(textModel, this.languageService.createById(candidateLanguageId));
 		}
 	}
 }

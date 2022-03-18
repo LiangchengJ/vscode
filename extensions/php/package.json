@@ -59,7 +59,7 @@
     ]
   },
   "scripts": {
-    "update-grammar": "node ./build/update-grammar.mjs"
+    "update-grammar": "node ./build/update-grammar.js"
   },
   "repository": {
     "type": "git",

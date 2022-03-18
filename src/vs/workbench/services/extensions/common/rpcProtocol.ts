@@ -914,11 +914,14 @@ class MessageIO {
 	}
 
 	public static serializeReplyErr(req: number, err: any): VSBuffer {
-		const errStr: string | undefined = (err ? safeStringify(errors.transformErrorForSerialization(err), null) : undefined);
-		if (typeof errStr !== 'string') {
-			return this._serializeReplyErrEmpty(req);
+		if (err) {
+			return this._serializeReplyErrEror(req, err);
 		}
-		const errBuff = VSBuffer.fromString(errStr);
+		return this._serializeReplyErrEmpty(req);
+	}
+
+	private static _serializeReplyErrEror(req: number, _err: Error): VSBuffer {
+		const errBuff = VSBuffer.fromString(safeStringify(errors.transformErrorForSerialization(_err), null));
 
 		let len = 0;
 		len += MessageBuffer.sizeLongString(errBuff);

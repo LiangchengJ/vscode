@@ -753,13 +753,12 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
 		}
 	}
 
-	public async $getCanonicalURI(remoteAuthority: string, uriComponents: UriComponents): Promise<UriComponents | null> {
+	public async $getCanonicalURI(remoteAuthority: string, uriComponents: UriComponents): Promise<UriComponents> {
 		this._logService.info(`$getCanonicalURI invoked for authority (${getRemoteAuthorityPrefix(remoteAuthority)})`);
 
-		const { resolver } = await this._activateAndGetResolver(remoteAuthority);
+		const { authorityPrefix, resolver } = await this._activateAndGetResolver(remoteAuthority);
 		if (!resolver) {
-			// Return `null` if no resolver for `remoteAuthority` is found.
-			return null;
+			throw new Error(`Cannot get canonical URI because no remote extension is installed to resolve ${authorityPrefix}`);
 		}
 
 		const uri = URI.revive(uriComponents);

@@ -7,10 +7,10 @@
     "typescript": "4.6.2"
   },
   "scripts": {
-    "postinstall": "node ./postinstall.mjs"
+    "postinstall": "node ./postinstall"
   },
   "devDependencies": {
     "esbuild": "^0.11.12",
-    "vscode-grammar-updater": "^1.0.4"
+    "vscode-grammar-updater": "^1.0.3"
   }
 }

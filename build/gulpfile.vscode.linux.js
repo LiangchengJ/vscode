@@ -103,9 +103,6 @@ function prepareDebPackage(arch) {
 	};
 }
 
-/**
- * @param {string} arch
- */
 function buildDebPackage(arch) {
 	const debArch = getDebPackageArch(arch);
 	return shell.task([
@@ -115,23 +112,14 @@ function buildDebPackage(arch) {
 	], { cwd: '.build/linux/deb/' + debArch });
 }
 
-/**
- * @param {string} rpmArch
- */
 function getRpmBuildPath(rpmArch) {
 	return '.build/linux/rpm/' + rpmArch + '/rpmbuild';
 }
 
-/**
- * @param {string} arch
- */
 function getRpmPackageArch(arch) {
 	return { x64: 'x86_64', armhf: 'armv7hl', arm64: 'aarch64' }[arch];
 }
 
-/**
- * @param {string} arch
- */
 function prepareRpmPackage(arch) {
 	const binaryDir = '../VSCode-linux-' + arch;
 	const rpmArch = getRpmPackageArch(arch);
@@ -198,9 +186,6 @@ function prepareRpmPackage(arch) {
 	};
 }
 
-/**
- * @param {string} arch
- */
 function buildRpmPackage(arch) {
 	const rpmArch = getRpmPackageArch(arch);
 	const rpmBuildPath = getRpmBuildPath(rpmArch);
@@ -214,16 +199,10 @@ function buildRpmPackage(arch) {
 	]);
 }
 
-/**
- * @param {string} arch
- */
 function getSnapBuildPath(arch) {
 	return `.build/linux/snap/${arch}/${product.applicationName}-${arch}`;
 }
 
-/**
- * @param {string} arch
- */
 function prepareSnapPackage(arch) {
 	const binaryDir = '../VSCode-linux-' + arch;
 	const destination = getSnapBuildPath(arch);
@@ -268,9 +247,6 @@ function prepareSnapPackage(arch) {
 	};
 }
 
-/**
- * @param {string} arch
- */
 function buildSnapPackage(arch) {
 	const snapBuildPath = getSnapBuildPath(arch);
 	// Default target for snapcraft runs: pull, build, stage and prime, and finally assembles the snap.

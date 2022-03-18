@@ -178,7 +178,6 @@ export class ExtHostFileSystemEventService implements ExtHostFileSystemEventServ
 				this._onDidDeleteFile.fire(Object.freeze({ files: files.map(f => URI.revive(f.target)) }));
 				break;
 			case FileOperation.CREATE:
-			case FileOperation.COPY:
 				this._onDidCreateFile.fire(Object.freeze({ files: files.map(f => URI.revive(f.target)) }));
 				break;
 			default:
@@ -214,7 +213,6 @@ export class ExtHostFileSystemEventService implements ExtHostFileSystemEventServ
 			case FileOperation.DELETE:
 				return await this._fireWillEvent(this._onWillDeleteFile, { files: files.map(f => URI.revive(f.target)) }, timeout, token);
 			case FileOperation.CREATE:
-			case FileOperation.COPY:
 				return await this._fireWillEvent(this._onWillCreateFile, { files: files.map(f => URI.revive(f.target)) }, timeout, token);
 		}
 		return undefined;

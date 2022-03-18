@@ -25,10 +25,9 @@ import { ISignService } from 'vs/platform/sign/common/sign';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
-import { ExtensionDescriptionRegistry } from 'vs/workbench/services/extensions/common/extensionDescriptionRegistry';
 import { parseExtensionDevOptions } from 'vs/workbench/services/extensions/common/extensionDevOptions';
 import { createMessageOfType, isMessageOfType, MessageType, IExtensionHostInitData, UIKind } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
-import { ExtensionHostLogFileName, IExtensionHost, RemoteRunningLocation } from 'vs/workbench/services/extensions/common/extensions';
+import { ExtensionHostKind, ExtensionHostLogFileName, IExtensionHost } from 'vs/workbench/services/extensions/common/extensions';
 import { ILifecycleService } from 'vs/workbench/services/lifecycle/common/lifecycle';
 import { Extensions, IOutputChannelRegistry } from 'vs/workbench/services/output/common/output';
 
@@ -50,9 +49,9 @@ export interface IRemoteExtensionHostDataProvider {
 
 export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 
+	public readonly kind = ExtensionHostKind.Remote;
 	public readonly remoteAuthority: string;
 	public readonly lazyStart = false;
-	public readonly extensions = new ExtensionDescriptionRegistry([]);
 
 	private _onExit: Emitter<[number, string | null]> = this._register(new Emitter<[number, string | null]>());
 	public readonly onExit: Event<[number, string | null]> = this._onExit.event;
@@ -63,7 +62,6 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 	private readonly _isExtensionDevHost: boolean;
 
 	constructor(
-		public readonly runningLocation: RemoteRunningLocation,
 		private readonly _initDataProvider: IRemoteExtensionHostDataProvider,
 		private readonly _socketFactory: ISocketFactory,
 		@IWorkspaceContextService private readonly _contextService: IWorkspaceContextService,
@@ -224,7 +222,6 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 				.filter(extension => (extension.main || extension.browser) && extension.api === 'none').map(extension => extension.identifier)
 		);
 		const workspace = this._contextService.getWorkspace();
-		this.extensions.deltaExtensions(remoteInitData.extensions, []);
 		return {
 			commit: this._productService.commit,
 			version: this._productService.version,
@@ -254,7 +251,7 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 			},
 			resolvedExtensions: resolvedExtensions,
 			hostExtensions: hostExtensions,
-			extensions: this.extensions.getAllExtensionDescriptions(),
+			extensions: remoteInitData.extensions,
 			telemetryInfo,
 			logLevel: this._logService.getLevel(),
 			logsLocation: remoteInitData.extensionHostLogsPath,

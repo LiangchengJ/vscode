@@ -52,16 +52,12 @@ export const enum SyntaxServerConfiguration {
 
 export class ImplicitProjectConfiguration {
 
-	public readonly target: string | undefined;
-	public readonly module: string | undefined;
 	public readonly checkJs: boolean;
 	public readonly experimentalDecorators: boolean;
 	public readonly strictNullChecks: boolean;
 	public readonly strictFunctionTypes: boolean;
 
 	constructor(configuration: vscode.WorkspaceConfiguration) {
-		this.target = ImplicitProjectConfiguration.readTarget(configuration);
-		this.module = ImplicitProjectConfiguration.readModule(configuration);
 		this.checkJs = ImplicitProjectConfiguration.readCheckJs(configuration);
 		this.experimentalDecorators = ImplicitProjectConfiguration.readExperimentalDecorators(configuration);
 		this.strictNullChecks = ImplicitProjectConfiguration.readImplicitStrictNullChecks(configuration);
@@ -70,14 +66,6 @@ export class ImplicitProjectConfiguration {
 
 	public isEqualTo(other: ImplicitProjectConfiguration): boolean {
 		return objects.equals(this, other);
-	}
-
-	private static readTarget(configuration: vscode.WorkspaceConfiguration): string | undefined {
-		return configuration.get<string>('js/ts.implicitProjectConfig.target');
-	}
-
-	private static readModule(configuration: vscode.WorkspaceConfiguration): string | undefined {
-		return configuration.get<string>('js/ts.implicitProjectConfig.module');
 	}
 
 	private static readCheckJs(configuration: vscode.WorkspaceConfiguration): boolean {

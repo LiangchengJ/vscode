@@ -41,7 +41,7 @@ function getTagBodyText(
 
 	// Convert to markdown code block if it does not already contain one
 	function makeCodeblock(text: string): string {
-		if (/^\s*[~`]{3}/m.test(text)) {
+		if (text.match(/^\s*[~`]{3}/m)) {
 			return text;
 		}
 		return '```\n' + text + '\n```';

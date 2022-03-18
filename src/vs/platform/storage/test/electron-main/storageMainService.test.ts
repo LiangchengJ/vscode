@@ -57,6 +57,7 @@ suite('StorageMainService', function () {
 
 		onWillLoadWindow = Event.None;
 		onBeforeCloseWindow = Event.None;
+		onBeforeUnloadWindow = Event.None;
 
 		wasRestarted = false;
 		quitRequested = false;

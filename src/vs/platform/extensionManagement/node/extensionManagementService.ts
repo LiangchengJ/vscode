@@ -23,16 +23,16 @@ import { INativeEnvironmentService } from 'vs/platform/environment/common/enviro
 import { AbstractExtensionManagementService, AbstractExtensionTask, IInstallExtensionTask, IUninstallExtensionTask, joinErrors, UninstallExtensionTaskOptions } from 'vs/platform/extensionManagement/common/abstractExtensionManagementService';
 import {
 	ExtensionManagementError, ExtensionManagementErrorCode, getTargetPlatform, IExtensionGalleryService, IExtensionIdentifier, IExtensionManagementService, IGalleryExtension, IGalleryMetadata, ILocalExtension, InstallOperation, InstallOptions,
-	InstallVSIXOptions, Metadata
+	InstallVSIXOptions, Metadata, TargetPlatform
 } from 'vs/platform/extensionManagement/common/extensionManagement';
-import { areSameExtensions, ExtensionKey, getGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
+import { areSameExtensions, ExtensionIdentifierWithVersion, getGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
 import { ExtensionsDownloader } from 'vs/platform/extensionManagement/node/extensionDownloader';
 import { ExtensionsLifecycle } from 'vs/platform/extensionManagement/node/extensionLifecycle';
 import { getManifest } from 'vs/platform/extensionManagement/node/extensionManagementUtil';
 import { ExtensionsManifestCache } from 'vs/platform/extensionManagement/node/extensionsManifestCache';
 import { ExtensionsScanner, ILocalExtensionManifest } from 'vs/platform/extensionManagement/node/extensionsScanner';
 import { ExtensionsWatcher } from 'vs/platform/extensionManagement/node/extensionsWatcher';
-import { ExtensionType, IExtensionManifest, TargetPlatform } from 'vs/platform/extensions/common/extensions';
+import { ExtensionType, IExtensionManifest } from 'vs/platform/extensions/common/extensions';
 import { isEngineValid } from 'vs/platform/extensions/common/extensionValidator';
 import { IFileService } from 'vs/platform/files/common/files';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -43,7 +43,7 @@ import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity'
 
 interface InstallableExtension {
 	zipPath: string;
-	key: ExtensionKey;
+	identifierWithVersion: ExtensionIdentifierWithVersion;
 	metadata?: Metadata;
 }
 
@@ -229,7 +229,7 @@ abstract class AbstractInstallExtensionTask extends AbstractExtensionTask<ILocal
 
 	protected async installExtension(installableExtension: InstallableExtension, token: CancellationToken): Promise<ILocalExtension> {
 		try {
-			const local = await this.unsetUninstalledAndGetLocal(installableExtension.key);
+			const local = await this.unsetUninstalledAndGetLocal(installableExtension.identifierWithVersion);
 			if (local) {
 				return installableExtension.metadata ? this.extensionsScanner.saveMetadataForLocalExtension(local, { ...((<ILocalExtensionManifest>local.manifest).__metadata || {}), ...installableExtension.metadata }) : local;
 			}
@@ -243,28 +243,28 @@ abstract class AbstractInstallExtensionTask extends AbstractExtensionTask<ILocal
 		return this.extract(installableExtension, token);
 	}
 
-	protected async unsetUninstalledAndGetLocal(extensionKey: ExtensionKey): Promise<ILocalExtension | null> {
-		const isUninstalled = await this.isUninstalled(extensionKey);
+	protected async unsetUninstalledAndGetLocal(identifierWithVersion: ExtensionIdentifierWithVersion): Promise<ILocalExtension | null> {
+		const isUninstalled = await this.isUninstalled(identifierWithVersion);
 		if (!isUninstalled) {
 			return null;
 		}
 
-		this.logService.trace('Removing the extension from uninstalled list:', extensionKey.id);
+		this.logService.trace('Removing the extension from uninstalled list:', identifierWithVersion.id);
 		// If the same version of extension is marked as uninstalled, remove it from there and return the local.
-		const local = await this.extensionsScanner.setInstalled(extensionKey);
-		this.logService.info('Removed the extension from uninstalled list:', extensionKey.id);
+		const local = await this.extensionsScanner.setInstalled(identifierWithVersion);
+		this.logService.info('Removed the extension from uninstalled list:', identifierWithVersion.id);
 
 		return local;
 	}
 
-	private async isUninstalled(extensionId: ExtensionKey): Promise<boolean> {
+	private async isUninstalled(identifier: ExtensionIdentifierWithVersion): Promise<boolean> {
 		const uninstalled = await this.extensionsScanner.getUninstalledExtensions();
-		return !!uninstalled[extensionId.toString()];
+		return !!uninstalled[identifier.key()];
 	}
 
-	private async extract({ zipPath, key, metadata }: InstallableExtension, token: CancellationToken): Promise<ILocalExtension> {
-		let local = await this.extensionsScanner.extractUserExtension(key, zipPath, metadata, token);
-		this.logService.info('Extracting completed.', key.id);
+	private async extract({ zipPath, identifierWithVersion, metadata }: InstallableExtension, token: CancellationToken): Promise<ILocalExtension> {
+		let local = await this.extensionsScanner.extractUserExtension(identifierWithVersion, zipPath, metadata, token);
+		this.logService.info('Extracting completed.', identifierWithVersion.id);
 		return local;
 	}
 
@@ -300,7 +300,7 @@ class InstallGalleryExtensionTask extends AbstractInstallExtensionTask {
 
 		try {
 			const local = await this.installExtension(installableExtension, token);
-			if (existingExtension && (existingExtension.targetPlatform !== local.targetPlatform || semver.neq(existingExtension.manifest.version, local.manifest.version))) {
+			if (existingExtension && semver.neq(existingExtension.manifest.version, this.gallery.version)) {
 				await this.extensionsScanner.setUninstalled(existingExtension);
 			}
 			return local;
@@ -324,7 +324,6 @@ class InstallGalleryExtensionTask extends AbstractInstallExtensionTask {
 			id: extension.identifier.uuid,
 			publisherId: extension.publisherId,
 			publisherDisplayName: extension.publisherDisplayName,
-			targetPlatform: extension.properties.targetPlatform
 		};
 
 		let zipPath: string | undefined;
@@ -337,8 +336,8 @@ class InstallGalleryExtensionTask extends AbstractInstallExtensionTask {
 		}
 
 		try {
-			await getManifest(zipPath);
-			return (<Required<InstallableExtension>>{ zipPath, key: ExtensionKey.create(extension), metadata });
+			const manifest = await getManifest(zipPath);
+			return (<Required<InstallableExtension>>{ zipPath, identifierWithVersion: new ExtensionIdentifierWithVersion(extension.identifier, manifest.version), metadata });
 		} catch (error) {
 			await this.deleteDownloadedVSIX(zipPath);
 			throw new ExtensionManagementError(joinErrors(error).message, ExtensionManagementErrorCode.Invalid);
@@ -360,7 +359,7 @@ class InstallVSIXTask extends AbstractInstallExtensionTask {
 	}
 
 	protected async doRun(token: CancellationToken): Promise<ILocalExtension> {
-		const extensionKey = new ExtensionKey(this.identifier, this.manifest.version);
+		const identifierWithVersion = new ExtensionIdentifierWithVersion(this.identifier, this.manifest.version);
 		const installedExtensions = await this.extensionsScanner.scanExtensions(ExtensionType.User);
 		const existing = installedExtensions.find(i => areSameExtensions(this.identifier, i.identifier));
 		const metadata = await this.getMetadata(this.identifier.id, this.manifest.version, token);
@@ -369,7 +368,7 @@ class InstallVSIXTask extends AbstractInstallExtensionTask {
 
 		if (existing) {
 			this._operation = InstallOperation.Update;
-			if (extensionKey.equals(new ExtensionKey(existing.identifier, existing.manifest.version))) {
+			if (identifierWithVersion.equals(new ExtensionIdentifierWithVersion(existing.identifier, existing.manifest.version))) {
 				try {
 					await this.extensionsScanner.removeExtension(existing, 'existing');
 				} catch (e) {
@@ -381,7 +380,7 @@ class InstallVSIXTask extends AbstractInstallExtensionTask {
 		} else {
 			// Remove the extension with same version if it is already uninstalled.
 			// Installing a VSIX extension shall replace the existing extension always.
-			const existing = await this.unsetUninstalledAndGetLocal(extensionKey);
+			const existing = await this.unsetUninstalledAndGetLocal(identifierWithVersion);
 			if (existing) {
 				try {
 					await this.extensionsScanner.removeExtension(existing, 'existing');
@@ -391,7 +390,7 @@ class InstallVSIXTask extends AbstractInstallExtensionTask {
 			}
 		}
 
-		return this.installExtension({ zipPath: path.resolve(this.location.fsPath), key: extensionKey, metadata }, token);
+		return this.installExtension({ zipPath: path.resolve(this.location.fsPath), identifierWithVersion, metadata }, token);
 	}
 
 	private async getMetadata(id: string, version: string, token: CancellationToken): Promise<Metadata> {
@@ -428,8 +427,8 @@ class UninstallExtensionTask extends AbstractExtensionTask<void> implements IUni
 		const toUninstall: ILocalExtension[] = [];
 		const userExtensions = await this.extensionsScanner.scanUserExtensions(false);
 		if (this.options.versionOnly) {
-			const extensionKey = ExtensionKey.create(this.extension);
-			toUninstall.push(...userExtensions.filter(u => extensionKey.equals(ExtensionKey.create(u))));
+			const extensionIdentifierWithVersion = new ExtensionIdentifierWithVersion(this.extension.identifier, this.extension.manifest.version);
+			toUninstall.push(...userExtensions.filter(u => extensionIdentifierWithVersion.equals(new ExtensionIdentifierWithVersion(u.identifier, u.manifest.version))));
 		} else {
 			toUninstall.push(...userExtensions.filter(u => areSameExtensions(u.identifier, this.extension.identifier)));
 		}

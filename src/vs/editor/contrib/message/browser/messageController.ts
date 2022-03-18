@@ -13,7 +13,6 @@ import { EditorCommand, registerEditorCommand, registerEditorContribution } from
 import { IPosition } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import { IEditorContribution, ScrollType } from 'vs/editor/common/editorCommon';
-import { PositionAffinity } from 'vs/editor/common/model';
 import * as nls from 'vs/nls';
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
@@ -146,11 +145,10 @@ class MessageWidget implements IContentWidget {
 
 		this._editor = editor;
 		this._editor.revealLinesInCenterIfOutsideViewport(lineNumber, lineNumber, ScrollType.Smooth);
-		this._position = { lineNumber, column };
+		this._position = { lineNumber, column: column - 1 };
 
 		this._domNode = document.createElement('div');
 		this._domNode.classList.add('monaco-editor-overlaymessage');
-		this._domNode.style.marginLeft = '-6px';
 
 		const anchorTop = document.createElement('div');
 		anchorTop.classList.add('anchor', 'top');
@@ -182,14 +180,7 @@ class MessageWidget implements IContentWidget {
 	}
 
 	getPosition(): IContentWidgetPosition {
-		return {
-			position: this._position,
-			preference: [
-				ContentWidgetPositionPreference.ABOVE,
-				ContentWidgetPositionPreference.BELOW,
-			],
-			positionAffinity: PositionAffinity.Right,
-		};
+		return { position: this._position, preference: [ContentWidgetPositionPreference.ABOVE, ContentWidgetPositionPreference.BELOW] };
 	}
 
 	afterRender(position: ContentWidgetPositionPreference | null): void {

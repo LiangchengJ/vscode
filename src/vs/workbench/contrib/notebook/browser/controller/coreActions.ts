@@ -17,6 +17,7 @@ import { IEditorCommandsContext } from 'vs/workbench/common/editor';
 import { INotebookEditorService } from 'vs/workbench/contrib/notebook/browser/notebookEditorService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from 'vs/base/common/actions';
+import { flatten } from 'vs/base/common/arrays';
 import { TypeConstraint } from 'vs/base/common/types';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { MarshalledId } from 'vs/base/common/marshallingIds';
@@ -42,7 +43,8 @@ export const enum CellToolbarOrder {
 export const enum CellOverflowToolbarGroups {
 	Copy = '1_copy',
 	Insert = '2_insert',
-	Edit = '3_edit'
+	Edit = '3_edit',
+	Collapse = '4_collapse',
 }
 
 export interface INotebookActionContext {
@@ -333,7 +335,7 @@ export function parseMultiCellExecutionArgs(accessor: ServicesAccessor, ...args:
 		}
 
 		const ranges = firstArg.ranges;
-		const selectedCells = ranges.map(range => editor.getCellsInRange(range).slice(0)).flat();
+		const selectedCells = flatten(ranges.map(range => editor.getCellsInRange(range).slice(0)));
 		const autoReveal = firstArg.autoReveal;
 		return {
 			ui: false,

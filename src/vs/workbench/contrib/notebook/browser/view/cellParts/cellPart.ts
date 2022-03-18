@@ -20,11 +20,6 @@ export abstract class CellPart extends Disposable {
 	abstract renderCell(element: ICellViewModel, templateData: BaseCellRenderTemplate): void;
 
 	/**
-	 * Dispose any disposables generated from `renderCell`
-	 */
-	unrenderCell(element: ICellViewModel, templateData: BaseCellRenderTemplate): void { }
-
-	/**
 	 * Perform DOM read operations to prepare for the list/cell layout update.
 	 */
 	abstract prepareLayout(): void;

@@ -26,7 +26,7 @@ function isExclusive(selector: LanguageSelector): boolean {
 	}
 }
 
-export interface NotebookTypeResolver {
+export interface NotebooTypeResolver {
 	(uri: URI): string | undefined;
 }
 
@@ -38,7 +38,7 @@ export class LanguageFeatureRegistry<T> {
 	private readonly _onDidChange = new Emitter<number>();
 	readonly onDidChange = this._onDidChange.event;
 
-	constructor(private readonly _notebookTypeResolver?: NotebookTypeResolver) { }
+	constructor(private readonly _notebookTypeResolver?: NotebooTypeResolver) { }
 
 	register(selector: LanguageSelector, provider: T): IDisposable {
 
@@ -113,6 +113,10 @@ export class LanguageFeatureRegistry<T> {
 	}
 
 	private _orderedForEach(model: ITextModel, callback: (provider: Entry<T>) => any): void {
+
+		if (!model) {
+			return;
+		}
 
 		this._updateScores(model);
 

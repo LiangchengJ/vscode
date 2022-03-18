@@ -290,7 +290,7 @@ jsonRegistry.registerSchema('vscode://schemas/workspaceConfig', {
 			description: nls.localize('workspaceConfig.folders.description', "List of folders to be loaded in the workspace."),
 			items: {
 				type: 'object',
-				defaultSnippets: [{ body: { path: '$1' } }],
+				default: { path: '' },
 				oneOf: [{
 					properties: {
 						path: {
