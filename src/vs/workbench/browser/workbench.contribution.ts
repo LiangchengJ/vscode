@@ -102,6 +102,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			'workbench.editor.historyBasedLanguageDetection': {
 				type: 'boolean',
 				default: false,
+				tags: ['experimental'],
 				description: localize('workbench.editor.historyBasedLanguageDetection', "Enables use of editor history in language detection. This causes automatic language detection to favor languages that have been recently opened and allows for automatic language detection to operate with smaller inputs."),
 			},
 			'workbench.editor.tabCloseButton': {
@@ -295,7 +296,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 				'type': 'string',
 				'enum': ['left', 'right'],
 				'default': 'left',
-				'description': localize('sideBarLocation', "Controls the location of the sidebar and activity bar. They can either show on the left or right of the workbench.")
+				'description': localize('sideBarLocation', "Controls the location of the primary sidebar and activity bar. They can either show on the left or right of the workbench. The secondary side bar will show on the opposite side of the workbench.")
 			},
 			'workbench.panel.defaultLocation': {
 				'type': 'string',
@@ -371,6 +372,17 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 				// On Mac, the delay is 1500.
 				'default': isMacintosh ? 1500 : 500
 			},
+			'workbench.reduceMotion': {
+				type: 'string',
+				description: localize('workbench.reduceMotion', "Controls whether the workbench should render with fewer animations."),
+				'enumDescriptions': [
+					localize('workbench.reduceMotion.on', "Always render with reduced motion."),
+					localize('workbench.reduceMotion.off', "Do not render with reduced motion"),
+					localize('workbench.reduceMotion.auto', "Render with reduced motion based on OS configuration."),
+				],
+				default: 'auto',
+				enum: ['on', 'off', 'auto']
+			},
 			'workbench.experimental.layoutControl.enabled': {
 				'type': 'boolean',
 				'tags': ['experimental'],
@@ -386,7 +398,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 					localize('layoutcontrol.type.both', "Shows both the dropdown and toggle buttons."),
 				],
 				'tags': ['experimental'],
-				'default': 'menu',
+				'default': 'both',
 				'description': localize('layoutControlType', "Controls whether the layout control in the custom title bar is displayed as a single menu button or with multiple UI toggles."),
 			},
 		}
@@ -486,8 +498,8 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 				'scope': ConfigurationScope.APPLICATION,
 				'markdownDescription':
 					isMacintosh ?
-						localize('openFilesInNewWindowMac', "Controls whether files should open in a new window. \nNote that there can still be cases where this setting is ignored (e.g. when using the `--new-window` or `--reuse-window` command line option).") :
-						localize('openFilesInNewWindow', "Controls whether files should open in a new window.\nNote that there can still be cases where this setting is ignored (e.g. when using the `--new-window` or `--reuse-window` command line option).")
+						localize('openFilesInNewWindowMac', "Controls whether files should open in a new window when using a command line or file dialog.\nNote that there can still be cases where this setting is ignored (e.g. when using the `--new-window` or `--reuse-window` command line option).") :
+						localize('openFilesInNewWindow', "Controls whether files should open in a new window when using a command line or file dialog.\nNote that there can still be cases where this setting is ignored (e.g. when using the `--new-window` or `--reuse-window` command line option).")
 			},
 			'window.openFoldersInNewWindow': {
 				'type': 'string',
@@ -509,7 +521,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 					localize('window.confirmBeforeClose.keyboardOnly', "Only ask for confirmation if a keybinding was detected. Note that detection may not be possible in some cases."),
 					localize('window.confirmBeforeClose.never', "Never explicitly ask for confirmation unless data loss is imminent.")
 				],
-				'default': isWeb && !isStandalone ? 'keyboardOnly' : 'never', // on by default in web, unless PWA
+				'default': isWeb && !isStandalone() ? 'keyboardOnly' : 'never', // on by default in web, unless PWA
 				'description': localize('confirmBeforeCloseWeb', "Controls whether to show a confirmation dialog before closing the browser tab or window. Note that even if enabled, browsers may still decide to close a tab or window without confirmation and that this setting is only a hint that may not work in all cases."),
 				'scope': ConfigurationScope.APPLICATION,
 				'included': isWeb

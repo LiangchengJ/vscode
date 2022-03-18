@@ -7,7 +7,7 @@ description: |
   edit-build-debug cycle.
 
 architectures:
-  - build-on: amd64
+  - build-on: @@ARCHITECTURE@@
     run-on: @@ARCHITECTURE@@
 
 grade: stable

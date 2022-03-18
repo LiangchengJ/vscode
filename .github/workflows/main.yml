@@ -15,7 +15,7 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NODE_VERSION: 14
+  NODE_VERSION: 16
   SPLIT_LINE: =============================
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   UPDATE_PRODUCT_CONFIGURATION_SH: |
