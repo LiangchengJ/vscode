@@ -89,10 +89,6 @@ async function detectAvailableWindowsProfiles(
 
 	// Add auto detected profiles
 	if (includeDetectedProfiles) {
-		detectedProfiles.set('Git Bash', {
-			source: ProfileSource.GitBash,
-			isAutoDetected: true
-		});
 		detectedProfiles.set('PowerShell', {
 			source: ProfileSource.Pwsh,
 			icon: Codicon.terminalPowershell,
@@ -101,6 +97,10 @@ async function detectAvailableWindowsProfiles(
 		detectedProfiles.set('Windows PowerShell', {
 			path: `${system32Path}\\WindowsPowerShell\\v1.0\\powershell.exe`,
 			icon: Codicon.terminalPowershell,
+			isAutoDetected: true
+		});
+		detectedProfiles.set('Git Bash', {
+			source: ProfileSource.GitBash,
 			isAutoDetected: true
 		});
 		detectedProfiles.set('Cygwin', {
