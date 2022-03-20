@@ -16,7 +16,6 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NODE_VERSION: 14
-  PYTHON_VERSION: "2.x"
   SPLIT_LINE: =============================
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   UPDATE_PRODUCT_CONFIGURATION_SH: |
@@ -272,7 +271,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.x"
 
       - name: Update product configurations
         run: |
@@ -327,7 +326,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.x"
 
       - name: Update product configurations
         run: |
@@ -379,7 +378,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.x"
 
       - name: Update product configurations
         run: |
@@ -431,7 +430,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.x"
 
       - name: Update product configurations
         run: |
@@ -484,7 +483,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.x"
 
       - name: Update product configurations
         run: |
