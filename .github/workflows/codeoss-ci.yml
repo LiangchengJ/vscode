@@ -116,8 +116,10 @@ jobs:
 
           	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
             echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
-          	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo "$APPLICATION_NAME"
-          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo "$LINUX_ICON_NAME"
+          	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
+            echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
+          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
+            echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
 
           	URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
             curl -L -O -s "https://github.com/${URI}"
