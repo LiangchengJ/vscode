@@ -10,7 +10,7 @@ on:
 
 jobs:
   richnav:
-    runs-on: windows-2022
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v2
 
@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 16
+          node-version: 14
 
       - name: Install dependencies
         if: steps.caching-stage.outputs.cache-hit != 'true'
