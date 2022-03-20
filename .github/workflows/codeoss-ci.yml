@@ -58,6 +58,11 @@ jobs:
           sudo apt-get install -y fakeroot rpm
           sudo apt-get install -y snapcraft
 
+      - name: Switch to Terrapin packages
+        run: |
+          set -e
+          npx https://aka.ms/enablesecurefeed standAlone
+
       - name: Install build dependencies
         run: |
           set -e
@@ -81,30 +86,30 @@ jobs:
           npm_config_arch=${NPM_ARCH}
           export npm_config_arch
 
-          if [ -z "$CC" ] || [ -z "$CXX" ]; then
-          	# Download clang based on chromium revision used by vscode
-          	curl -s https://raw.githubusercontent.com/chromium/chromium/91.0.4472.164/tools/clang/scripts/update.py | python - --output-dir="$PWD"/.build/CR_Clang --host-os=linux
-          	# Download libcxx headers and objects from upstream electron releases
-          	DEBUG=libcxx-fetcher \
-          		VSCODE_LIBCXX_OBJECTS_DIR=$PWD/.build/libcxx-objects \
-          		VSCODE_LIBCXX_HEADERS_DIR=$PWD/.build/libcxx_headers \
-          		VSCODE_LIBCXXABI_HEADERS_DIR=$PWD/.build/libcxxabi_headers \
-          		VSCODE_ARCH="${NPM_ARCH}" \
-          		node build/linux/libcxx-fetcher.js
-          	# Set compiler toolchain
-          	# Flags for the client build are based on
-          	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/arm.gni
-          	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/compiler/BUILD.gn
-          	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/c++/BUILD.gn
-          	export CC=$PWD/.build/CR_Clang/bin/clang
-          	export CXX=$PWD/.build/CR_Clang/bin/clang++
-          	export CXXFLAGS="-nostdinc++ -D_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS -D__NO_INLINE__ -isystem$PWD/.build/libcxx_headers/include -isystem$PWD/.build/libcxxabi_headers/include -fPIC -flto=thin -fsplit-lto-unit"
-          	export LDFLAGS="-stdlib=libc++ -fuse-ld=lld -flto=thin -L$PWD/.build/libcxx-objects -lc++abi -Wl,--lto-O0"
-          	VSCODE_REMOTE_CC=$(which gcc)
-          	export VSCODE_REMOTE_CC
-          	VSCODE_REMOTE_CXX=$(which g++)
-          	export VSCODE_REMOTE_CXX
-          fi
+          # if [ -z "$CC" ] || [ -z "$CXX" ]; then
+          # 	# Download clang based on chromium revision used by vscode
+          # 	curl -s https://raw.githubusercontent.com/chromium/chromium/91.0.4472.164/tools/clang/scripts/update.py | python - --output-dir="$PWD"/.build/CR_Clang --host-os=linux
+          # 	# Download libcxx headers and objects from upstream electron releases
+          # 	DEBUG=libcxx-fetcher \
+          # 		VSCODE_LIBCXX_OBJECTS_DIR=$PWD/.build/libcxx-objects \
+          # 		VSCODE_LIBCXX_HEADERS_DIR=$PWD/.build/libcxx_headers \
+          # 		VSCODE_LIBCXXABI_HEADERS_DIR=$PWD/.build/libcxxabi_headers \
+          # 		VSCODE_ARCH="${NPM_ARCH}" \
+          # 		node build/linux/libcxx-fetcher.js
+          # 	# Set compiler toolchain
+          # 	# Flags for the client build are based on
+          # 	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/arm.gni
+          # 	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/compiler/BUILD.gn
+          # 	# https://source.chromium.org/chromium/chromium/src/+/refs/tags/91.0.4472.164:build/config/c++/BUILD.gn
+          # 	export CC=$PWD/.build/CR_Clang/bin/clang
+          # 	export CXX=$PWD/.build/CR_Clang/bin/clang++
+          # 	export CXXFLAGS="-nostdinc++ -D_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS -D__NO_INLINE__ -isystem$PWD/.build/libcxx_headers/include -isystem$PWD/.build/libcxxabi_headers/include -fPIC -flto=thin -fsplit-lto-unit"
+          # 	export LDFLAGS="-stdlib=libc++ -fuse-ld=lld -flto=thin -L$PWD/.build/libcxx-objects -lc++abi -Wl,--lto-O0"
+          # 	VSCODE_REMOTE_CC=$(which gcc)
+          # 	export VSCODE_REMOTE_CC
+          # 	VSCODE_REMOTE_CXX=$(which g++)
+          # 	export VSCODE_REMOTE_CXX
+          # fi
 
           for i in {1..3}; do # try 3 times, for Terrapin
           	yarn --frozen-lockfile && break
@@ -119,71 +124,71 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
-      - name: Build packages
+      - name: Build binary packages
         run: |
-          yarn
           yarn gulp vscode-linux-${{ matrix.arch }}-min
           (cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }})
           (cd .. && tar -cJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
-          if [ "${{ matrix.arch }}" != "ia32" ]; then
-          	yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-          	(cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
-          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
-          	mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          # shellcheck disable=SC2046
+          # shellcheck disable=SC2012
+          mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
 
-          	yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-          	(cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
-          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
-          	mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+          yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
+          cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
 
-          	yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
-          	# shellcheck disable=SC2046
-          	# shellcheck disable=SC2012
-          	mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          # yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
 
-          	yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
-          	cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
+          [ "${{ matrix.arch }}" != "x64" ] && rm -f ./product.json
+        shell: bash
 
-          	# yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
-          fi
+      - name: Build AppImage package for arch x64
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
+          curl -fsSL https://deno.land/x/install/install.sh | sh
+          DENO_INSTALL="/home/$(whoami)/.deno"
+          export DENO_INSTALL
+          PATH="$DENO_INSTALL/bin:$PATH"
+          export PATH
 
-          if [ "${{ matrix.arch }}" != "x64" ]; then
-          	rm -f ./product.json
-          fi
+          echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-          if [ "${{ matrix.arch }}" == "x64" ]; then
-          	curl -fsSL https://deno.land/x/install/install.sh | sh
-          	DENO_INSTALL="/home/$(whoami)/.deno"
-          	export DENO_INSTALL
-          	PATH="$DENO_INSTALL/bin:$PATH"
-          	export PATH
+          deno fmt ./product.json
+          deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
+          sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
 
-          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
-          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-          	deno fmt ./product.json
-          	deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
-          	sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
+          mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
+          echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
+          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
+          echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
+          LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
+          echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
 
-          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
-          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
+          curl -L -O -s "https://github.com/${URI}"
 
-          	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
-            echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
-          	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
-            echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
-          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
-            echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
+          # shellcheck disable=SC2211
+          chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
+          mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
+        shell: bash
 
-          	URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
-            curl -L -O -s "https://github.com/${URI}"
+      - name: Build server packages
+        run: |
+          yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
+          (cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
+          (cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
+          mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
-          	# shellcheck disable=SC2211
-          	chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
-          	mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
-          fi
+          yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
+          (cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
+          (cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
+          mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
         shell: bash
 
       - name: Generate SHA512 checksum files
