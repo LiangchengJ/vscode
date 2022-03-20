@@ -342,7 +342,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+          curl -L -s -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
           yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
           mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
@@ -394,7 +394,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+          curl -L -s -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
           mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
