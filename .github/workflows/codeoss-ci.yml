@@ -59,6 +59,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+        shell: bash
+
       - name: Prepare yarn cache flags
         run: |
           mkdir -p .build
@@ -80,15 +85,10 @@ jobs:
         shell: bash
 
       - name: Switch to Terrapin packages
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' && ${{ env.ENABLE_TERRAPIN }} }}
+        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }} && ${{ env.ENABLE_TERRAPIN }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
-        shell: bash
-
-      - name: Update product configurations
-        run: |
-          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
         shell: bash
 
       - name: Build packages
