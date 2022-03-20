@@ -164,8 +164,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             CodeOSS-linux-${{ matrix.arch }}.tar.xz
@@ -245,8 +245,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             CodeOSS-darwin-${{ matrix.arch }}.tar.xz
@@ -304,8 +304,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             CodeOSS-win32-${{ matrix.arch }}.tar.xz
@@ -358,8 +358,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
@@ -410,8 +410,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
@@ -463,8 +463,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             vscode-server-win32-${{ matrix.arch }}.zip
@@ -516,8 +516,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part15
-          tag_name: dev_test_part15
+          name: dev_test_codeoss_ci
+          tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
             vscode-server-win32-${{ matrix.arch }}-web.zip
