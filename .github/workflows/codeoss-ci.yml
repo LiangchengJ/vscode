@@ -31,14 +31,15 @@ env:
     extract-zip $VS_ZIP_FNAME
     cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
     node ./.github/updateProduct.js
+  ENABLE_TERRAPIN: true
 
 jobs:
-  build-packages-for-linux:
-    name: Build packages for linux
+  linux:
+    name: Linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [x64, arm64, ia32, armhf]
+        arch: [x64, arm64, armhf]
 
     steps:
       - uses: actions/checkout@v2
@@ -58,12 +59,39 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Prepare yarn cache flags
+        run: |
+          mkdir -p .build
+          node build/azure-pipelines/common/computeNodeModulesCacheKey.js ${{ matrix.arch }} ${{ env.ENABLE_TERRAPIN }} >.build/yarnlockhash
+        shell: bash
+
+      - name: Restore node_modules cache
+        id: restoreNodeModulesCache
+        uses: actions/cache@v2
+        with:
+          key: "nodeModules | ${{ runner.os }} | .build/yarnlockhash"
+          path: .build/node_modules_cache
+
+      - name: Extract node_modules cache
+        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }}
+        run: |
+          set -e
+          tar -xzf .build/node_modules_cache/cache.tgz
+        shell: bash
+
+      - name: Switch to Terrapin packages
+        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' && ${{ env.ENABLE_TERRAPIN }} }}
+        run: |
+          set -e
+          npx https://aka.ms/enablesecurefeed standAlone
+        shell: bash
+
       - name: Update product configurations
         run: |
           ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
         shell: bash
 
-      - name: Build and Package
+      - name: Build packages
         run: |
           yarn
           yarn gulp vscode-linux-${{ matrix.arch }}-min
@@ -132,32 +160,36 @@ jobs:
 
       - name: Generate SHA512 checksum files
         run: |
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ] ; then
-              sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ]; then
+          	sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
           fi
 
-          if [ -f "vscode-server-linux-${{ matrix.arch }}.tar.gz" ] ; then
-              sha512sum vscode-server-linux-${{ matrix.arch }}.tar.gz | awk '{print $1}' > vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
+          if [ -f "vscode-server-linux-${{ matrix.arch }}.tar.gz" ]; then
+          	sha512sum vscode-server-linux-${{ matrix.arch }}.tar.gz | awk '{print $1}' >vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
           fi
 
-          if [ -f "vscode-server-linux-${{ matrix.arch }}-web.tar.gz" ] ; then
-              sha512sum vscode-server-linux-${{ matrix.arch }}-web.tar.gz | awk '{print $1}' > vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
+          if [ -f "vscode-server-linux-${{ matrix.arch }}-web.tar.gz" ]; then
+          	sha512sum vscode-server-linux-${{ matrix.arch }}-web.tar.gz | awk '{print $1}' >vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
           fi
 
-          if [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}.*\.rpm$")" ] ; then
-              sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          # shellcheck disable=SC2143
+          # shellcheck disable=SC2010
+          if [ -n "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}.*\.rpm$")" ]; then
+          	sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm >tmpret
+          	# shellcheck disable=SC2002
+          	cat tmpret | awk '{print $1}' >"$(cat tmpret | awk '{print $2}')".sha512
           fi
 
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ] ; then
-              sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.deb.sha512
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ]; then
+          	sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.deb.sha512
           fi
 
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] ; then
-              sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ]; then
+          	sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
           fi
 
-          if [ -f "product.json" ] ; then
-              sha512sum product.json | awk '{print $1}' > product.json.sha512
+          if [ -f "product.json" ]; then
+          	sha512sum product.json | awk '{print $1}' >product.json.sha512
           fi
         shell: bash
 
@@ -183,8 +215,8 @@ jobs:
             product.json
             product.json.sha512
 
-  build-packages-for-macos:
-    name: Build packages for macOS
+  macos:
+    name: macOS
     runs-on: macos-latest
     strategy:
       matrix:
