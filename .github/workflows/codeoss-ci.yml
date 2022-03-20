@@ -15,7 +15,8 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NODE_VERSION: 16
+  NODE_VERSION: 14
+  PYTHON_VERSION: "2.x"
   SPLIT_LINE: =============================
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   UPDATE_PRODUCT_CONFIGURATION_SH: |
@@ -37,11 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
-          - armhf
+        arch: [x64, arm64, ia32, armhf]
 
     steps:
       - uses: actions/checkout@v2
@@ -71,18 +68,18 @@ jobs:
           yarn
           yarn gulp vscode-linux-${{ matrix.arch }}-min
           (cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }})
-          (cd .. && tar -cvJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
+          (cd .. && tar -cJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
           mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
 
           if [ "${{ matrix.arch }}" != "ia32" ]; then
           	yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
           	(cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
-          	(cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
+          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
           	mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
 
           	yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
           	(cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
-          	(cd .. && tar -zcvf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
+          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
           	mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
 
           	yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
@@ -117,12 +114,13 @@ jobs:
           	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
           	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
 
-          	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)" && echo "$DOWNLOAD_URL"
+          	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
+            echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
           	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo "$APPLICATION_NAME"
           	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo "$LINUX_ICON_NAME"
 
           	URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
-          	wget -c "https://github.com/${URI}"
+            curl -L -O -s "https://github.com/${URI}"
 
           	# shellcheck disable=SC2211
           	chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
@@ -207,7 +205,7 @@ jobs:
           yarn
           yarn gulp vscode-darwin-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }} )
-          ( cd .. && tar -cvJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
+          ( cd .. && tar -cJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
           mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
 
           npm i -g @ffflorian/jszip-cli@3.1.6
@@ -263,10 +261,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -277,7 +272,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update product configurations
         run: |
@@ -291,7 +286,7 @@ jobs:
           yarn
           yarn gulp vscode-win32-${{ matrix.arch }}-min
           ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
-          ( cd .. && tar -cvJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
+          ( cd .. && tar -cJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
           mv ../CodeOSS-win32-${{ matrix.arch }}.tar.xz .
 
           ( cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9 )
@@ -321,10 +316,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -335,7 +327,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update product configurations
         run: |
@@ -350,7 +342,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
           yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
           mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
@@ -376,10 +368,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -390,7 +379,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update product configurations
         run: |
@@ -405,7 +394,7 @@ jobs:
           yarn gulp vscode-win32-${{ matrix.arch }}-min
 
           yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
-          curl -o resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
 
           yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
           mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
@@ -431,10 +420,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -445,7 +431,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update product configurations
         run: |
@@ -487,10 +473,7 @@ jobs:
     runs-on: windows-2019
     strategy:
       matrix:
-        arch:
-          - x64
-          - arm64
-          # - ia32
+        arch: [x64, arm64, ia32]
 
     steps:
       - uses: actions/checkout@v2
@@ -501,7 +484,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Update product configurations
         run: |
