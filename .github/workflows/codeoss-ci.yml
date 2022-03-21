@@ -53,8 +53,9 @@ jobs:
 
       - name: Install build tools
         run: |
-          sudo apt update -y
-          sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev
+          sudo apt-get install -y libgtk-3-0 libgbm1 libsecret-1-dev libnotify-bin libxss1 dbus
           sudo apt-get install -y fakeroot rpm
           sudo apt-get install -y snapcraft
 
@@ -416,7 +417,6 @@ jobs:
             CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
             CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
             CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
-            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
             vscode-server-win32-${{ matrix.arch }}.zip
             vscode-server-win32-${{ matrix.arch }}.zip.sha512
             vscode-server-win32-${{ matrix.arch }}-web.zip
