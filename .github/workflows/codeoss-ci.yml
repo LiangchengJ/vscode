@@ -141,8 +141,6 @@ jobs:
           cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
 
           # yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
-
-          [ "${{ matrix.arch }}" != "x64" ] && rm -f ./product.json
         shell: bash
 
       - name: Build AppImage package
@@ -222,6 +220,7 @@ jobs:
           	sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
           fi
 
+          [ "${{ matrix.arch }}" != "x64" ] && rm -f ./product.json
           if [ -f "product.json" ]; then
           	sha512sum product.json | awk '{print $1}' >product.json.sha512
           fi
