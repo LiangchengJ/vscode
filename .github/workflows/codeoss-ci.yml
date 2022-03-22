@@ -19,23 +19,42 @@ env:
   PYTHON_VERSION: "2.x"
   SPLIT_LINE: =============================
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
-  UPDATE_PRODUCT_CONFIGURATION_SH: |
-    PKG_VER=$(node -p "require('./package.json')['version']")
-    VS_ZIP_URL="https://update.code.visualstudio.com/${PKG_VER}/darwin-universal/stable"
-    CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
-    echo "CURL_DO_URL >>> $CURL_DO_URL"
-
-    VS_ZIP_FNAME=VSCode-darwin-universal.zip
-    curl -L -s -o $VS_ZIP_FNAME "$CURL_DO_URL"
-    npm install extract-zip@2.0.1 -g
-    extract-zip $VS_ZIP_FNAME
-    cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-    node ./.github/updateProduct.js
 
 jobs:
+  update-product-configurations:
+    name: Update product configurations
+    runs-on: windows-latest
+    outputs:
+      product-json: ${{ steps.product.outputs.product-json }}
+      win32vem-xml: ${{ steps.product.outputs.win32vem-xml }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - id: product
+        run: |
+          PKG_VER=$(node -p "require('./package.json')['version']")
+          VS_ZIP_URL="https://update.code.visualstudio.com/${PKG_VER}/darwin-universal/stable"
+          CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
+          echo "CURL_DO_URL >>> $CURL_DO_URL"
+
+          VS_ZIP_FNAME=VSCode-darwin-universal.zip
+          curl -L -s -o $VS_ZIP_FNAME "$CURL_DO_URL"
+          npm install extract-zip@2.0.1 -g
+          extract-zip $VS_ZIP_FNAME
+          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+          node ./.github/updateProduct.js
+          echo "::set-output name=product-json::$(cat product.json)"
+
+          node ./.github/updateWin32VisualElementsManifest.js
+          echo "::set-output name=win32vem-xml::$(cat resources/win32/VisualElementsManifest.xml)"
+        shell: bash
+
   linux:
     name: Linux
     runs-on: ubuntu-latest
+    needs: update-product-configurations
     strategy:
       matrix:
         arch: [x64, arm64, armhf]
@@ -45,10 +64,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Update product configurations
-        run: |
-          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+      - run: echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
         shell: bash
 
       - name: Install build tools
@@ -251,6 +267,7 @@ jobs:
   macos:
     name: macOS
     runs-on: macos-latest
+    needs: update-product-configurations
     strategy:
       matrix:
         arch: [x64, arm64]
@@ -260,10 +277,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Update product configurations
-        run: |
-          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+      - run: echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
         shell: bash
 
       - name: Build and Package
@@ -327,6 +341,7 @@ jobs:
   windows:
     name: Windows
     runs-on: windows-2019
+    needs: update-product-configurations
     strategy:
       matrix:
         arch: [x64, arm64, ia32]
@@ -339,11 +354,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Update product configurations
-        run: |
-          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
-          node ./.github/updateWin32VisualElementsManifest.js
+      - run: |
+          echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
+          echo ${{ needs.update-product-configurations.outputs.win32vem-xml }} >resources/win32/VisualElementsManifest.xml
         shell: bash
 
       - name: Build binary packages
