@@ -11,7 +11,7 @@ on:
       - v*.*.*
   pull_request:
     branches:
-      - main
+      - $default-branch
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +75,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Update product configurations
-        run: echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+        run: |
+          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+          NPM_ARCH=${{ matrix.arch }}
+          [ "${{ matrix.arch }}" == "armhf" ] && NPM_ARCH=armv7l
+          echo "NPM_ARCH=$NPM_ARCH" >> $GITHUB_ENV
+          echo "VSCODE_ARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
+          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >> $GITHUB_ENV
+          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
+          echo "APPLICATION_NAME=$APPLICATION_NAME" >> $GITHUB_ENV
         shell: bash
 
       - name: Install build tools
@@ -106,12 +115,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          NPM_ARCH=${{ matrix.arch }}
-          [ "${{ matrix.arch }}" == "armhf" ] && NPM_ARCH=armv7l
-          echo "NPM_ARCH >>> $NPM_ARCH"
-          export NPM_ARCH
-
-          npm_config_arch=${NPM_ARCH}
+          npm_config_arch=${{ env.NPM_ARCH }}
           export npm_config_arch
 
           # if [ -z "$CC" ] || [ -z "$CXX" ]; then
@@ -122,7 +126,7 @@ jobs:
           # 		VSCODE_LIBCXX_OBJECTS_DIR=$PWD/.build/libcxx-objects \
           # 		VSCODE_LIBCXX_HEADERS_DIR=$PWD/.build/libcxx_headers \
           # 		VSCODE_LIBCXXABI_HEADERS_DIR=$PWD/.build/libcxxabi_headers \
-          # 		VSCODE_ARCH="${NPM_ARCH}" \
+          # 		VSCODE_ARCH="${{ env.NPM_ARCH }}" \
           # 		node build/linux/libcxx-fetcher.js
           # 	# Set compiler toolchain
           # 	# Flags for the client build are based on
@@ -153,25 +157,43 @@ jobs:
         shell: bash
 
       - name: Build binary packages
+        id: build-binary-packages
         run: |
-          yarn gulp vscode-linux-${{ matrix.arch }}-min
-          (cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }})
-          (cd .. && tar -cJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
-          mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
+          BUILD_VERSION="$(date +%s)"
 
-          yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          [ -z "${{ env.VSCODE_QUALITY }}" ] &&
+          	XZ_TARBALL_NAME="${{ env.APPLICATION_NAME }}-${{ env.VSCODE_ARCH }}-$BUILD_VERSION.tar.xz" ||
+          	XZ_TARBALL_NAME="${{ env.APPLICATION_NAME }}-${{ env.VSCODE_QUALITY }}-${{ env.VSCODE_ARCH }}-$BUILD_VERSION.tar.xz"
+          [ -z "${{ env.VSCODE_QUALITY }}" ] &&
+          	GZ_TARBALL_NAME="code-${{ env.VSCODE_ARCH }}-$BUILD_VERSION.tar.gz" ||
+          	GZ_TARBALL_NAME="code-${{ env.VSCODE_QUALITY }}-${{ env.VSCODE_ARCH }}-$BUILD_VERSION.tar.gz"
+
+          yarn gulp vscode-linux-${{ env.VSCODE_ARCH }}-min
+          (cd .. && cp -r VSCode-linux-${{ env.VSCODE_ARCH }} CodeOSS-linux-${{ env.VSCODE_ARCH }})
+          (cd .. && tar -cJf "$XZ_TARBALL_NAME" CodeOSS-linux-${{ env.VSCODE_ARCH }})
+          mv ../"$XZ_TARBALL_NAME" .
+          (cd .. && tar -zcf "$GZ_TARBALL_NAME" CodeOSS-linux-${{ env.VSCODE_ARCH }})
+          mv ../"$GZ_TARBALL_NAME" .
+          echo "::set-output name=xz-tarball-name::$XZ_TARBALL_NAME"
+          echo "::set-output name=gz-tarball-name::$GZ_TARBALL_NAME"
+
+          (cd .. && tar -cJf CodeOSS-linux-${{ env.VSCODE_ARCH }}.tar.xz CodeOSS-linux-${{ env.VSCODE_ARCH }})
+          mv ../CodeOSS-linux-${{ env.VSCODE_ARCH }}.tar.xz .
+
+          yarn gulp vscode-linux-${{ env.VSCODE_ARCH }}-build-rpm
           # shellcheck disable=SC2046
           # shellcheck disable=SC2012
-          mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ env.VSCODE_ARCH }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
 
-          yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
-          cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
+          yarn gulp vscode-linux-${{ env.VSCODE_ARCH }}-build-deb
+          cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ env.VSCODE_ARCH }}.deb
 
-          # yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
+          # yarn gulp vscode-linux-${{ env.VSCODE_ARCH }}-build-snap
+
         shell: bash
 
       - name: Build AppImage package
-        if: ${{ matrix.arch == 'x64' }}
+        if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
           curl -fsSL https://deno.land/x/install/install.sh | sh
           DENO_INSTALL="/home/$(whoami)/.deno"
@@ -191,7 +213,7 @@ jobs:
 
           mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
           echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
-          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
+          APPLICATION_NAME=${{ env.APPLICATION_NAME }}
           echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
           LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
           echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
@@ -201,53 +223,57 @@ jobs:
 
           # shellcheck disable=SC2211
           chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
-          mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
+          mv out/*.AppImage CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage
         shell: bash
 
       - name: Build server packages
         run: |
-          yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
-          (cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
-          (cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
-          mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
+          yarn gulp vscode-reh-linux-${{ env.VSCODE_ARCH }}-min
+          (cd .. && mv vscode-reh-linux-${{ env.VSCODE_ARCH }} vscode-server-linux-${{ env.VSCODE_ARCH }})
+          (cd .. && tar -zcf vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz vscode-server-linux-${{ env.VSCODE_ARCH }})
+          mv ../vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz .
 
-          yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
-          (cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
-          (cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
-          mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+          yarn gulp vscode-reh-web-linux-${{ env.VSCODE_ARCH }}-min
+          (cd .. && mv vscode-reh-web-linux-${{ env.VSCODE_ARCH }} vscode-server-linux-${{ env.VSCODE_ARCH }}-web)
+          (cd .. && tar -zcf vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz vscode-server-linux-${{ env.VSCODE_ARCH }}-web)
+          mv ../vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz .
         shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ]; then
-          	sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+          if [ -f "${{ steps.build-binary-packages.outputs.xz-tarball-name }}" ]; then
+          	sha512sum ${{ steps.build-binary-packages.outputs.xz-tarball-name }} | awk '{print $1}' >${{ steps.build-binary-packages.outputs.xz-tarball-name }}.sha512
           fi
 
-          if [ -f "vscode-server-linux-${{ matrix.arch }}.tar.gz" ]; then
-          	sha512sum vscode-server-linux-${{ matrix.arch }}.tar.gz | awk '{print $1}' >vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
+          if [ -f "${{ steps.build-binary-packages.outputs.gz-tarball-name }}" ]; then
+          	sha512sum ${{ steps.build-binary-packages.outputs.gz-tarball-name }} | awk '{print $1}' >${{ steps.build-binary-packages.outputs.gz-tarball-name }}.sha512
           fi
 
-          if [ -f "vscode-server-linux-${{ matrix.arch }}-web.tar.gz" ]; then
-          	sha512sum vscode-server-linux-${{ matrix.arch }}-web.tar.gz | awk '{print $1}' >vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
+          if [ -f "vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz" ]; then
+          	sha512sum vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz | awk '{print $1}' >vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz.sha512
+          fi
+
+          if [ -f "vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz" ]; then
+          	sha512sum vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz | awk '{print $1}' >vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz.sha512
           fi
 
           # shellcheck disable=SC2143
           # shellcheck disable=SC2010
-          if [ -n "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}.*\.rpm$")" ]; then
-          	sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm >tmpret
+          if [ -n "$(ls | grep -E "CodeOSS-linux-${{ env.VSCODE_ARCH }}.*\.rpm$")" ]; then
+          	sha512sum CodeOSS-linux-${{ env.VSCODE_ARCH }}*.rpm >tmpret
           	# shellcheck disable=SC2002
           	cat tmpret | awk '{print $1}' >"$(cat tmpret | awk '{print $2}')".sha512
           fi
 
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ]; then
-          	sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.deb.sha512
+          if [ -f "CodeOSS-linux-${{ env.VSCODE_ARCH }}.deb" ]; then
+          	sha512sum CodeOSS-linux-${{ env.VSCODE_ARCH }}.deb | awk '{print $1}' >CodeOSS-linux-${{ env.VSCODE_ARCH }}.deb.sha512
           fi
 
-          if [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ]; then
-          	sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' >CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+          if [ -f "CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage" ]; then
+          	sha512sum CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage | awk '{print $1}' >CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage.sha512
           fi
 
-          [ "${{ matrix.arch }}" != "x64" ] && rm -f ./product.json
+          [ "${{ env.VSCODE_ARCH }}" != "x64" ] && rm -f ./product.json
           if [ -f "product.json" ]; then
           	sha512sum product.json | awk '{print $1}' >product.json.sha512
           fi
@@ -260,18 +286,20 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            CodeOSS-linux-${{ matrix.arch }}.tar.xz
-            CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
-            CodeOSS-linux-${{ matrix.arch }}*.rpm
-            CodeOSS-linux-${{ matrix.arch }}*.rpm.sha512
+            ${{ steps.build-binary-packages.outputs.xz-tarball-name }}
+            ${{ steps.build-binary-packages.outputs.xz-tarball-name }}.sha512
+            ${{ steps.build-binary-packages.outputs.gz-tarball-name }}
+            ${{ steps.build-binary-packages.outputs.gz-tarball-name }}.sha512
+            CodeOSS-linux-${{ env.VSCODE_ARCH }}*.rpm
+            CodeOSS-linux-${{ env.VSCODE_ARCH }}*.rpm.sha512
             CodeOSS-linux-*.deb
             CodeOSS-linux-*.deb.sha512
-            CodeOSS-linux-${{ matrix.arch }}.AppImage
-            CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
-            vscode-server-linux-${{ matrix.arch }}.tar.gz
-            vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
-            vscode-server-linux-${{ matrix.arch }}-web.tar.gz
-            vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
+            CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage
+            CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage.sha512
+            vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz
+            vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz.sha512
+            vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz
+            vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz.sha512
             product.json
             product.json.sha512
 
