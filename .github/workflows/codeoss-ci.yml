@@ -37,7 +37,9 @@ jobs:
         name: Do generating ...
         run: |
           GITHUB_API_URL=https://api.github.com/repos/microsoft/vscode/releases
-          REMOTE_VERSION=$(node -p "$(curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL)[0]['tag_name']")
+          curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
+          # shellcheck disable=SC2034
+          REMOTE_VERSION=$(node -p "require('./releases.json')[0]['tag_name']")
           VERSION=$(node -p "require('./package.json')['version']")
 
           UNIVERSAL_ZIP_VERSION=$VERSION
