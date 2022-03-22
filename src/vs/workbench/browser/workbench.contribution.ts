@@ -101,7 +101,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			},
 			'workbench.editor.historyBasedLanguageDetection': {
 				type: 'boolean',
-				default: false,
+				default: true,
 				description: localize('workbench.editor.historyBasedLanguageDetection', "Enables use of editor history in language detection. This causes automatic language detection to favor languages that have been recently opened and allows for automatic language detection to operate with smaller inputs."),
 			},
 			'workbench.editor.tabCloseButton': {
@@ -374,7 +374,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			'workbench.experimental.layoutControl.enabled': {
 				'type': 'boolean',
 				'tags': ['experimental'],
-				'default': false,
+				'default': true,
 				'markdownDescription': localize({ key: 'layoutControlEnabled', comment: ['{0} is a placeholder for a setting identifier.'] }, "Controls whether the layout controls in the custom title bar is enabled via {0}.", '`#window.titleBarStyle#`'),
 			},
 			'workbench.experimental.layoutControl.type': {
@@ -386,7 +386,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 					localize('layoutcontrol.type.both', "Shows both the dropdown and toggle buttons."),
 				],
 				'tags': ['experimental'],
-				'default': 'menu',
+				'default': 'both',
 				'description': localize('layoutControlType', "Controls whether the layout control in the custom title bar is displayed as a single menu button or with multiple UI toggles."),
 			},
 		}
