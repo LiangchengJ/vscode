@@ -64,7 +64,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
+      - run: echo '${{ needs.update-product-configurations.outputs.product-json }}' >product.json
         shell: bash
 
       - name: Install build tools
@@ -277,7 +277,7 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
+      - run: echo '${{ needs.update-product-configurations.outputs.product-json }}' >product.json
         shell: bash
 
       - name: Build and Package
@@ -355,8 +355,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: |
-          echo ${{ needs.update-product-configurations.outputs.product-json }} >product.json
-          echo ${{ needs.update-product-configurations.outputs.win32vem-xml }} >resources/win32/VisualElementsManifest.xml
+          echo '${{ needs.update-product-configurations.outputs.product-json }}' >product.json
+          echo '${{ needs.update-product-configurations.outputs.win32vem-xml }}' >resources/win32/VisualElementsManifest.xml
         shell: bash
 
       - name: Build binary packages
