@@ -27,6 +27,7 @@ jobs:
     outputs:
       product-json: ${{ steps.product.outputs.product-json }}
       win32vem-xml: ${{ steps.product.outputs.win32vem-xml }}
+      version: ${{ steps.product.outputs.version }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -35,21 +36,27 @@ jobs:
       - id: product
         name: Do generating ...
         run: |
-          PKG_VER=$(node -p "require('./package.json')['version']")
-          VS_ZIP_URL="https://update.code.visualstudio.com/${PKG_VER}/darwin-universal/stable"
+          GITHUB_API_URL=https://api.github.com/repos/microsoft/vscode/releases
+          REMOTE_VERSION=$(node -p "$(curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL)[0]['tag_name']")
+          VERSION=$(node -p "require('./package.json')['version']")
+
+          UNIVERSAL_ZIP_VERSION=$VERSION
+          VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
           echo "CURL_DO_URL >>> $CURL_DO_URL"
 
-          VS_ZIP_FNAME=VSCode-darwin-universal.zip
-          curl -L -s -o $VS_ZIP_FNAME "$CURL_DO_URL"
+          VS_ZIP_NAME=VSCode-darwin-universal.zip
+          curl -L -s -o $VS_ZIP_NAME "$CURL_DO_URL"
           npm install extract-zip@2.0.1 -g
-          extract-zip $VS_ZIP_FNAME
+          extract-zip $VS_ZIP_NAME
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
           node ./.github/updateProduct.js
           echo "::set-output name=product-json::$(cat product.json)"
 
           node ./.github/updateWin32VisualElementsManifest.js
           echo "::set-output name=win32vem-xml::$(cat resources/win32/VisualElementsManifest.xml)"
+
+          echo "::set-output name=version::$VERSION"
         shell: bash
 
   linux:
