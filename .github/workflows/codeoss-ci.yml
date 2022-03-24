@@ -143,8 +143,9 @@ jobs:
       - name: Mix in quality
         run: |
           set -e
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''") \
-          	node build/azure-pipelines/mixin
+          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
+          export VSCODE_QUALITY
+          node build/azure-pipelines/mixin
         shell: bash
 
       - name: Compile & Hygiene
