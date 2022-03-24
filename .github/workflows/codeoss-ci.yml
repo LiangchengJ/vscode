@@ -77,6 +77,8 @@ jobs:
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
           echo "VSCODE_ARCH=x64" >>"$GITHUB_ENV"
+          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
+          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Prepare yarn cache flags
