@@ -206,7 +206,10 @@ jobs:
         run: |
           set -e
           # Start X server
-          /etc/init.d/xvfb start
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
           # Start dbus session
           DBUS_LAUNCH_RESULT=$(sudo dbus-daemon --config-file=/usr/share/dbus-1/system.conf --print-address)
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_LAUNCH_RESULT" >>"$GITHUB_ENV"
