@@ -76,14 +76,7 @@ jobs:
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          NPM_ARCH=${{ matrix.arch }}
-          [ "${NPM_ARCH}" == "armhf" ] && NPM_ARCH=armv7l
-          echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
-          echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
-          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
-          echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
+          echo "VSCODE_ARCH=x64" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Prepare yarn cache flags
