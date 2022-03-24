@@ -144,7 +144,7 @@ jobs:
         run: |
           set -e
           VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          export VSCODE_QUALITY
+          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
           node build/azure-pipelines/mixin
         shell: bash
 
