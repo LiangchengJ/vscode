@@ -288,8 +288,8 @@ jobs:
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           echo "::set-output name=xz-tarball-name::$XZ_TARBALL_NAME"
           [ -z "${VSCODE_QUALITY}" ] &&
-          	GZ_TARBALL_NAME="code-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz" ||
-          	GZ_TARBALL_NAME="code-${VSCODE_QUALITY}-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz"
+          	GZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz" ||
+          	GZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_QUALITY}-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz"
           echo "GZ_TARBALL_NAME=$GZ_TARBALL_NAME" >>"$GITHUB_ENV"
           echo "::set-output name=gz-tarball-name::$GZ_TARBALL_NAME"
 
