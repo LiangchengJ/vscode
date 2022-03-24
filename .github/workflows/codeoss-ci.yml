@@ -84,14 +84,14 @@ jobs:
           echo "::set-output name=yarnlockhash::$(cat .build/yarnlockhash)"
         shell: bash
 
-      - name: Restore node_modules cache
+      - name: Restore node modules cache
         id: restoreNodeModulesCache
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}-genericNodeModules-${{ steps.prepareYarnCacheFlags.outputs.yarnlockhash }}"
 
-      - name: Extract node_modules cache
+      - name: Extract node modules cache
         if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }}
         run: |
           set -e
@@ -130,7 +130,7 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
-      - name: Create node_modules archive
+      - name: Create node modules archive
         if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
         run: |
           set -e
@@ -229,14 +229,14 @@ jobs:
           echo "::set-output name=yarnlockhash::$(cat .build/yarnlockhash)"
         shell: bash
 
-      - name: Restore node_modules cache
+      - name: Restore node modules cache
         id: restoreNodeModulesCache
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}-nodeModules-${{ steps.prepareYarnCacheFlags.outputs.yarnlockhash }}"
 
-      - name: Extract node_modules cache
+      - name: Extract node modules cache
         if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }}
         run: |
           set -e
@@ -294,7 +294,7 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
-      - name: Create node_modules archive
+      - name: Create node modules archive
         if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
         run: |
           set -e
