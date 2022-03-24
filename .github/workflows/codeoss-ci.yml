@@ -21,6 +21,7 @@ env:
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
+  VSCODE_QUALITY: stable
 
 jobs:
   generate-product-configurations:
@@ -143,8 +144,6 @@ jobs:
       - name: Mix in quality
         run: |
           set -e
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
           node build/azure-pipelines/mixin
         shell: bash
 
@@ -155,7 +154,7 @@ jobs:
         shell: bash
 
       - name: Compile test suites
-        if: ${{ env.VSCODE_STEP_ON_IT == false }}
+        if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
         run: |
           set -e
           yarn --cwd test/smoke compile
@@ -194,8 +193,6 @@ jobs:
           [ "${NPM_ARCH}" == "armhf" ] && NPM_ARCH=armv7l
           echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
           APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
           echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
         shell: bash
