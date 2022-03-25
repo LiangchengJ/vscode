@@ -17,7 +17,6 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NODE_VERSION: 14
   PYTHON_VERSION: "2.x"
-  SPLIT_LINE: =============================
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
@@ -266,21 +265,19 @@ jobs:
       - name: Build AppImage package
         if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
+          echo "::group::Install deno"
           curl -fsSL https://deno.land/x/install/install.sh | sh
           DENO_INSTALL="$HOME/.deno"
           export DENO_INSTALL
           PATH="$DENO_INSTALL/bin:$PATH"
           export PATH
+          echo "::endgroup::"
 
-          echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
-          echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
-
-          deno fmt product.json
-          deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
+          echo "::group::Start deno file server"
+          deno fmt product.json 1>/dev/null
+          deno run --allow-read --allow-net https://deno.land/std@0.131.0/http/file_server.ts >dfserv.log 2>&1 &
           sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
-
-          echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
-          echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
+          echo "::endgroup::"
 
           DOWNLOAD_URL="http://127.0.0.1:4507/$DEB_FILENAME"
           echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
@@ -320,6 +317,7 @@ jobs:
 
       - name: Generate SHA512 checksum files
         run: |
+          set -x
           [ -f "$XZ_TARBALL_NAME" ] && (sha512sum "$XZ_TARBALL_NAME" | awk '{print $1}' >"$XZ_TARBALL_NAME".sha512)
           [ -f "$GZ_TARBALL_NAME" ] && (sha512sum "$GZ_TARBALL_NAME" | awk '{print $1}' >"$GZ_TARBALL_NAME".sha512)
           [ -f "$SERVER_TARBALL_FILENAME" ] && (sha512sum "$SERVER_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_TARBALL_FILENAME".sha512)
