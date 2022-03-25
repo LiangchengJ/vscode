@@ -77,7 +77,6 @@ jobs:
       - name: Install build tools
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
-          set -e
           sudo apt update -y
           sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
         shell: bash
@@ -91,50 +90,29 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: "${{ runner.os }}GenericNodeModules02-${{ steps.compute-node-modules-cache-key.outputs.key }}"
-
-      - name: Switch to Terrapin packages
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
-        run: |
-          set -e
-          npx https://aka.ms/enablesecurefeed standAlone
-        shell: bash
+          key: "${{ runner.os }}GenericNodeModules03-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
-        run: |
-          set -e
-          for i in {1..3}; do # try 3 times, for Terrapin
-          	yarn --frozen-lockfile && break
-          	if [ "$i" -eq 3 ]; then
-          		echo "Yarn failed too many times" >&2
-          		exit 1
-          	fi
-          	echo "Yarn failed $i, trying again..."
-          done
+        run: yarn --frozen-lockfile --network-timeout 180000
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
       - name: Compile & Hygiene
-        run: |
-          set -e
-          yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check
+        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check
         shell: bash
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
         run: |
-          set -e
           yarn --cwd test/smoke compile
           yarn --cwd test/integration/browser compile
         shell: bash
 
       - name: Compress compilation artifact
-        run: |
-          set -e
-          tar -cJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out
+        run: tar -cJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out
         shell: bash
 
       - name: Publish compilation artifact
@@ -172,7 +150,6 @@ jobs:
       - name: Setup system services
         if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
-          set -e
           # Start X server
           sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
           sudo chmod +x /etc/init.d/xvfb
@@ -189,9 +166,7 @@ jobs:
           name: Compilation
 
       - name: Extract compilation output
-        run: |
-          set -e
-          tar -xJf compilation.tar.xz
+        run: tar -xJf compilation.tar.xz
         shell: bash
 
       - name: Compute node modules cache key
@@ -203,14 +178,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: "${{ runner.os }}NodeModules02-${{ steps.compute-node-modules-cache-key.outputs.key }}"
-
-      - name: Switch to Terrapin packages
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
-        run: |
-          set -e
-          npx https://aka.ms/enablesecurefeed standAlone
-        shell: bash
+          key: "${{ runner.os }}NodeModules03-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
