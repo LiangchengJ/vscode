@@ -21,7 +21,6 @@ env:
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
-  CACHE-VERSION: v1
 
 jobs:
   generate-product-configurations:
@@ -75,6 +74,13 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
+      - name: Install build tools
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
+        run: |
+          set -e
+          sudo apt update -y
+          sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
@@ -84,29 +90,14 @@ jobs:
         id: cache-node-modules
         uses: actions/cache@v2
         with:
-          path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-genericNodeModules-${{ env.CACHE-VERSION }}-${{ steps.compute-node-modules-cache-key.outputs.key }}"
-
-      - name: Extract node modules cache
-        if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
-        run: |
-          set -e
-          tar -xJf .build/node_modules_cache/cache.tar.xz
-        shell: bash
+          path: "**/node_modules"
+          key: "${{ runner.os }}GenericNodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
-        shell: bash
-
-      - name: Install build tools
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
-        run: |
-          set -e
-          sudo apt update -y
-          sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
         shell: bash
 
       - name: Install dependencies
@@ -126,15 +117,6 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
-      - name: Create node modules archive
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
-        run: |
-          set -e
-          node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          mkdir -p .build/node_modules_cache
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
-        shell: bash
-
       - name: Compile & Hygiene
         run: |
           set -e
@@ -152,7 +134,7 @@ jobs:
       - name: Compress compilation artifact
         run: |
           set -e
-          tar -cJ --ignore-failed-read -f compilation.tar.gz .build out-* test/integration/browser/out test/smoke/out test/automation/out
+          tar -cJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out
         shell: bash
 
       - name: Publish compilation artifact
@@ -218,15 +200,8 @@ jobs:
         id: cache-node-modules
         uses: actions/cache@v2
         with:
-          path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-nodeModules-${{ env.CACHE-VERSION }}-${{ steps.compute-node-modules-cache-key.outputs.key }}"
-
-      - name: Extract node modules cache
-        if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
-        run: |
-          set -e
-          tar -xJf .build/node_modules_cache/cache.tar.xz
-        shell: bash
+          path: "**/node_modules"
+          key: "${{ runner.os }}NodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
@@ -279,15 +254,6 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         shell: bash
 
-      - name: Create node modules archive
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
-        run: |
-          set -e
-          node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          mkdir -p .build/node_modules_cache
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
-        shell: bash
-
       - name: Build binary packages
         id: build-binary-packages
         run: |
@@ -337,7 +303,7 @@ jobs:
           echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
           echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
 
-          deno fmt ./product.json
+          deno fmt product.json
           deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
           sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
 
