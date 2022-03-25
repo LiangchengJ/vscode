@@ -21,7 +21,6 @@ env:
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
-  VSCODE_QUALITY: stable
 
 jobs:
   generate-product-configurations:
@@ -76,37 +75,33 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Prepare yarn cache flags
-        id: prepareYarnCacheFlags
-        run: |
-          mkdir -p .build
-          node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $ENABLE_TERRAPIN >.build/yarnlockhash
-          echo "::set-output name=yarnlockhash::$(cat .build/yarnlockhash)"
-        shell: bash
+      - name: Compute node modules cache key
+        id: compute-node-modules-cache-key
+        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $ENABLE_TERRAPIN)"
 
-      - name: Restore node modules cache
-        id: restoreNodeModulesCache
+      - name: Cache node modules
+        id: cache-node-modules
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-genericNodeModules-${{ steps.prepareYarnCacheFlags.outputs.yarnlockhash }}"
+          key: "${{ runner.os }}-genericNodeModules-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Extract node modules cache
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
         run: |
           set -e
-          tar -xzf .build/node_modules_cache/cache.tgz
+          tar -xJf .build/node_modules_cache/cache.tar.xz
         shell: bash
 
       - name: Switch to Terrapin packages
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
         shell: bash
 
       - name: Install build tools
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           set -e
           sudo apt update -y
@@ -114,7 +109,7 @@ jobs:
         shell: bash
 
       - name: Install dependencies
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           set -e
           for i in {1..3}; do # try 3 times, for Terrapin
@@ -131,19 +126,12 @@ jobs:
         shell: bash
 
       - name: Create node modules archive
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           set -e
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           mkdir -p .build/node_modules_cache
-          tar -czf .build/node_modules_cache/cache.tgz --files-from .build/node_modules_list.txt
-        shell: bash
-
-      # Mixin must run before optimize, because the CSS loader will inline small SVGs
-      - name: Mix in quality
-        run: |
-          set -e
-          node build/azure-pipelines/mixin
+          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
         shell: bash
 
       - name: Compile & Hygiene
@@ -163,14 +151,14 @@ jobs:
       - name: Compress compilation artifact
         run: |
           set -e
-          tar -cz --ignore-failed-read -f compilation.tar.gz .build out-* test/integration/browser/out test/smoke/out test/automation/out
+          tar -cJ --ignore-failed-read -f compilation.tar.gz .build out-* test/integration/browser/out test/smoke/out test/automation/out
         shell: bash
 
       - name: Publish compilation artifact
         uses: actions/upload-artifact@v3
         with:
           name: Compilation
-          path: compilation.tar.gz
+          path: compilation.tar.xz
 
   linux:
     name: Linux
@@ -196,11 +184,6 @@ jobs:
           echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
         shell: bash
 
-      - name: Download compilation output
-        uses: actions/download-artifact@v3
-        with:
-          name: Compilation
-
       - name: Setup system services
         if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
@@ -215,43 +198,44 @@ jobs:
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_LAUNCH_RESULT" >>"$GITHUB_ENV"
         shell: bash
 
+      - name: Download compilation output
+        uses: actions/download-artifact@v3
+        with:
+          name: Compilation
+
       - name: Extract compilation output
         run: |
           set -e
-          tar -xzf compilation.tar.gz
+          tar -xJf compilation.tar.xz
         shell: bash
 
-      - name: Prepare yarn cache flags
-        id: prepareYarnCacheFlags
-        run: |
-          mkdir -p .build
-          node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $ENABLE_TERRAPIN >.build/yarnlockhash
-          echo "::set-output name=yarnlockhash::$(cat .build/yarnlockhash)"
-        shell: bash
+      - name: Compute node modules cache key
+        id: compute-node-modules-cache-key
+        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $ENABLE_TERRAPIN)"
 
-      - name: Restore node modules cache
-        id: restoreNodeModulesCache
+      - name: Cache node modules
+        id: cache-node-modules
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-nodeModules-${{ steps.prepareYarnCacheFlags.outputs.yarnlockhash }}"
+          key: "${{ runner.os }}-nodeModules-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Extract node modules cache
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit == 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
         run: |
           set -e
-          tar -xzf .build/node_modules_cache/cache.tgz
+          tar -xJf .build/node_modules_cache/cache.tar.xz
         shell: bash
 
       - name: Switch to Terrapin packages
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
         shell: bash
 
       - name: Install dependencies
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           npm_config_arch=${NPM_ARCH}
           export npm_config_arch
@@ -295,18 +279,12 @@ jobs:
         shell: bash
 
       - name: Create node modules archive
-        if: ${{ steps.restoreNodeModulesCache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           set -e
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           mkdir -p .build/node_modules_cache
-          tar -czf .build/node_modules_cache/cache.tgz --files-from .build/node_modules_list.txt
-        shell: bash
-
-      - name: Mix in quality
-        run: |
-          set -e
-          node build/azure-pipelines/mixin
+          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
         shell: bash
 
       - name: Build binary packages
@@ -383,7 +361,6 @@ jobs:
 
       - name: Build server packages
         run: |
-          node build/azure-pipelines/mixin --server
           yarn gulp vscode-reh-linux-${VSCODE_ARCH}-min-ci
           (cd .. && mv vscode-reh-linux-${VSCODE_ARCH} vscode-server-linux-${VSCODE_ARCH})
           (cd .. && tar -zcf vscode-server-linux-${VSCODE_ARCH}.tar.gz vscode-server-linux-${VSCODE_ARCH})
