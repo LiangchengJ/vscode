@@ -163,6 +163,8 @@ jobs:
           [ "${NPM_ARCH}" == "armhf" ] && NPM_ARCH=armv7l
           echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
+          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
+          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
           APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
           echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
         shell: bash
@@ -241,14 +243,7 @@ jobs:
           # 	export VSCODE_REMOTE_CXX
           # fi
 
-          for i in {1..3}; do # try 3 times, for Terrapin
-          	yarn --frozen-lockfile && break
-          	if [ $i -eq 3 ]; then
-          		echo "Yarn failed too many times" >&2
-          		exit 1
-          	fi
-          	echo "Yarn failed $i, trying again..."
-          done
+          yarn --frozen-lockfile --network-timeout 180000
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
@@ -263,12 +258,10 @@ jobs:
           	XZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_ARCH}-$BUILD_VERSION.tar.xz" ||
           	XZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_QUALITY}-${VSCODE_ARCH}-$BUILD_VERSION.tar.xz"
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
-          echo "::set-output name=xz-tarball-name::$XZ_TARBALL_NAME"
           [ -z "${VSCODE_QUALITY}" ] &&
           	GZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz" ||
           	GZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_QUALITY}-${VSCODE_ARCH}-$BUILD_VERSION.tar.gz"
           echo "GZ_TARBALL_NAME=$GZ_TARBALL_NAME" >>"$GITHUB_ENV"
-          echo "::set-output name=gz-tarball-name::$GZ_TARBALL_NAME"
 
           yarn gulp vscode-linux-${VSCODE_ARCH}-min-ci
           (cd .. && cp -r VSCode-linux-${VSCODE_ARCH} CodeOSS-linux-${VSCODE_ARCH})
@@ -277,16 +270,25 @@ jobs:
           (cd .. && tar -zcf "$GZ_TARBALL_NAME" CodeOSS-linux-${VSCODE_ARCH})
           mv ../"$GZ_TARBALL_NAME" .
 
-          (cd .. && tar -cJf CodeOSS-linux-${VSCODE_ARCH}.tar.xz CodeOSS-linux-${VSCODE_ARCH})
-          mv ../CodeOSS-linux-${VSCODE_ARCH}.tar.xz .
-
           yarn gulp vscode-linux-${VSCODE_ARCH}-build-rpm
-          # shellcheck disable=SC2046
-          # shellcheck disable=SC2012
-          mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${VSCODE_ARCH}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+          case $VSCODE_ARCH in
+          x64) RPM_ARCH="x86_64" ;;
+          armhf) RPM_ARCH="armv7hl" ;;
+          arm64) RPM_ARCH="aarch64" ;;
+          *) RPM_ARCH="$VSCODE_ARCH" ;;
+          esac
+          RPM_FILENAME="$(ls .build/linux/rpm/$RPM_ARCH/*.rpm)"
+          mv ".build/linux/rpm/$RPM_ARCH/$RPM_FILENAME" .
+          echo "RPM_FILENAME=$RPM_FILENAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-linux-${VSCODE_ARCH}-build-deb
-          cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${VSCODE_ARCH}.deb
+          case $VSCODE_ARCH in
+          x64) DEB_ARCH="amd64" ;;
+          *) DEB_ARCH="$VSCODE_ARCH" ;;
+          esac
+          DEB_FILENAME="$(ls .build/linux/deb/$DEB_ARCH/deb/)"
+          mv ".build/linux/deb/$DEB_ARCH/deb/$DEB_FILENAME" .
+          echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
 
           # yarn gulp vscode-linux-${VSCODE_ARCH}-build-snap
         shell: bash
@@ -310,8 +312,7 @@ jobs:
           echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
           echo "${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}${SPLIT_LINE}"
 
-          # shellcheck disable=SC2035
-          mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
+          DOWNLOAD_URL="http://127.0.0.1:4507/$DEB_FILENAME"
           echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
           echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
           LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
@@ -323,60 +324,43 @@ jobs:
           curl -L -O -s "$BROWSER_DOWNLOAD_URL"
 
           chmod u+x ./"${BROWSER_DOWNLOAD_URL##*/}" && ./"${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
-          mv out/*.AppImage CodeOSS-linux-${VSCODE_ARCH}.AppImage
+          APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}.AppImage
+          mv out/*.AppImage $APPIMAGE_FILENAME
+          echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Build server packages
         run: |
           yarn gulp vscode-reh-linux-${VSCODE_ARCH}-min-ci
-          (cd .. && mv vscode-reh-linux-${VSCODE_ARCH} vscode-server-linux-${VSCODE_ARCH})
-          (cd .. && tar -zcf vscode-server-linux-${VSCODE_ARCH}.tar.gz vscode-server-linux-${VSCODE_ARCH})
-          mv ../vscode-server-linux-${VSCODE_ARCH}.tar.gz .
+          SERVER_BUILD_NAME="vscode-server-linux-${VSCODE_ARCH}"
+          SERVER_TARBALL_FILENAME="$SERVER_BUILD_NAME.tar.gz"
+          (cd .. && cp -rf vscode-reh-linux-${VSCODE_ARCH} $SERVER_BUILD_NAME)
+          (cd .. && tar -zcf $SERVER_TARBALL_FILENAME $SERVER_BUILD_NAME)
+          mv ../$SERVER_TARBALL_FILENAME .
+          echo "SERVER_TARBALL_FILENAME=$SERVER_TARBALL_FILENAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-reh-web-linux-${VSCODE_ARCH}-min-ci
-          (cd .. && mv vscode-reh-web-linux-${VSCODE_ARCH} vscode-server-linux-${VSCODE_ARCH}-web)
-          (cd .. && tar -zcf vscode-server-linux-${VSCODE_ARCH}-web.tar.gz vscode-server-linux-${VSCODE_ARCH}-web)
-          mv ../vscode-server-linux-${VSCODE_ARCH}-web.tar.gz .
+          SERVER_WEB_BUILD_NAME="vscode-server-linux-${VSCODE_ARCH}-web"
+          SERVER_WEB_TARBALL_FILENAME="$SERVER_WEB_BUILD_NAME.tar.gz"
+          (cd .. && cp -rf vscode-reh-web-linux-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
+          (cd .. && tar -zcf $SERVER_WEB_TARBALL_FILENAME $SERVER_WEB_BUILD_NAME)
+          mv ../$SERVER_WEB_TARBALL_FILENAME .
+          echo "SERVER_WEB_TARBALL_FILENAME=$SERVER_WEB_TARBALL_FILENAME" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
-          if [ -f "$XZ_TARBALL_NAME" ]; then
-          	sha512sum $XZ_TARBALL_NAME | awk '{print $1}' >$XZ_TARBALL_NAME.sha512
-          fi
+          [ -f "$XZ_TARBALL_NAME" ] && (sha512sum "$XZ_TARBALL_NAME" | awk '{print $1}' >"$XZ_TARBALL_NAME".sha512)
+          [ -f "$GZ_TARBALL_NAME" ] && (sha512sum "$GZ_TARBALL_NAME" | awk '{print $1}' >"$GZ_TARBALL_NAME".sha512)
+          [ -f "$SERVER_TARBALL_FILENAME" ] && (sha512sum "$SERVER_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_TARBALL_FILENAME".sha512)
+          [ -f "$SERVER_WEB_TARBALL_FILENAME" ] && (sha512sum "$SERVER_WEB_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_WEB_TARBALL_FILENAME".sha512)
 
-          if [ -f "$GZ_TARBALL_NAME" ]; then
-          	sha512sum $GZ_TARBALL_NAME | awk '{print $1}' >$GZ_TARBALL_NAME.sha512
-          fi
-
-          if [ -f "vscode-server-linux-${VSCODE_ARCH}.tar.gz" ]; then
-          	sha512sum vscode-server-linux-${VSCODE_ARCH}.tar.gz | awk '{print $1}' >vscode-server-linux-${VSCODE_ARCH}.tar.gz.sha512
-          fi
-
-          if [ -f "vscode-server-linux-${VSCODE_ARCH}-web.tar.gz" ]; then
-          	sha512sum vscode-server-linux-${VSCODE_ARCH}-web.tar.gz | awk '{print $1}' >vscode-server-linux-${VSCODE_ARCH}-web.tar.gz.sha512
-          fi
-
-          # shellcheck disable=SC2143
-          # shellcheck disable=SC2010
-          if [ -n "$(ls | grep -E "CodeOSS-linux-${VSCODE_ARCH}.*\.rpm$")" ]; then
-          	sha512sum CodeOSS-linux-${VSCODE_ARCH}*.rpm >tmpret
-          	# shellcheck disable=SC2002
-          	cat tmpret | awk '{print $1}' >"$(cat tmpret | awk '{print $2}')".sha512
-          fi
-
-          if [ -f "CodeOSS-linux-${VSCODE_ARCH}.deb" ]; then
-          	sha512sum CodeOSS-linux-${VSCODE_ARCH}.deb | awk '{print $1}' >CodeOSS-linux-${VSCODE_ARCH}.deb.sha512
-          fi
-
-          if [ -f "CodeOSS-linux-${VSCODE_ARCH}.AppImage" ]; then
-          	sha512sum CodeOSS-linux-${VSCODE_ARCH}.AppImage | awk '{print $1}' >CodeOSS-linux-${VSCODE_ARCH}.AppImage.sha512
-          fi
+          [ -f "$RPM_FILENAME" ] && (sha512sum "$RPM_FILENAME" | awk '{print $1}' >"$RPM_FILENAME".sha512)
+          [ -f "$DEB_FILENAME" ] && (sha512sum "$DEB_FILENAME" | awk '{print $1}' >"$DEB_FILENAME".sha512)
+          [ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512)
 
           [ "${VSCODE_ARCH}" != "x64" ] && rm -f ./product.json
-          if [ -f "product.json" ]; then
-          	sha512sum product.json | awk '{print $1}' >product.json.sha512
-          fi
+          [ -f "product.json" ] && (sha512sum product.json | awk '{print $1}' >product.json.sha512)
         shell: bash
 
       - name: Publish packages
@@ -386,20 +370,20 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            ${{ steps.build-binary-packages.outputs.xz-tarball-name }}
-            ${{ steps.build-binary-packages.outputs.xz-tarball-name }}.sha512
-            ${{ steps.build-binary-packages.outputs.gz-tarball-name }}
-            ${{ steps.build-binary-packages.outputs.gz-tarball-name }}.sha512
-            CodeOSS-linux-${{ env.VSCODE_ARCH }}*.rpm
-            CodeOSS-linux-${{ env.VSCODE_ARCH }}*.rpm.sha512
-            CodeOSS-linux-*.deb
-            CodeOSS-linux-*.deb.sha512
-            CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage
-            CodeOSS-linux-${{ env.VSCODE_ARCH }}.AppImage.sha512
-            vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz
-            vscode-server-linux-${{ env.VSCODE_ARCH }}.tar.gz.sha512
-            vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz
-            vscode-server-linux-${{ env.VSCODE_ARCH }}-web.tar.gz.sha512
+            ${{ env.XZ_TARBALL_NAME }}
+            ${{ env.XZ_TARBALL_NAME }}.sha512
+            ${{ env.GZ_TARBALL_NAME }}
+            ${{ env.GZ_TARBALL_NAME }}.sha512
+            ${{ env.RPM_FILENAME }}
+            ${{ env.RPM_FILENAME }}.sha512
+            ${{ env.DEB_FILENAME }}
+            ${{ env.DEB_FILENAME }}.sha512
+            ${{ env.APPIMAGE_FILENAME }}
+            ${{ env.APPIMAGE_FILENAME }}.sha512
+            ${{ env.SERVER_TARBALL_FILENAME }}
+            ${{ env.SERVER_TARBALL_FILENAME }}.sha512
+            ${{ env.SERVER_WEB_TARBALL_FILENAME }}
+            ${{ env.SERVER_WEB_TARBALL_FILENAME }}.sha512
             product.json
             product.json.sha512
 
