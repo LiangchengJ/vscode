@@ -91,7 +91,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: "${{ runner.os }}GenericNodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "${{ runner.os }}GenericNodeModules02-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
@@ -203,7 +203,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "**/node_modules"
-          key: "${{ runner.os }}NodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "${{ runner.os }}NodeModules02-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
