@@ -94,7 +94,7 @@ jobs:
           key: "${{ runner.os }}GenericNodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
@@ -206,7 +206,7 @@ jobs:
           key: "${{ runner.os }}NodeModules01-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Switch to Terrapin packages
-        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }} && ${{ env.ENABLE_TERRAPIN }}
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' && env.ENABLE_TERRAPIN == 'true' }}
         run: |
           set -e
           npx https://aka.ms/enablesecurefeed standAlone
