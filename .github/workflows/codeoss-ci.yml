@@ -245,8 +245,9 @@ jobs:
           arm64) RPM_ARCH="aarch64" ;;
           *) RPM_ARCH="$VSCODE_ARCH" ;;
           esac
-          RPM_FILENAME="$(ls .build/linux/rpm/$RPM_ARCH/*.rpm)"
-          mv ".build/linux/rpm/$RPM_ARCH/$RPM_FILENAME" .
+          RPM_OUT_DIR=.build/linux/rpm/$RPM_ARCH
+          RPM_FILENAME="$(cd $RPM_OUT_DIR && (ls ./*.rpm) | awk -F "./" 'NR==1{print $2}')"
+          mv "$RPM_OUT_DIR/$RPM_FILENAME" .
           echo "RPM_FILENAME=$RPM_FILENAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-linux-${VSCODE_ARCH}-build-deb
@@ -254,8 +255,9 @@ jobs:
           x64) DEB_ARCH="amd64" ;;
           *) DEB_ARCH="$VSCODE_ARCH" ;;
           esac
-          DEB_FILENAME="$(ls .build/linux/deb/$DEB_ARCH/deb/)"
-          mv ".build/linux/deb/$DEB_ARCH/deb/$DEB_FILENAME" .
+          DEB_OUT_DIR=.build/linux/deb/$DEB_ARCH/deb
+          DEB_FILENAME="$(cd $DEB_OUT_DIR && (ls ./*.deb) | awk -F "./" 'NR==1{print $2}')"
+          mv "$DEB_OUT_DIR/$DEB_FILENAME" .
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
 
           # yarn gulp vscode-linux-${VSCODE_ARCH}-build-snap
