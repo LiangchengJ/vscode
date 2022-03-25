@@ -21,6 +21,7 @@ env:
   CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
+  CACHE-VERSION: v1
 
 jobs:
   generate-product-configurations:
@@ -84,7 +85,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-genericNodeModules-${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "${{ runner.os }}-genericNodeModules-${{ env.CACHE-VERSION }}-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Extract node modules cache
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -218,7 +219,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}-nodeModules-${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "${{ runner.os }}-nodeModules-${{ env.CACHE-VERSION }}-${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Extract node modules cache
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
