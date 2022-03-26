@@ -253,6 +253,7 @@ jobs:
         shell: bash
 
       - name: Prepare snap package
+        if: ${{ env.VSCODE_ARCH != 'armhf' }}
         run: |
           yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
@@ -260,6 +261,7 @@ jobs:
         shell: bash
 
       - name: Build snap package
+        if: ${{ env.VSCODE_ARCH != 'armhf' }}
         uses: addnab/docker-run-action@v3
         with:
           image: "snapcore/snapcraft:stable"
@@ -276,7 +278,7 @@ jobs:
             sudo apt-get update
             sudo apt-get upgrade -y
             sudo apt-get install -y curl apt-transport-https ca-certificates
-            SNAP_ROOT=".build/linux/snap/${VSCODE_ARCH}"
+            SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
             SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
             case $VSCODE_ARCH in
             x64) SNAPCRAFT_TARGET_ARGS="" ;;
