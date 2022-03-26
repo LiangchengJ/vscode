@@ -265,7 +265,7 @@ jobs:
           image: "snapcore/snapcraft:stable"
           options: "-v ${{ github.workspace }}:/workspace \
             -e VSCODE_ARCH=${{ env.VSCODE_ARCH }} \
-            -e APPLICATION_NAME=${{ env.VSCODE_ARCH }} \
+            -e APPLICATION_NAME=${{ env.APPLICATION_NAME }} \
             -e SNAP_FILENAME=${{ env.SNAP_FILENAME }}"
           run: |
             set -x
