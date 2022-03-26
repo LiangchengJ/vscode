@@ -253,14 +253,16 @@ jobs:
           echo "::group::Build snap package"
           yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
           sudo apt-get install -y snapcraft
+          ls -alF .build/linux
           SNAP_ROOT=".build/linux/snap/${VSCODE_ARCH}"
+          ls -alF "$SNAP_ROOT"
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
           SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
           case $VSCODE_ARCH in
           x64) SNAPCRAFT_TARGET_ARGS="" ;;
           *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
           esac
-          (cd "$SNAP_ROOT"/code-* &&
+          (cd "$SNAP_ROOT"/$APPLICATION_NAME-* &&
           	sudo --preserve-env snapcraft prime "$SNAPCRAFT_TARGET_ARGS" &&
           	snap pack prime --compression=lzo --filename="$SNAP_PATH")
           mv "$SNAP_PATH" .
