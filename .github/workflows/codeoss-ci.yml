@@ -268,9 +268,22 @@ jobs:
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
 
-          echo "::group::Prepare snap package"
-          yarn gulp vscode-linux-${VSCODE_ARCH}-prepare-snap
-          ls -alF .build/linux/snap-tarball
+          echo "::group::Build snap package"
+          sudo apt-get install -y snapcraft
+          snapcraft --version
+
+          SNAP_ROOT=".build/linux/snap/${VSCODE_ARCH}"
+          SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
+          SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
+          case $VSCODE_ARCH in
+          x64) SNAPCRAFT_TARGET_ARGS="" ;;
+          *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
+          esac
+          (cd "$SNAP_ROOT"/code-* &&
+          	sudo --preserve-env snapcraft prime "$SNAPCRAFT_TARGET_ARGS" &&
+          	snap pack prime --compression=lzo --filename="$SNAP_PATH")
+          mv "$SNAP_PATH" .
+          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
 
@@ -307,8 +320,8 @@ jobs:
           chmod u+x ./"${BROWSER_DOWNLOAD_URL##*/}" && ./"${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
           APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}-${{ needs.generate-product-configurations.outputs.version }}.AppImage
           mv out/*.AppImage $APPIMAGE_FILENAME
-          echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
+          echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Build server packages
@@ -339,6 +352,7 @@ jobs:
 
           [ -f "$RPM_FILENAME" ] && (sha512sum "$RPM_FILENAME" | awk '{print $1}' >"$RPM_FILENAME".sha512)
           [ -f "$DEB_FILENAME" ] && (sha512sum "$DEB_FILENAME" | awk '{print $1}' >"$DEB_FILENAME".sha512)
+          [ -f "$SNAP_FILENAME" ] && (sha512sum "$SNAP_FILENAME" | awk '{print $1}' >"$SNAP_FILENAME".sha512)
           [ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512)
 
           [ "${VSCODE_ARCH}" != "x64" ] && rm -f product.json
@@ -361,6 +375,8 @@ jobs:
             ${{ env.RPM_FILENAME }}.sha512
             ${{ env.DEB_FILENAME }}
             ${{ env.DEB_FILENAME }}.sha512
+            ${{ env.SNAP_FILENAME }}
+            ${{ env.SNAP_FILENAME }}.sha512
             ${{ env.APPIMAGE_FILENAME }}
             ${{ env.APPIMAGE_FILENAME }}.sha512
             ${{ env.SERVER_TARBALL_FILENAME }}
