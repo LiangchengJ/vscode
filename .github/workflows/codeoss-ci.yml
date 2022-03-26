@@ -335,9 +335,7 @@ jobs:
           [ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512)
 
           [ "${VSCODE_ARCH}" != "x64" ] && rm -f product.json
-          if [ -f "product.json" ]; then
-          	sha512sum product.json | awk '{print $1}' >product.json.sha512
-          fi
+          ([ -f "product.json" ] && (sha512sum product.json | awk '{print $1}' >product.json.sha512)) || echo >/dev/null
         shell: bash
 
       - name: Publish packages
