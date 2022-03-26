@@ -210,7 +210,14 @@ jobs:
           # 	export VSCODE_REMOTE_CXX
           # fi
 
-          yarn --frozen-lockfile --network-timeout 180000
+          for i in {1..3}; do
+          	yarn --frozen-lockfile && break
+          	if [ "$i" -eq 3 ]; then
+          		echo "Yarn failed too many times" >&2
+          		exit 1
+          	fi
+          	echo "Yarn failed $i, trying again..."
+          done
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
