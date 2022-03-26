@@ -17,7 +17,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NODE_VERSION: 14
   PYTHON_VERSION: "2.x"
-  CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
+  CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   ENABLE_TERRAPIN: true
   VSCODE_STEP_ON_IT: false
   CACHE_VERSION: 1648273595
@@ -209,6 +209,7 @@ jobs:
         id: build-binary-packages
         run: |
           BUILD_VERSION="$(date +%s)"
+          echo "BUILD_VERSION=$BUILD_VERSION" >>"$GITHUB_ENV"
 
           [ -z "${VSCODE_QUALITY}" ] &&
           	XZ_TARBALL_NAME="${APPLICATION_NAME}-${VSCODE_ARCH}-$BUILD_VERSION.tar.xz" ||
@@ -249,24 +250,44 @@ jobs:
           mv "$DEB_OUT_DIR/$DEB_FILENAME" .
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
-
-          echo "::group::Build snap package"
-          yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
-          sudo apt-get install -y snapcraft
-          SNAP_ROOT=".build/linux/snap/${VSCODE_ARCH}"
-          SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
-          SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
-          case $VSCODE_ARCH in
-          x64) SNAPCRAFT_TARGET_ARGS="" ;;
-          *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
-          esac
-          (cd "$SNAP_ROOT"/$APPLICATION_NAME-$VSCODE_ARCH &&
-          	sudo --preserve-env snapcraft prime "$SNAPCRAFT_TARGET_ARGS" &&
-          	snap pack prime --compression=lzo --filename="$SNAP_PATH")
-          mv "$SNAP_PATH" .
-          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
-          echo "::endgroup::"
         shell: bash
+
+      - name: Prepare snap package
+        run: |
+          yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
+          SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
+          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
+        shell: bash
+
+      - name: Build snap package
+        uses: addnab/docker-run-action@v3
+        with:
+          image: "snapcore/snapcraft:stable"
+          options: "-v ${{ github.workspace }}:/workspace \
+            -e VSCODE_ARCH=${{ env.VSCODE_ARCH }} \
+            -e APPLICATION_NAME=${{ env.VSCODE_ARCH }} \
+            -e SNAP_FILENAME=${{ env.SNAP_FILENAME }}"
+          run: |
+            set -x
+            cd /workspace
+            # Get snapcraft version
+            snapcraft --version
+            # Make sure we get latest packages
+            sudo apt-get update
+            sudo apt-get upgrade -y
+            sudo apt-get install -y curl apt-transport-https ca-certificates
+            SNAP_ROOT=".build/linux/snap/${VSCODE_ARCH}"
+            SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
+            case $VSCODE_ARCH in
+            x64) SNAPCRAFT_TARGET_ARGS="" ;;
+            *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
+            esac
+            (cd "$SNAP_ROOT"/$APPLICATION_NAME-$VSCODE_ARCH &&
+            	sudo --preserve-env snapcraft prime "$SNAPCRAFT_TARGET_ARGS" &&
+            	snap pack prime --compression=lzo --filename="$SNAP_PATH")
+            mv "$SNAP_PATH" .
+          shell: bash
+          registry: docker.io
 
       - name: Build AppImage package
         if: ${{ env.VSCODE_ARCH == 'x64' }}
@@ -301,8 +322,8 @@ jobs:
           chmod u+x ./"${BROWSER_DOWNLOAD_URL##*/}" && ./"${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
           APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}-${{ needs.generate-product-configurations.outputs.version }}.AppImage
           mv out/*.AppImage $APPIMAGE_FILENAME
-          echo "::endgroup::"
           echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "::endgroup::"
         shell: bash
 
       - name: Build server packages
@@ -326,19 +347,18 @@ jobs:
 
       - name: Generate SHA512 checksum files
         run: |
-          [ -f "$XZ_TARBALL_NAME" ] && (sha512sum "$XZ_TARBALL_NAME" | awk '{print $1}' >"$XZ_TARBALL_NAME".sha512)
-          [ -f "$GZ_TARBALL_NAME" ] && (sha512sum "$GZ_TARBALL_NAME" | awk '{print $1}' >"$GZ_TARBALL_NAME".sha512)
-          [ -f "$SERVER_TARBALL_FILENAME" ] && (sha512sum "$SERVER_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_TARBALL_FILENAME".sha512)
-          [ -f "$SERVER_WEB_TARBALL_FILENAME" ] && (sha512sum "$SERVER_WEB_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_WEB_TARBALL_FILENAME".sha512)
-
-          [ -f "$RPM_FILENAME" ] && (sha512sum "$RPM_FILENAME" | awk '{print $1}' >"$RPM_FILENAME".sha512)
-          [ -f "$DEB_FILENAME" ] && (sha512sum "$DEB_FILENAME" | awk '{print $1}' >"$DEB_FILENAME".sha512)
-          [ -f "$SNAP_FILENAME" ] && (sha512sum "$SNAP_FILENAME" | awk '{print $1}' >"$SNAP_FILENAME".sha512)
-          [ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512)
-
-          [ "${VSCODE_ARCH}" != "x64" ] && rm -f product.json
-          [ -f "product.json" ] && deno fmt product.json 1>/dev/null
-          ([ -f "product.json" ] && (sha512sum product.json | awk '{print $1}' >product.json.sha512)) || echo >/dev/null
+          gensha512() { (sha512sum "$1" | awk '{print $1}' >"$1".sha512); }
+          [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
+          [ -f "$GZ_TARBALL_NAME" ] && gensha512 "$GZ_TARBALL_NAME"
+          [ -f "$SERVER_TARBALL_FILENAME" ] && gensha512 "$SERVER_TARBALL_FILENAME"
+          [ -f "$SERVER_WEB_TARBALL_FILENAME" ] && gensha512 "$SERVER_WEB_TARBALL_FILENAME"
+          [ -f "$RPM_FILENAME" ] && gensha512 "$RPM_FILENAME"
+          [ -f "$DEB_FILENAME" ] && gensha512 "$DEB_FILENAME"
+          [ -f "$SNAP_FILENAME" ] && gensha512 "$SNAP_FILENAME"
+          [ -f "$APPIMAGE_FILENAME" ] && gensha512 "$APPIMAGE_FILENAME"
+          [ "$VSCODE_ARCH" != "x64" ] && rm -f product.json
+          [ -f product.json ] && deno fmt product.json 1>/dev/null
+          ([ -f product.json ] && gensha512 product.json) || echo >/dev/null
         shell: bash
 
       - name: Publish packages
