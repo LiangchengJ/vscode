@@ -317,17 +317,20 @@ jobs:
 
       - name: Generate SHA512 checksum files
         run: |
-          ([ -f "$XZ_TARBALL_NAME" ] && (sha512sum "$XZ_TARBALL_NAME" | awk '{print $1}' >"$XZ_TARBALL_NAME".sha512))
-          ([ -f "$GZ_TARBALL_NAME" ] && (sha512sum "$GZ_TARBALL_NAME" | awk '{print $1}' >"$GZ_TARBALL_NAME".sha512))
-          ([ -f "$SERVER_TARBALL_FILENAME" ] && (sha512sum "$SERVER_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_TARBALL_FILENAME".sha512))
-          ([ -f "$SERVER_WEB_TARBALL_FILENAME" ] && (sha512sum "$SERVER_WEB_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_WEB_TARBALL_FILENAME".sha512))
+          set -x
+          [ -f "$XZ_TARBALL_NAME" ] && (sha512sum "$XZ_TARBALL_NAME" | awk '{print $1}' >"$XZ_TARBALL_NAME".sha512)
+          [ -f "$GZ_TARBALL_NAME" ] && (sha512sum "$GZ_TARBALL_NAME" | awk '{print $1}' >"$GZ_TARBALL_NAME".sha512)
+          [ -f "$SERVER_TARBALL_FILENAME" ] && (sha512sum "$SERVER_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_TARBALL_FILENAME".sha512)
+          [ -f "$SERVER_WEB_TARBALL_FILENAME" ] && (sha512sum "$SERVER_WEB_TARBALL_FILENAME" | awk '{print $1}' >"$SERVER_WEB_TARBALL_FILENAME".sha512)
 
-          ([ -f "$RPM_FILENAME" ] && (sha512sum "$RPM_FILENAME" | awk '{print $1}' >"$RPM_FILENAME".sha512))
-          ([ -f "$DEB_FILENAME" ] && (sha512sum "$DEB_FILENAME" | awk '{print $1}' >"$DEB_FILENAME".sha512))
-          ([ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512))
+          [ -f "$RPM_FILENAME" ] && (sha512sum "$RPM_FILENAME" | awk '{print $1}' >"$RPM_FILENAME".sha512)
+          [ -f "$DEB_FILENAME" ] && (sha512sum "$DEB_FILENAME" | awk '{print $1}' >"$DEB_FILENAME".sha512)
+          [ -f "$APPIMAGE_FILENAME" ] && (sha512sum "$APPIMAGE_FILENAME" | awk '{print $1}' >"$APPIMAGE_FILENAME".sha512)
 
-          ([ "${VSCODE_ARCH}" != "x64" ] && rm -f product.json)
-          ([ -f "product.json" ] && (sha512sum product.json | awk '{print $1}' >product.json.sha512))
+          [ "${VSCODE_ARCH}" != "x64" ] && rm -f product.json
+          if [ -f "product.json" ]; then
+          	sha512sum product.json | awk '{print $1}' >product.json.sha512
+          fi
         shell: bash
 
       - name: Publish packages
