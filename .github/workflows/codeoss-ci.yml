@@ -45,6 +45,7 @@ jobs:
           # shellcheck disable=SC2034
           REMOTE_VERSION=$(node -p "require('./releases.json')[0]['tag_name']")
           VERSION=$(node -p "require('./package.json')['version']")
+          echo "VERSION=$VERSION" >>"$GITHUB_ENV"
 
           UNIVERSAL_ZIP_VERSION=$VERSION
           VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
@@ -270,63 +271,57 @@ jobs:
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
 
+          if [ "$VSCODE_ARCH" == "x64" ]; then
+          	echo "::group::Build AppImage package"
+          	npm install -g @liangchengj/nfserv && nfserv >nfserv.log 2>&1 &
+          	sleep 3 && cat nfserv.log
+          	DOWNLOAD_URL="http://127.0.0.1:9934/$DEB_FILENAME"
+          	echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
+          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
+          	echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
+          	GITHUB_API_URL=https://api.github.com/repos/AppImage/pkg2appimage/releases
+          	curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
+          	BROWSER_DOWNLOAD_URL=$(node -p "require('./releases.json')[0]['assets'][0]['browser_download_url']")
+          	curl -L -O -s "$BROWSER_DOWNLOAD_URL" && chmod u+x "$PWD/${BROWSER_DOWNLOAD_URL##*/}"
+          	"$PWD/${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
+          	APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}-$VERSION.AppImage
+          	mv out/*.AppImage "$APPIMAGE_FILENAME"
+          	echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          	echo "::endgroup::"
+          fi
+
+          echo "::group::Build snap package"
           yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
+          DOCKER_IMAGE_NAME="docker.io/snapcore/snapcraft:stable"
+          docker pull $DOCKER_IMAGE_NAME
+          SNAP_BUILD_SH_NAME="snap-build-$BUILD_VERSION.sh"
+          cat <<EOF >"$PWD/$SNAP_BUILD_SH_NAME"
+          cd /workspace || exit
+          # Make sure we get latest packages
+          sudo apt-get update
+          sudo apt-get upgrade -y
+          sudo apt-get install -y curl apt-transport-https ca-certificates
+          # Get snapcraft version
+          snapcraft --version
+          SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
+          SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
+          case $VSCODE_ARCH in
+          x64) SNAP_ARCH="amd64" ;;
+          *) SNAP_ARCH="$VSCODE_ARCH" ;;
+          esac
+          (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
+          	sudo --preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
+          	snap pack prime --compression=lzo --filename="$SNAP_PATH")
+          mv "$SNAP_PATH" .
+          EOF
+          CONTAINER_ID=$(docker run -itd \
+          	-v "$PWD:/workspace" \
+          	-e VSCODE_ARCH=$VSCODE_ARCH \
+          	-e APPLICATION_NAME=$APPLICATION_NAME \
+          	-e SNAP_FILENAME=$SNAP_FILENAME $DOCKER_IMAGE_NAME)
+          docker exec -it "$CONTAINER_ID" bash -ex "/workspace/$SNAP_BUILD_SH_NAME"
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
-        shell: bash
-
-      - name: Build snap package
-        uses: addnab/docker-run-action@v3
-        with:
-          image: "snapcore/snapcraft:stable"
-          options: "-v ${{ github.workspace }}:/workspace \
-            -e VSCODE_ARCH=${{ env.VSCODE_ARCH }} \
-            -e APPLICATION_NAME=${{ env.APPLICATION_NAME }} \
-            -e SNAP_FILENAME=${{ env.SNAP_FILENAME }}"
-          run: |
-            set -x
-            cd /workspace || exit
-            # Make sure we get latest packages
-            sudo apt-get update
-            sudo apt-get upgrade -y
-            sudo apt-get install -y curl apt-transport-https ca-certificates
-            # Get snapcraft version
-            snapcraft --version
-            SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
-            SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
-            case $VSCODE_ARCH in
-            x64) SNAP_ARCH="amd64" ;;
-            *) SNAP_ARCH="$VSCODE_ARCH" ;;
-            esac
-            (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
-            	sudo --preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
-            	snap pack prime --compression=lzo --filename="$SNAP_PATH")
-            mv "$SNAP_PATH" .
-          shell: bash
-          registry: docker.io
-
-      - name: Build AppImage package
-        if: ${{ env.VSCODE_ARCH == 'x64' }}
-        run: |
-          echo "::group::Start file server"
-          npm install -g @liangchengj/nfserv && nfserv >nfserv.log 2>&1 &
-          sleep 3 && cat nfserv.log
-          echo "::endgroup::"
-          DOWNLOAD_URL="http://127.0.0.1:9934/$DEB_FILENAME"
-          echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
-          LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
-          echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
-          echo "::group::Downloading pkg2appimage tool"
-          GITHUB_API_URL=https://api.github.com/repos/AppImage/pkg2appimage/releases
-          curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
-          BROWSER_DOWNLOAD_URL=$(node -p "require('./releases.json')[0]['assets'][0]['browser_download_url']")
-          curl -L -O -s "$BROWSER_DOWNLOAD_URL" && chmod u+x "$PWD/${BROWSER_DOWNLOAD_URL##*/}"
-          echo "::endgroup::"
-          echo "::group::Building AppImage"
-          "$PWD/${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
-          APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}-$VERSION.AppImage
-          mv out/*.AppImage "$APPIMAGE_FILENAME"
-          echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
 
