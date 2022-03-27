@@ -476,18 +476,18 @@ jobs:
       - name: Build server packages
         if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
-          yarn gulp vscode-reh-darwin-${VSCODE_ARCH}-min-ci
-          SERVER_BUILD_NAME="vscode-server-darwin-${VSCODE_ARCH}"
+          yarn gulp vscode-reh-darwin-min-ci
+          SERVER_BUILD_NAME="vscode-server-darwin"
           SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
-          (cd .. && cp -r vscode-reh-darwin-${VSCODE_ARCH} $SERVER_BUILD_NAME)
+          (cd .. && cp -r vscode-reh-darwin $SERVER_BUILD_NAME)
           (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
           mv ../$SERVER_ZIP_NAME .
           echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
-          yarn gulp vscode-reh-web-darwin-${VSCODE_ARCH}-min-ci
-          SERVER_WEB_BUILD_NAME="vscode-server-darwin-${VSCODE_ARCH}-web"
+          yarn gulp vscode-reh-web-darwin-min-ci
+          SERVER_WEB_BUILD_NAME="vscode-server-darwin-web"
           SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
-          (cd .. && cp -r vscode-reh-web-darwin-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
+          (cd .. && cp -r vscode-reh-web-darwin $SERVER_WEB_BUILD_NAME)
           (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
           mv ../$SERVER_WEB_ZIP_NAME .
           echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
