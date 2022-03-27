@@ -77,6 +77,7 @@ function prepareDebPackage(arch) {
 			function () {
 				const that = this;
 				gulp.src('resources/linux/debian/control.template', { base: '.' })
+					.pipe(replace('@@NAME_LONG@@', product.nameLong))
 					.pipe(replace('@@NAME@@', product.applicationName))
 					.pipe(replace('@@VERSION@@', packageJson.version + '-' + linuxPackageRevision))
 					.pipe(replace('@@ARCHITECTURE@@', debArch))
