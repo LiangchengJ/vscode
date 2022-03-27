@@ -371,15 +371,24 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            ${{ env.XZ_TARBALL_NAME }}*
-            ${{ env.GZ_TARBALL_NAME }}*
-            ${{ env.RPM_FILENAME }}*
-            ${{ env.DEB_FILENAME }}*
-            ${{ env.SNAP_FILENAME }}*
-            ${{ env.APPIMAGE_FILENAME }}*
-            ${{ env.SERVER_TARBALL_FILENAME }}*
-            ${{ env.SERVER_WEB_TARBALL_FILENAME }}*
-            product.json*
+            ${{ env.XZ_TARBALL_NAME }}
+            ${{ env.XZ_TARBALL_NAME }}.sha512
+            ${{ env.GZ_TARBALL_NAME }}
+            ${{ env.GZ_TARBALL_NAME }}.sha512
+            ${{ env.RPM_FILENAME }}
+            ${{ env.RPM_FILENAME }}.sha512
+            ${{ env.DEB_FILENAME }}
+            ${{ env.DEB_FILENAME }}.sha512
+            ${{ env.SNAP_FILENAME }}
+            ${{ env.SNAP_FILENAME }}.sha512
+            ${{ env.APPIMAGE_FILENAME }}
+            ${{ env.APPIMAGE_FILENAME }}.sha512
+            ${{ env.SERVER_TARBALL_FILENAME }}
+            ${{ env.SERVER_TARBALL_FILENAME }}.sha512
+            ${{ env.SERVER_WEB_TARBALL_FILENAME }}
+            ${{ env.SERVER_WEB_TARBALL_FILENAME }}.sha512
+            product.json
+            product.json.sha512
 
   build-for-macos:
     name: Build for macOS
@@ -501,10 +510,14 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            ${{ env.XZ_TARBALL_NAME }}*
-            ${{ env.ZIP_NAME }}*
-            ${{ env.SERVER_ZIP_NAME }}*
-            ${{ env.SERVER_WEB_ZIP_NAME }}*
+            ${{ env.XZ_TARBALL_NAME }}
+            ${{ env.XZ_TARBALL_NAME }}.sha512
+            ${{ env.ZIP_NAME }}
+            ${{ env.ZIP_NAME }}.sha512
+            ${{ env.SERVER_ZIP_NAME }}
+            ${{ env.SERVER_ZIP_NAME }}.sha512
+            ${{ env.SERVER_WEB_ZIP_NAME }}
+            ${{ env.SERVER_WEB_ZIP_NAME }}.sha512
 
   build-for-windows:
     name: Build for Windows
@@ -643,9 +656,15 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            ${{ env.XZ_TARBALL_NAME }}*
-            ${{ env.ZIP_NAME }}*
-            ${{ env.SYSTEM_SETUP_NAME }}*
-            ${{ env.USER_SETUP_NAME }}*
-            ${{ env.SERVER_ZIP_NAME }}*
-            ${{ env.SERVER_WEB_ZIP_NAME }}*
+            ${{ env.XZ_TARBALL_NAME }}
+            ${{ env.XZ_TARBALL_NAME }}.sha512
+            ${{ env.ZIP_NAME }}
+            ${{ env.ZIP_NAME }}.sha512
+            ${{ env.SYSTEM_SETUP_NAME }}
+            ${{ env.SYSTEM_SETUP_NAME }}.sha512
+            ${{ env.USER_SETUP_NAME }}
+            ${{ env.USER_SETUP_NAME }}.sha512
+            ${{ env.SERVER_ZIP_NAME }}
+            ${{ env.SERVER_ZIP_NAME }}.sha512
+            ${{ env.SERVER_WEB_ZIP_NAME }}
+            ${{ env.SERVER_WEB_ZIP_NAME }}.sha512
