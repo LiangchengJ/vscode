@@ -51,7 +51,7 @@ jobs:
           VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
           echo "CURL_DO_URL=$CURL_DO_URL" >>"$GITHUB_ENV"
-          echo "::set-output name=key::$(echo "$CURL_DO_URL" | sha512sum | awk '{print $1}')"
+          echo "::set-output name=key::$(echo "$CURL_DO_URL#$CACHE_VERSION" | sha512sum | awk '{print $1}')"
         shell: bash
 
       - name: Cache product configurations
@@ -316,11 +316,11 @@ jobs:
           	snap pack prime --compression=lzo --filename="$SNAP_PATH")
           mv "$SNAP_PATH" .
           EOF
-          CONTAINER_ID=$(docker run -d \
+          CONTAINER_ID=$(docker run -itd \
           	-v "$PWD:/workspace" \
           	-e VSCODE_ARCH=$VSCODE_ARCH \
           	-e APPLICATION_NAME=$APPLICATION_NAME \
-          	-e SNAP_FILENAME=$SNAP_FILENAME $DOCKER_IMAGE_NAME)
+          	-e SNAP_FILENAME=$SNAP_FILENAME $DOCKER_IMAGE_NAME bash)
           docker exec "$CONTAINER_ID" bash -ex "/workspace/$SNAP_BUILD_SH_NAME"
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
