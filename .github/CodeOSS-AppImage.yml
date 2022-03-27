@@ -4,7 +4,7 @@
 # by the VSCode team. In the meantime
 # you can easily make your own using this recipe like this on a Debian/Ubuntu system:
 # wget -c "https://github.com/AppImage/pkg2appimage/raw/master/pkg2appimage"
-# bash -ex pkg2appimage CodeOSS-Recipe
+# bash -ex pkg2appimage CodeOSS-AppImage.yml
 
 app: CodeOSS
 
@@ -15,19 +15,22 @@ ingredients:
   dist: trusty
   sources:
     - deb http://archive.ubuntu.com/ubuntu/ trusty main universe
-  script:
-    - wget -c --trust-server-names "$DOWNLOAD_URL"
-    - ls *.deb | cut -d _ -f 2 > VERSION
+  script: |
+    wget -c --trust-server-names "$DOWNLOAD_URL"
+    find "$PWD" -maxdepth 1 -name "${APPLICATION_NAME}_*.deb" | awk -F "_" '{print $2}' >VERSION
 
-script:
-  - cp "usr/share/applications/$APPLICATION_NAME.desktop" .
-  - cp "usr/share/pixmaps/$LINUX_ICON_NAME.png" .
-  - convert "$LINUX_ICON_NAME.png" -resize 512x512 "usr/share/icons/hicolor/512x512/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 256x256 "usr/share/icons/hicolor/256x256/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 128x128 "usr/share/icons/hicolor/128x128/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 64x64 "usr/share/icons/hicolor/64x64/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 48x48 "usr/share/icons/hicolor/48x48/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 32x32 "usr/share/icons/hicolor/32x32/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 24x24 "usr/share/icons/hicolor/24x24/apps/$LINUX_ICON_NAME.png"
-  - convert "$LINUX_ICON_NAME.png" -resize 22x22 "usr/share/icons/hicolor/22x22/apps/$LINUX_ICON_NAME.png"
-  - ( cd usr/bin/ ; ln -s "../share/$APPLICATION_NAME/$APPLICATION_NAME" . )
+script: |
+  cp "usr/share/applications/$APPLICATION_NAME.desktop" .
+  cp "usr/share/pixmaps/$LINUX_ICON_NAME.png" .
+  convert "$LINUX_ICON_NAME.png" -resize 512x512 "usr/share/icons/hicolor/512x512/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 256x256 "usr/share/icons/hicolor/256x256/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 128x128 "usr/share/icons/hicolor/128x128/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 64x64 "usr/share/icons/hicolor/64x64/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 48x48 "usr/share/icons/hicolor/48x48/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 32x32 "usr/share/icons/hicolor/32x32/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 24x24 "usr/share/icons/hicolor/24x24/apps/$LINUX_ICON_NAME.png"
+  convert "$LINUX_ICON_NAME.png" -resize 22x22 "usr/share/icons/hicolor/22x22/apps/$LINUX_ICON_NAME.png"
+  (
+  	cd usr/bin/ || exit
+  	ln -s ../share/$APPLICATION_NAME/$APPLICATION_NAME .
+  )
