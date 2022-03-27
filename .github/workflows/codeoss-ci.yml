@@ -227,7 +227,7 @@ jobs:
           (cd .. && tar -zcf "$GZ_TARBALL_NAME" CodeOSS-linux-${VSCODE_ARCH})
           mv ../"$GZ_TARBALL_NAME" .
 
-          echo "::group::Build deb, rpm packages"
+          echo "::group::Build rpm package"
           yarn gulp vscode-linux-${VSCODE_ARCH}-build-rpm
           case $VSCODE_ARCH in
           x64) RPM_ARCH="x86_64" ;;
@@ -239,7 +239,9 @@ jobs:
           RPM_FILENAME="$(cd $RPM_OUT_DIR && (ls ./*.rpm) | awk -F "./" 'NR==1{print $2}')"
           mv "$RPM_OUT_DIR/$RPM_FILENAME" .
           echo "RPM_FILENAME=$RPM_FILENAME" >>"$GITHUB_ENV"
+          echo "::endgroup::"
 
+          echo "::group::Build deb package"
           yarn gulp vscode-linux-${VSCODE_ARCH}-build-deb
           case $VSCODE_ARCH in
           x64) DEB_ARCH="amd64" ;;
@@ -250,46 +252,16 @@ jobs:
           mv "$DEB_OUT_DIR/$DEB_FILENAME" .
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
-        shell: bash
 
-      - name: Prepare snap package
-        if: ${{ env.VSCODE_ARCH != 'armhf' }}
-        run: |
-          yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
-          SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
+          echo "::group::Build snap package"
+          sudo apt-get install snapcraft -y
+          yarn gulp vscode-linux-$VSCODE_ARCH-build-snap
+          SNAP_OUT_DIR=.build/linux/snap/$VSCODE_ARCH/$APPLICATION_NAME-$VSCODE_ARCH
+          SNAP_FILENAME="$(cd $SNAP_OUT_DIR && (ls ./*.snap) | awk -F "./" 'NR==1{print $2}')"
+          mv "$SNAP_OUT_DIR/$SNAP_FILENAME" .
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
+          echo "::endgroup::"
         shell: bash
-
-      - name: Build snap package
-        if: ${{ env.VSCODE_ARCH != 'armhf' }}
-        uses: addnab/docker-run-action@v3
-        with:
-          image: "snapcore/snapcraft:stable"
-          options: "-v ${{ github.workspace }}:/workspace \
-            -e VSCODE_ARCH=${{ env.VSCODE_ARCH }} \
-            -e APPLICATION_NAME=${{ env.APPLICATION_NAME }} \
-            -e SNAP_FILENAME=${{ env.SNAP_FILENAME }}"
-          run: |
-            set -x
-            cd /workspace
-            # Get snapcraft version
-            snapcraft --version
-            # Make sure we get latest packages
-            sudo apt-get update
-            sudo apt-get upgrade -y
-            sudo apt-get install -y curl apt-transport-https ca-certificates
-            SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
-            SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
-            case $VSCODE_ARCH in
-            x64) SNAPCRAFT_TARGET_ARGS="" ;;
-            *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
-            esac
-            (cd "$SNAP_ROOT"/$APPLICATION_NAME-$VSCODE_ARCH &&
-            	sudo --preserve-env snapcraft prime "$SNAPCRAFT_TARGET_ARGS" &&
-            	snap pack prime --compression=lzo --filename="$SNAP_PATH")
-            mv "$SNAP_PATH" .
-          shell: bash
-          registry: docker.io
 
       - name: Build AppImage package
         if: ${{ env.VSCODE_ARCH == 'x64' }}
