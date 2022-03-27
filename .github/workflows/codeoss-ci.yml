@@ -296,34 +296,26 @@ jobs:
         run: |
           echo "::group::Install deno"
           curl -fsSL https://deno.land/x/install/install.sh | sh
-          DENO_INSTALL="$HOME/.deno"
-          export DENO_INSTALL
-          PATH="$DENO_INSTALL/bin:$PATH"
-          export PATH
+          echo "$HOME/.deno/bin" >>"$GITHUB_PATH"
           echo "::endgroup::"
-
           echo "::group::Start deno file server"
           deno run --allow-read --allow-net https://deno.land/std@0.131.0/http/file_server.ts >dfserv.log 2>&1 &
           sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
           echo "::endgroup::"
-
           DOWNLOAD_URL="http://127.0.0.1:4507/$DEB_FILENAME"
           echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
-          echo "APPLICATION_NAME >>> $APPLICATION_NAME" && export APPLICATION_NAME
           LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
           echo "LINUX_ICON_NAME >>> $LINUX_ICON_NAME" && export LINUX_ICON_NAME
-
           echo "::group::Downloading pkg2appimage tool"
           GITHUB_API_URL=https://api.github.com/repos/AppImage/pkg2appimage/releases
           curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
           BROWSER_DOWNLOAD_URL=$(node -p "require('./releases.json')[0]['assets'][0]['browser_download_url']")
-          curl -L -O -s "$BROWSER_DOWNLOAD_URL"
+          curl -L -O -s "$BROWSER_DOWNLOAD_URL" && chmod u+x "$PWD/${BROWSER_DOWNLOAD_URL##*/}"
           echo "::endgroup::"
-
           echo "::group::Building AppImage"
-          chmod u+x ./"${BROWSER_DOWNLOAD_URL##*/}" && ./"${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
+          "$PWD/${BROWSER_DOWNLOAD_URL##*/}" .github/CodeOSS-AppImage.yml
           APPIMAGE_FILENAME=CodeOSS-linux-${VSCODE_ARCH}-${{ needs.generate-product-configurations.outputs.version }}.AppImage
-          mv out/*.AppImage $APPIMAGE_FILENAME
+          mv out/*.AppImage "$APPIMAGE_FILENAME"
           echo "APPIMAGE_FILENAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
