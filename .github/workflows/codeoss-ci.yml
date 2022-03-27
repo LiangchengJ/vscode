@@ -272,27 +272,20 @@ jobs:
           run: |
             set -x
             cd /workspace || exit
-            # Get snapcraft version
-            snapcraft --version
             # Make sure we get latest packages
             sudo apt-get update
             sudo apt-get upgrade -y
             sudo apt-get install -y curl apt-transport-https ca-certificates
-            # Yarn
-            curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-            echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-            sudo apt-get update
-            sudo apt-get install -y yarn
-            # Install build dependencies
-            (cd build && yarn)
+            # Get snapcraft version
+            snapcraft --version
             SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
             SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
             case $VSCODE_ARCH in
-            x64) SNAPCRAFT_TARGET_ARGS="" ;;
-            *) SNAPCRAFT_TARGET_ARGS="--target-arch $VSCODE_ARCH" ;;
+            x64) SNAP_ARCH="amd64" ;;
+            *) SNAP_ARCH="$VSCODE_ARCH" ;;
             esac
             (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
-            	sudo --preserve-env snapcraft prime $SNAPCRAFT_TARGET_ARGS &&
+            	sudo --preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
             	snap pack prime --compression=lzo --filename="$SNAP_PATH")
             mv "$SNAP_PATH" .
           shell: bash
