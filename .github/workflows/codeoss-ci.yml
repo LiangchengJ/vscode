@@ -491,7 +491,7 @@ jobs:
       - name: Build client packages
         run: |
           echo "::group::Build binary package"
-          yarn gulp vscode-win32-${VSCODE_ARCH}-min-cli
+          yarn gulp vscode-win32-${VSCODE_ARCH}-min-ci
           BUILD=CodeOSS-win32-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-win32-${VSCODE_ARCH} $BUILD)
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
