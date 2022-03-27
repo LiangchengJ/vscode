@@ -315,12 +315,12 @@ jobs:
           	snap pack prime --compression=lzo --filename="$SNAP_PATH")
           mv "$SNAP_PATH" .
           EOF
-          CONTAINER_ID=$(docker run -itd \
+          CONTAINER_ID=$(docker run -d \
           	-v "$PWD:/workspace" \
           	-e VSCODE_ARCH=$VSCODE_ARCH \
           	-e APPLICATION_NAME=$APPLICATION_NAME \
           	-e SNAP_FILENAME=$SNAP_FILENAME $DOCKER_IMAGE_NAME)
-          docker exec -it "$CONTAINER_ID" bash -ex "/workspace/$SNAP_BUILD_SH_NAME"
+          docker exec "$CONTAINER_ID" bash -ex "/workspace/$SNAP_BUILD_SH_NAME"
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
