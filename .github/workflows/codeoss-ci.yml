@@ -26,16 +26,19 @@ jobs:
     name: Generate product configurations
     runs-on: windows-latest
     outputs:
-      product-json: ${{ steps.product.outputs.product-json }}
-      win32vem-xml: ${{ steps.product.outputs.win32vem-xml }}
-      version: ${{ steps.product.outputs.version }}
+      product-json: ${{ steps.write-outputs.outputs.product-json }}
+      win32vem-xml: ${{ steps.write-outputs.outputs.win32vem-xml }}
+      application-name: ${{ steps.write-outputs.outputs.application-name }}
+      vscode-quality: ${{ steps.write-outputs.outputs.vscode-quality }}
+      version: ${{ steps.write-outputs.outputs.version }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - id: product
-        name: Do generating ...
+
+      - name: Compute product configurations cache key
+        id: compute-product-configurations-cache-key
         run: |
           GITHUB_API_URL=https://api.github.com/repos/microsoft/vscode/releases
           curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
@@ -46,19 +49,38 @@ jobs:
           UNIVERSAL_ZIP_VERSION=$VERSION
           VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
-          echo "CURL_DO_URL >>> $CURL_DO_URL"
+          echo "CURL_DO_URL=$CURL_DO_URL" >>"$GITHUB_ENV"
+          echo "::set-output name=key::$(echo "$CURL_DO_URL" | sha512sum | awk '{print $1}')"
+        shell: bash
 
+      - name: Cache product configurations
+        id: cache-product-configurations
+        uses: actions/cache@v2
+        with:
+          path: |
+            product.json
+            resources/win32/VisualElementsManifest.xml
+          key: "${{ runner.os }}${{ steps.compute-product-configurations-cache-key.outputs.key }}"
+
+      - name: Do generating ...
+        if: ${{ steps.cache-product-configurations.outputs.cache-hit != 'true' }}
+        run: |
           VS_ZIP_NAME=VSCode-darwin-universal.zip
           curl -L -s -o $VS_ZIP_NAME "$CURL_DO_URL"
           npm install extract-zip@2.0.1 -g
           extract-zip $VS_ZIP_NAME
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
           node ./.github/updateProduct.js
-          echo "::set-output name=product-json::$(cat product.json)"
-
           node ./.github/updateWin32VisualElementsManifest.js
-          echo "::set-output name=win32vem-xml::$(cat resources/win32/VisualElementsManifest.xml)"
+        shell: bash
 
+      - name: Write outputs
+        id: write-outputs
+        run: |
+          echo "::set-output name=product-json::$(cat product.json)"
+          echo "::set-output name=win32vem-xml::$(cat resources/win32/VisualElementsManifest.xml)"
+          echo "::set-output name=application-name::$(node -p "require('./product.json')['applicationName']")"
+          echo "::set-output name=vscode-quality::$(node -p "require('./product.json')['quality']||''")"
           echo "::set-output name=version::$VERSION"
         shell: bash
 
@@ -137,16 +159,14 @@ jobs:
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          NPM_ARCH=${{ matrix.arch }}
+          VSCODE_ARCH=${{ matrix.arch }}
+          echo "VSCODE_ARCH=$VSCODE_ARCH" >>"$GITHUB_ENV"
+          NPM_ARCH=$VSCODE_ARCH
           [ "${NPM_ARCH}" == "armhf" ] && NPM_ARCH=armv7l
           echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
-          echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
-          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
-          echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
-          VERSION=${{ needs.generate-product-configurations.outputs.version }}
-          echo "VERSION=$VERSION" >>"$GITHUB_ENV"
+          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+          echo "VSCODE_QUALITY=${{ needs.generate-product-configurations.outputs.vscode-quality }}" >>"$GITHUB_ENV"
+          echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Setup system services
@@ -250,23 +270,40 @@ jobs:
           echo "DEB_FILENAME=$DEB_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
 
-          echo "::group::Build snap package"
-          sudo apt-get install -y snapcraft
           yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
-          SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
-          SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
-          case $VSCODE_ARCH in
-          x64) SNAP_ARCH="amd64" ;;
-          *) SNAP_ARCH="$VSCODE_ARCH" ;;
-          esac
-          (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
-          	--preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
-          	snap pack prime --compression=lzo --filename="$SNAP_PATH")
-          mv "$SNAP_PATH" .
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
-          echo "::endgroup::"
         shell: bash
+
+      - name: Build snap package
+        uses: addnab/docker-run-action@v3
+        with:
+          image: "snapcore/snapcraft:stable"
+          options: "-v ${{ github.workspace }}:/workspace \
+            -e VSCODE_ARCH=${{ env.VSCODE_ARCH }} \
+            -e APPLICATION_NAME=${{ env.APPLICATION_NAME }} \
+            -e SNAP_FILENAME=${{ env.SNAP_FILENAME }}"
+          run: |
+            set -x
+            cd /workspace || exit
+            # Make sure we get latest packages
+            sudo apt-get update
+            sudo apt-get upgrade -y
+            sudo apt-get install -y curl apt-transport-https ca-certificates
+            # Get snapcraft version
+            snapcraft --version
+            SNAP_ROOT="$PWD/.build/linux/snap/${VSCODE_ARCH}"
+            SNAP_PATH="$SNAP_ROOT/$SNAP_FILENAME"
+            case $VSCODE_ARCH in
+            x64) SNAP_ARCH="amd64" ;;
+            *) SNAP_ARCH="$VSCODE_ARCH" ;;
+            esac
+            (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
+            	sudo --preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
+            	snap pack prime --compression=lzo --filename="$SNAP_PATH")
+            mv "$SNAP_PATH" .
+          shell: bash
+          registry: docker.io
 
       - name: Build AppImage package
         if: ${{ env.VSCODE_ARCH == 'x64' }}
@@ -358,49 +395,103 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Update product configurations
-        run: echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+        run: |
+          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+          echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
+          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
         shell: bash
 
-      - name: Build and Package
+      - name: Download compilation output
+        uses: actions/download-artifact@v3
+        with:
+          name: Compilation
+
+      - name: Extract compilation output
+        run: tar -xJf compilation.tar.xz
+        shell: bash
+
+      - name: Compute node modules cache key
+        id: compute-node-modules-cache-key
+        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
+
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
+
+      - name: Install dependencies
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
-          npm_config_arch=${{ matrix.arch }}
+          npm install -g node-gyp@latest
+          npm_config_arch=$VSCODE_ARCH
           export npm_config_arch
-          yarn
-          yarn gulp vscode-darwin-${{ matrix.arch }}-min
-          (cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }})
-          (cd .. && tar -cJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }})
-          mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
+          npm_config_node_gyp=$(which node-gyp)
+          export npm_config_node_gyp
+          # Electron <= 13 does not ship with correct config.gypi headers,
+          # remove this once we update to newer versions.
+          # Refs https://github.com/nodejs/node-gyp/pull/2497
+          export npm_config_force_process_config=true
 
+          for i in {1..3}; do
+          	yarn --frozen-lockfile && break
+          	if [ "$i" -eq 3 ]; then
+          		echo "Yarn failed too many times" >&2
+          		exit 1
+          	fi
+          	echo "Yarn failed $i, trying again..."
+          done
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
+
+      - name: Build client packages
+        run: |
+          yarn gulp vscode-darwin-${VSCODE_ARCH}-min-ci
+          BUILD=CodeOSS-darwin-${VSCODE_ARCH}
+          (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
+          XZ_TARBALL_NAME=$BUILD.tar.xz
+          (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
+          mv ../$XZ_TARBALL_NAME .
+          echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           npm i -g @ffflorian/jszip-cli@3.1.6
-          (cd .. && jszip-cli add CodeOSS-darwin-${{ matrix.arch }} --output CodeOSS-darwin-${{ matrix.arch }}.zip)
-          mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
+          ZIP_NAME=$BUILD.zip
+          (cd .. && jszip-cli add $BUILD --output $ZIP_NAME)
+          mv ../$ZIP_NAME .
+          echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
 
-          if [ "${{ matrix.arch }}" == "x64" ]; then
-          	yarn gulp vscode-reh-darwin-min
-          	(cd .. && mv vscode-reh-darwin vscode-server-darwin)
-          	(cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip)
-          	mv ../vscode-server-darwin.zip .
+      - name: Build server packages
+        if: ${{ env.VSCODE_ARCH == 'x64' }}
+        run: |
+          yarn gulp vscode-reh-darwin-${VSCODE_ARCH}-min-ci
+          SERVER_BUILD_NAME="vscode-server-darwin-${VSCODE_ARCH}"
+          SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
+          (cd .. && cp -r vscode-reh-darwin-${VSCODE_ARCH} $SERVER_BUILD_NAME)
+          (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
+          mv ../$SERVER_ZIP_NAME .
+          echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
-          	yarn gulp vscode-reh-web-darwin-min
-          	(cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web)
-          	(cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip)
-          	mv ../vscode-server-darwin-web.zip .
-          fi
+          yarn gulp vscode-reh-web-darwin-${VSCODE_ARCH}-min-ci
+          SERVER_WEB_BUILD_NAME="vscode-server-darwin-${VSCODE_ARCH}-web"
+          SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
+          (cd .. && cp -r vscode-reh-web-darwin-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
+          (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
+          mv ../$SERVER_WEB_ZIP_NAME .
+          echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
-          npm install -g checksum
-          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' >CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
-          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.zip | awk '{print $1}' >CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
-
-          if [ -f "vscode-server-darwin.zip" ]; then
-          	checksum -a sha512 vscode-server-darwin.zip | awk '{print $1}' >vscode-server-darwin.zip.sha512
-          fi
-
-          if [ -f "vscode-server-darwin-web.zip" ]; then
-          	checksum -a sha512 vscode-server-darwin-web.zip | awk '{print $1}' >vscode-server-darwin-web.zip.sha512
-          fi
+          npm install -g checksum@1.0.0
+          gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
+          [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
+          [ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME"
+          [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
+          ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
         shell: bash
 
       - name: Publish packages
@@ -410,14 +501,10 @@ jobs:
           tag_name: dev_test_codeoss_ci
           prerelease: true
           files: |
-            CodeOSS-darwin-${{ matrix.arch }}.tar.xz
-            CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
-            CodeOSS-darwin-${{ matrix.arch }}.zip
-            CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
-            vscode-server-darwin.zip
-            vscode-server-darwin.zip.sha512
-            vscode-server-darwin-web.zip
-            vscode-server-darwin-web.zip.sha512
+            ${{ env.XZ_TARBALL_NAME }}*
+            ${{ env.ZIP_NAME }}*
+            ${{ env.SERVER_ZIP_NAME }}*
+            ${{ env.SERVER_WEB_ZIP_NAME }}*
 
   build-for-windows:
     name: Build for Windows
@@ -440,12 +527,8 @@ jobs:
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
           echo '${{ needs.generate-product-configurations.outputs.win32vem-xml }}' >resources/win32/VisualElementsManifest.xml
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          VSCODE_QUALITY=$(node -p "require('./product.json')['quality']||''")
-          echo "VSCODE_QUALITY=$VSCODE_QUALITY" >>"$GITHUB_ENV"
-          APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']")
-          echo "APPLICATION_NAME=$APPLICATION_NAME" >>"$GITHUB_ENV"
-          VERSION=${{ needs.generate-product-configurations.outputs.version }}
-          echo "VERSION=$VERSION" >>"$GITHUB_ENV"
+          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+          echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
         shell: bash
 
       - name: Download compilation output
@@ -523,7 +606,7 @@ jobs:
         shell: bash
 
       - name: Build server packages
-        if: ${{ matrix.arch != 'arm64' }}
+        if: ${{ env.VSCODE_ARCH != 'arm64' }}
         run: |
           yarn gulp vscode-reh-win32-${VSCODE_ARCH}-min-ci
           SERVER_BUILD_NAME="vscode-server-win32-${VSCODE_ARCH}"
@@ -550,7 +633,7 @@ jobs:
           [ -f "$SYSTEM_SETUP_NAME" ] && gensha512 "$SYSTEM_SETUP_NAME"
           [ -f "$USER_SETUP_NAME" ] && gensha512 "$USER_SETUP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
-          [ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME"
+          ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
         shell: bash
 
       - name: Publish packages
