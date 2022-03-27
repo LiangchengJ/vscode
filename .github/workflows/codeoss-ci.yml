@@ -261,7 +261,7 @@ jobs:
           *) SNAP_ARCH="$VSCODE_ARCH" ;;
           esac
           (cd "$SNAP_ROOT/$APPLICATION_NAME-$VSCODE_ARCH" &&
-          	sudo --preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
+          	--preserve-env snapcraft prime --target-arch "$SNAP_ARCH" &&
           	snap pack prime --compression=lzo --filename="$SNAP_PATH")
           mv "$SNAP_PATH" .
           echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
