@@ -20,6 +20,9 @@ env:
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
   CACHE_VERSION: 1648396992
+  PUBLISH_NAME: dev_test_part16
+  PUBLISH_TAG_NAME: dev_test_part16
+  PRE_RELEASE: true
 
 jobs:
   generate-product-configurations:
@@ -359,9 +362,9 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part16
-          tag_name: dev_test_part16
-          prerelease: true
+          name: ${{ env.PUBLISH_NAME }}
+          tag_name: ${{ env.PUBLISH_TAG_NAME }}
+          prerelease: ${{ env.PRE_RELEASE }}
           files: |
             ${{ env.XZ_TARBALL_NAME }}
             ${{ env.XZ_TARBALL_NAME }}.sha512
@@ -498,9 +501,9 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part16
-          tag_name: dev_test_part16
-          prerelease: true
+          name: ${{ env.PUBLISH_NAME }}
+          tag_name: ${{ env.PUBLISH_TAG_NAME }}
+          prerelease: ${{ env.PRE_RELEASE }}
           files: |
             ${{ env.XZ_TARBALL_NAME }}
             ${{ env.XZ_TARBALL_NAME }}.sha512
@@ -657,9 +660,9 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_part16
-          tag_name: dev_test_part16
-          prerelease: true
+          name: ${{ env.PUBLISH_NAME }}
+          tag_name: ${{ env.PUBLISH_TAG_NAME }}
+          prerelease: ${{ env.PRE_RELEASE }}
           files: |
             ${{ env.XZ_TARBALL_NAME }}
             ${{ env.XZ_TARBALL_NAME }}.sha512
