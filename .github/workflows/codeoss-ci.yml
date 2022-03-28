@@ -320,6 +320,7 @@ jobs:
           	-e VSCODE_ARCH=$VSCODE_ARCH \
           	-e SNAP_FILENAME=$SNAP_FILENAME \
           	--entrypoint=bash $DOCKER_IMAGE_NAME -ex "/workspace/$SNAP_BUILD_SH_NAME"
+          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
 
