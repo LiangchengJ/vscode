@@ -360,8 +360,8 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_codeoss_ci
-          tag_name: dev_test_codeoss_ci
+          name: dev_test_part16
+          tag_name: dev_test_part16
           prerelease: true
           files: |
             ${{ env.XZ_TARBALL_NAME }}
@@ -499,8 +499,8 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_codeoss_ci
-          tag_name: dev_test_codeoss_ci
+          name: dev_test_part16
+          tag_name: dev_test_part16
           prerelease: true
           files: |
             ${{ env.XZ_TARBALL_NAME }}
@@ -658,8 +658,8 @@ jobs:
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
-          name: dev_test_codeoss_ci
-          tag_name: dev_test_codeoss_ci
+          name: dev_test_part16
+          tag_name: dev_test_part16
           prerelease: true
           files: |
             ${{ env.XZ_TARBALL_NAME }}
