@@ -296,7 +296,7 @@ jobs:
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
           DOCKER_IMAGE_NAME="docker.io/snapcore/snapcraft:stable"
           SNAP_BUILD_SH_NAME="snap-build-$BUILD_VERSION.sh"
-          cat <<EOF >"$PWD/$SNAP_BUILD_SH_NAME"
+          cat <<'EOF' >"$PWD/$SNAP_BUILD_SH_NAME"
           cd /workspace || exit
           # Make sure we get latest packages
           sudo apt-get update
