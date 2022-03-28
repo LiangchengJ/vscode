@@ -71,8 +71,7 @@ jobs:
           npm install extract-zip@2.0.1 -g
           extract-zip $VS_ZIP_NAME
           cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/updateProduct.js
-          node ./.github/updateWin32VisualElementsManifest.js
+          node ./.github/generateProductConfigurations.js
         shell: bash
 
       - name: Write outputs
