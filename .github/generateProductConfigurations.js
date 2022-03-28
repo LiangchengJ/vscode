@@ -25,7 +25,7 @@ function generateProductJson() {
   const product = require(`../${outputFileName}`);
   const vsProduct = require(`../vs-${outputFileName}`);
 
-  product["nameShort"] = _replaceName(product["nameShort"]);
+  product["nameShort"] = _replaceName(product["nameShort"]).replace(" ", "");
   product["nameLong"] = _replaceName(product["nameLong"]);
   product["applicationName"] = _replaceName(product["applicationName"]);
   product["win32MutexName"] = "codeoss";
@@ -105,7 +105,7 @@ function generateProductJson() {
 function generateWin32VisualElementsManifest() {
   const outputFileName = "VisualElementsManifest.xml";
   // @ts-ignore
-  const _replaceName = (name) => name.replace(/-[ ]/, "");
+  const _replaceName = (name) => name.replace(/[ ]-[ ]/, "");
 
   const visualElementsManifestXmlPath = path.join(
     process.cwd(),
