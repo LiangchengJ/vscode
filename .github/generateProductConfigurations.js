@@ -11,11 +11,6 @@ const path = require("path");
 const process = require("process");
 const child_process = require("child_process");
 
-/**
- * @param {string} name
- */
-const replaceName = (name) => name.replace(/-[ ]*/, "");
-
 const getCommitHash = () =>
   child_process.execSync("git log -1 --format='%H'")
     .toString()
@@ -24,13 +19,15 @@ const getCommitHash = () =>
 
 function generateProductJson() {
   const outputFileName = "product.json";
+  // @ts-ignore
+  const _replaceName = (name) => name.replace(/-[ ]*/, "");
 
   const product = require(`../${outputFileName}`);
   const vsProduct = require(`../vs-${outputFileName}`);
 
-  product["nameShort"] = replaceName(product["nameShort"]);
-  product["nameLong"] = replaceName(product["nameLong"]);
-  product["applicationName"] = replaceName(product["applicationName"]);
+  product["nameShort"] = _replaceName(product["nameShort"]);
+  product["nameLong"] = _replaceName(product["nameLong"]);
+  product["applicationName"] = _replaceName(product["applicationName"]);
   product["win32MutexName"] = "codeoss";
   product["win32DirName"] = vsProduct["win32DirName"];
   // product["win32RegValueName"] = vsProduct["win32RegValueName"];
@@ -40,7 +37,7 @@ function generateProductJson() {
   product["win32UserAppId"] = vsProduct["win32UserAppId"];
   product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
   product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
-  product["win32ShellNameShort"] = replaceName(product["win32ShellNameShort"]);
+  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"]);
   product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
   product["darwinExecutable"] = "CodeOSS";
   product["dataFolderName"] = `.${product["applicationName"]}`;
@@ -107,6 +104,8 @@ function generateProductJson() {
 
 function generateWin32VisualElementsManifest() {
   const outputFileName = "VisualElementsManifest.xml";
+  // @ts-ignore
+  const _replaceName = (name) => name.replace(/-[ ]/, "");
 
   const visualElementsManifestXmlPath = path.join(
     process.cwd(),
@@ -119,7 +118,7 @@ function generateWin32VisualElementsManifest() {
 
   fs.writeFileSync(
     visualElementsManifestXmlPath,
-    replaceName(contents.toString()),
+    _replaceName(contents.toString()),
   );
 
   console.log(`Generate "${outputFileName}" successfully!`);
