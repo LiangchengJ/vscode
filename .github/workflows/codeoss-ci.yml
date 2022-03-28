@@ -294,6 +294,7 @@ jobs:
           set -x
           yarn gulp vscode-linux-$VSCODE_ARCH-prepare-snap
           SNAP_FILENAME="$APPLICATION_NAME-$VSCODE_QUALITY-$VSCODE_ARCH-$BUILD_VERSION.snap"
+          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           DOCKER_IMAGE_NAME="docker.io/snapcore/snapcraft:stable"
           SNAP_BUILD_SH_NAME="snap-build-$BUILD_VERSION.sh"
           cat <<'EOF' >"$PWD/$SNAP_BUILD_SH_NAME"
@@ -320,7 +321,6 @@ jobs:
           	-e VSCODE_ARCH=$VSCODE_ARCH \
           	-e SNAP_FILENAME=$SNAP_FILENAME \
           	--entrypoint=bash $DOCKER_IMAGE_NAME -ex "/workspace/$SNAP_BUILD_SH_NAME"
-          echo "SNAP_FILENAME=$SNAP_FILENAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
         shell: bash
 
