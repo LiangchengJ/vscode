@@ -540,10 +540,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	weight: KeybindingWeight.EditorContrib - 1000,
 	handler(accessor: ServicesAccessor) {
 		const layoutService = accessor.get(IWorkbenchLayoutService);
-		const contextKeyService = accessor.get(IContextKeyService);
-		if (InEditorZenModeContext.getValue(contextKeyService)) {
-			layoutService.toggleZenMode();
-		}
+		layoutService.toggleZenMode();
 	},
 	when: InEditorZenModeContext,
 	primary: KeyChord(KeyCode.Escape, KeyCode.Escape)

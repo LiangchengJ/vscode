@@ -17,6 +17,7 @@
     "findTextInFiles",
     "fsChunks",
     "inlineCompletions",
+    "markdownStringBaseUri",
     "notebookCellExecutionState",
     "notebookConcatTextDocument",
     "notebookContentProvider",
@@ -46,6 +47,7 @@
     "textSearchProvider",
     "timeline",
     "tokenInformation",
+    "treeViewDragAndDrop",
     "treeViewReveal",
     "workspaceTrust",
     "telemetry"

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as dom from 'vs/base/browser/dom';
-import { addMatchMediaChangeListener } from 'vs/base/browser/browser';
 import { Color } from 'vs/base/common/color';
 import { Emitter } from 'vs/base/common/event';
 import { FontStyle, TokenizationRegistry, TokenMetadata } from 'vs/editor/common/languages';
@@ -253,7 +252,7 @@ export class StandaloneThemeService extends Disposable implements IStandaloneThe
 			this._updateCSS();
 		});
 
-		addMatchMediaChangeListener('(forced-colors: active)', () => {
+		dom.addMatchMediaChangeListener('(forced-colors: active)', () => {
 			this._updateActualTheme();
 		});
 	}

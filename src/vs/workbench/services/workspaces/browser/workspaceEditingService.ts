@@ -43,12 +43,12 @@ export class BrowserWorkspaceEditingService extends AbstractWorkspaceEditingServ
 		super(jsonEditingService, contextService, configurationService, notificationService, commandService, fileService, textFileService, workspacesService, environmentService, fileDialogService, dialogService, hostService, uriIdentityService, workspaceTrustManagementService);
 	}
 
-	async enterWorkspace(workspaceUri: URI): Promise<void> {
-		const result = await this.doEnterWorkspace(workspaceUri);
+	async enterWorkspace(path: URI): Promise<void> {
+		const result = await this.doEnterWorkspace(path);
 		if (result) {
 
 			// Open workspace in same window
-			await this.hostService.openWindow([{ workspaceUri }], { forceReuseWindow: true });
+			await this.hostService.openWindow([{ workspaceUri: path }], { forceReuseWindow: true });
 		}
 	}
 }

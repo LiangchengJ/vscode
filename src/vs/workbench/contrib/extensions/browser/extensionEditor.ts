@@ -824,7 +824,7 @@ export class ExtensionEditor extends EditorPane {
 						height: 40px;
 						right: 25px;
 						bottom: 25px;
-						background-color:var(--vscode-button-background);
+						background-color:#444444;
 						border-radius: 50%;
 						cursor: pointer;
 						box-shadow: 1px 1px 1px rgba(0,0,0,.25);
@@ -835,7 +835,7 @@ export class ExtensionEditor extends EditorPane {
 					}
 
 					#scroll-to-top:hover {
-						background-color:var(--vscode-button-hoverBackground);
+						background-color:#007acc;
 						box-shadow: 2px 2px 2px rgba(0,0,0,.25);
 					}
 

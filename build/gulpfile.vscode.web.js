@@ -90,6 +90,7 @@ const createVSCodeWebProductConfigurationPatcher = (product) => {
 		if (path.endsWith('vs/platform/product/common/product.js')) {
 			const productConfiguration = JSON.stringify({
 				...product,
+				extensionAllowedProposedApi: [...product.extensionAllowedProposedApi],
 				version,
 				commit,
 				date: buildDate
@@ -234,7 +235,7 @@ const compileWebExtensionsBuildTask = task.define('compile-web-extensions-build'
 ));
 gulp.task(compileWebExtensionsBuildTask);
 
-const dashed = (/** @type {string} */ str) => (str ? `-${str}` : ``);
+const dashed = (str) => (str ? `-${str}` : ``);
 
 ['', 'min'].forEach(minified => {
 	const sourceFolderName = `out-vscode-web${dashed(minified)}`;

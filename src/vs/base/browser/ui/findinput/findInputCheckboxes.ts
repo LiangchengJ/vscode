@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Toggle } from 'vs/base/browser/ui/toggle/toggle';
+import { Checkbox } from 'vs/base/browser/ui/checkbox/checkbox';
 import { Codicon } from 'vs/base/common/codicons';
 import { Color } from 'vs/base/common/color';
 import * as nls from 'vs/nls';
 
-export interface IFindInputToggleOpts {
+export interface IFindInputCheckboxOpts {
 	readonly appendTitle: string;
 	readonly isChecked: boolean;
 	readonly inputActiveOptionBorder?: Color;
@@ -16,15 +16,15 @@ export interface IFindInputToggleOpts {
 	readonly inputActiveOptionBackground?: Color;
 }
 
-const NLS_CASE_SENSITIVE_TOGGLE_LABEL = nls.localize('caseDescription', "Match Case");
-const NLS_WHOLE_WORD_TOGGLE_LABEL = nls.localize('wordsDescription', "Match Whole Word");
-const NLS_REGEX_TOGGLE_LABEL = nls.localize('regexDescription', "Use Regular Expression");
+const NLS_CASE_SENSITIVE_CHECKBOX_LABEL = nls.localize('caseDescription', "Match Case");
+const NLS_WHOLE_WORD_CHECKBOX_LABEL = nls.localize('wordsDescription', "Match Whole Word");
+const NLS_REGEX_CHECKBOX_LABEL = nls.localize('regexDescription', "Use Regular Expression");
 
-export class CaseSensitiveToggle extends Toggle {
-	constructor(opts: IFindInputToggleOpts) {
+export class CaseSensitiveCheckbox extends Checkbox {
+	constructor(opts: IFindInputCheckboxOpts) {
 		super({
 			icon: Codicon.caseSensitive,
-			title: NLS_CASE_SENSITIVE_TOGGLE_LABEL + opts.appendTitle,
+			title: NLS_CASE_SENSITIVE_CHECKBOX_LABEL + opts.appendTitle,
 			isChecked: opts.isChecked,
 			inputActiveOptionBorder: opts.inputActiveOptionBorder,
 			inputActiveOptionForeground: opts.inputActiveOptionForeground,
@@ -33,11 +33,11 @@ export class CaseSensitiveToggle extends Toggle {
 	}
 }
 
-export class WholeWordsToggle extends Toggle {
-	constructor(opts: IFindInputToggleOpts) {
+export class WholeWordsCheckbox extends Checkbox {
+	constructor(opts: IFindInputCheckboxOpts) {
 		super({
 			icon: Codicon.wholeWord,
-			title: NLS_WHOLE_WORD_TOGGLE_LABEL + opts.appendTitle,
+			title: NLS_WHOLE_WORD_CHECKBOX_LABEL + opts.appendTitle,
 			isChecked: opts.isChecked,
 			inputActiveOptionBorder: opts.inputActiveOptionBorder,
 			inputActiveOptionForeground: opts.inputActiveOptionForeground,
@@ -46,11 +46,11 @@ export class WholeWordsToggle extends Toggle {
 	}
 }
 
-export class RegexToggle extends Toggle {
-	constructor(opts: IFindInputToggleOpts) {
+export class RegexCheckbox extends Checkbox {
+	constructor(opts: IFindInputCheckboxOpts) {
 		super({
 			icon: Codicon.regex,
-			title: NLS_REGEX_TOGGLE_LABEL + opts.appendTitle,
+			title: NLS_REGEX_CHECKBOX_LABEL + opts.appendTitle,
 			isChecked: opts.isChecked,
 			inputActiveOptionBorder: opts.inputActiveOptionBorder,
 			inputActiveOptionForeground: opts.inputActiveOptionForeground,

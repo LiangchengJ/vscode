@@ -66,16 +66,16 @@ async function start() {
 		if (product.serverLicensePrompt && parsedArgs['accept-server-license-terms'] !== true) {
 			if (hasStdinWithoutTty()) {
 				console.log('To accept the license terms, start the server with --accept-server-license-terms');
-				process.exit(1);
+				process.exit();
 			}
 			try {
 				const accept = await prompt(product.serverLicensePrompt);
 				if (!accept) {
-					process.exit(1);
+					process.exit();
 				}
 			} catch (e) {
 				console.log(e);
-				process.exit(1);
+				process.exit();
 			}
 		}
 	}

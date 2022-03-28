@@ -473,11 +473,6 @@ export interface ITerminalInstance {
 	 */
 	readonly isDisconnected: boolean;
 
-	/*
-	 * Whether this terminal has been disposed of
-	 */
-	readonly isDisposed: boolean;
-
 	/**
 	 * Whether the terminal's pty is hosted on a remote.
 	 */
@@ -896,11 +891,6 @@ export interface IXtermTerminal {
 	 * viewport.
 	 */
 	clearBuffer(): void;
-
-	/**
-	 * Clears decorations - for example, when shell integration is disabled.
-	 */
-	clearDecorations(): void;
 }
 
 export interface IRequestAddInstanceToGroupEvent {

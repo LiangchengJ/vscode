@@ -146,8 +146,7 @@ export class RenderedLinesCollection<T extends ILine> {
 		return deleted;
 	}
 
-	public onLinesChanged(changeFromLineNumber: number, changeCount: number): boolean {
-		const changeToLineNumber = changeFromLineNumber + changeCount - 1;
+	public onLinesChanged(changeFromLineNumber: number, changeToLineNumber: number): boolean {
 		if (this.getCount() === 0) {
 			// no lines
 			return false;
@@ -284,7 +283,7 @@ export class VisibleLinesCollection<T extends IVisibleLine> {
 	}
 
 	public onLinesChanged(e: viewEvents.ViewLinesChangedEvent): boolean {
-		return this._linesCollection.onLinesChanged(e.fromLineNumber, e.count);
+		return this._linesCollection.onLinesChanged(e.fromLineNumber, e.toLineNumber);
 	}
 
 	public onLinesDeleted(e: viewEvents.ViewLinesDeletedEvent): boolean {

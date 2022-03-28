@@ -15,7 +15,6 @@ import * as viewEvents from 'vs/editor/common/viewEvents';
 import { ViewportData } from 'vs/editor/common/viewLayout/viewLinesViewportData';
 import { EditorOption } from 'vs/editor/common/config/editorOptions';
 import { IDimension } from 'vs/editor/common/core/dimension';
-import { PositionAffinity } from 'vs/editor/common/model';
 
 
 class Coordinate {
@@ -113,9 +112,9 @@ export class ViewContentWidgets extends ViewPart {
 		this.setShouldRender();
 	}
 
-	public setWidgetPosition(widget: IContentWidget, range: IRange | null, preference: ContentWidgetPositionPreference[] | null, affinity: PositionAffinity | null): void {
+	public setWidgetPosition(widget: IContentWidget, range: IRange | null, preference: ContentWidgetPositionPreference[] | null): void {
 		const myWidget = this._widgets[widget.getId()];
-		myWidget.setPosition(range, preference, affinity);
+		myWidget.setPosition(range, preference);
 
 		this.setShouldRender();
 	}
@@ -194,7 +193,6 @@ class Widget {
 	private _lineHeight: number;
 
 	private _range: IRange | null;
-	private _affinity: PositionAffinity | null;
 	private _viewRange: Range | null;
 	private _preference: ContentWidgetPositionPreference[] | null;
 	private _cachedDomNodeOffsetWidth: number;
@@ -224,7 +222,6 @@ class Widget {
 
 		this._range = null;
 		this._viewRange = null;
-		this._affinity = null;
 		this._preference = [];
 		this._cachedDomNodeOffsetWidth = -1;
 		this._cachedDomNodeOffsetHeight = -1;
@@ -251,19 +248,18 @@ class Widget {
 	}
 
 	public onLineMappingChanged(e: viewEvents.ViewLineMappingChangedEvent): void {
-		this._setPosition(this._range, this._affinity);
+		this._setPosition(this._range);
 	}
 
-	private _setPosition(range: IRange | null, affinity: PositionAffinity | null): void {
+	private _setPosition(range: IRange | null): void {
 		this._range = range;
 		this._viewRange = null;
-		this._affinity = affinity;
 
 		if (this._range) {
 			// Do not trust that widgets give a valid position
 			const validModelRange = this._context.viewModel.model.validateRange(this._range);
 			if (this._context.viewModel.coordinatesConverter.modelPositionIsVisible(validModelRange.getStartPosition()) || this._context.viewModel.coordinatesConverter.modelPositionIsVisible(validModelRange.getEndPosition())) {
-				this._viewRange = this._context.viewModel.coordinatesConverter.convertModelRangeToViewRange(validModelRange, this._affinity ?? undefined);
+				this._viewRange = this._context.viewModel.coordinatesConverter.convertModelRangeToViewRange(validModelRange);
 			}
 		}
 	}
@@ -276,8 +272,8 @@ class Widget {
 		);
 	}
 
-	public setPosition(range: IRange | null, preference: ContentWidgetPositionPreference[] | null, affinity: PositionAffinity | null): void {
-		this._setPosition(range, affinity);
+	public setPosition(range: IRange | null, preference: ContentWidgetPositionPreference[] | null): void {
+		this._setPosition(range);
 		this._preference = preference;
 		if (this._viewRange && this._preference && this._preference.length > 0) {
 			// this content widget would like to be visible if possible

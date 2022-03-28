@@ -10,7 +10,6 @@ import { NotebookDocumentMetadata } from 'vs/workbench/contrib/notebook/common/n
 export interface NotebookLayoutInfo {
 	width: number;
 	height: number;
-	scrollHeight: number;
 	fontInfo: FontInfo;
 }
 

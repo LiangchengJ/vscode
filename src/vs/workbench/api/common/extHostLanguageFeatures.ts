@@ -1083,7 +1083,7 @@ class InlineCompletionAdapter {
 					throw new Error('text or insertText must be defined');
 				}
 				return ({
-					text: typeof insertText === 'string' ? insertText : { snippet: insertText.value },
+					text: insertText,
 					range: item.range ? typeConvert.Range.from(item.range) : undefined,
 					command,
 					idx: idx,
@@ -1263,7 +1263,6 @@ class InlayHintsAdapter {
 			cacheId: id,
 			tooltip: typeConvert.MarkdownString.fromStrict(hint.tooltip),
 			position: typeConvert.Position.from(hint.position),
-			textEdits: hint.textEdits && hint.textEdits.map(typeConvert.TextEdit.from),
 			kind: hint.kind && typeConvert.InlayHintKind.from(hint.kind),
 			paddingLeft: hint.paddingLeft,
 			paddingRight: hint.paddingRight,

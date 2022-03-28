@@ -577,6 +577,10 @@ schemaRegistry.registerSchema(schemaId, schema);
 
 schemaRegistry.registerSchema(productSchemaId, {
 	properties: {
+		extensionAllowedProposedApi: {
+			type: 'array',
+			deprecationMessage: nls.localize('product.extensionAllowedProposedApi', "Use `extensionEnabledApiProposals` instead.")
+		},
 		extensionEnabledApiProposals: {
 			description: nls.localize('product.extensionEnabledApiProposals', "API proposals that the respective extensions can freely use."),
 			type: 'object',

@@ -15,16 +15,7 @@ import { GhostText, GhostTextPart } from 'vs/editor/contrib/inlineCompletions/br
  * A normalized inline completion is an inline completion with a defined range.
 */
 export interface NormalizedInlineCompletion extends InlineCompletion {
-	readonly range: Range;
-	readonly text: string;
-
-	readonly snippetInfo:
-	| {
-		snippet: string;
-		/* Could be different than the main range */
-		range: Range;
-	}
-	| undefined;
+	range: Range;
 }
 
 export function normalizedInlineCompletionsEquals(a: NormalizedInlineCompletion | undefined, b: NormalizedInlineCompletion | undefined): boolean {
@@ -85,8 +76,7 @@ export function inlineCompletionToGhostText(
 		inlineCompletion = {
 			range: rangeThatDoesNotReplaceIndentation,
 			text: suggestionWithoutIndentationChange,
-			command: inlineCompletion.command,
-			snippetInfo: undefined,
+			command: inlineCompletion.command
 		};
 	}
 
@@ -153,18 +143,7 @@ function cachingDiff(originalValue: string, newValue: string): readonly IDiffCha
 	if (lastRequest?.originalValue === originalValue && lastRequest?.newValue === newValue) {
 		return lastRequest?.changes;
 	} else {
-		let changes = smartDiff(originalValue, newValue, true);
-		if (changes) {
-			const deletedChars = deletedCharacters(changes);
-			if (deletedChars > 0) {
-				// For performance reasons, don't compute diff if there is nothing to improve
-				const newChanges = smartDiff(originalValue, newValue, false);
-				if (newChanges && deletedCharacters(newChanges) < deletedChars) {
-					// Disabling smartness seems to be better here
-					changes = newChanges;
-				}
-			}
-		}
+		const changes = smartDiff(originalValue, newValue);
 		lastRequest = {
 			originalValue,
 			newValue,
@@ -172,14 +151,6 @@ function cachingDiff(originalValue: string, newValue: string): readonly IDiffCha
 		};
 		return changes;
 	}
-}
-
-function deletedCharacters(changes: readonly IDiffChange[]): number {
-	let sum = 0;
-	for (const c of changes) {
-		sum += Math.max(c.originalLength - c.modifiedLength, 0);
-	}
-	return sum;
 }
 
 /**
@@ -190,7 +161,7 @@ function deletedCharacters(changes: readonly IDiffChange[]): number {
  *
  * The parenthesis are preprocessed to ensure that they match correctly.
  */
-function smartDiff(originalValue: string, newValue: string, smartBracketMatching: boolean): (readonly IDiffChange[]) | undefined {
+function smartDiff(originalValue: string, newValue: string): (readonly IDiffChange[]) | undefined {
 	if (originalValue.length > 5000 || newValue.length > 5000) {
 		// We don't want to work on strings that are too big
 		return undefined;
@@ -220,18 +191,18 @@ function smartDiff(originalValue: string, newValue: string, smartBracketMatching
 		let group = 0;
 		const characters = new Int32Array(source.length);
 		for (let i = 0, len = source.length; i < len; i++) {
+			const id = group * 100 + level;
+
 			// TODO support more brackets
-			if (smartBracketMatching && source[i] === '(') {
-				const id = group * 100 + level;
+			if (source[i] === '(') {
 				characters[i] = getUniqueCharCode(2 * id);
 				level++;
-			} else if (smartBracketMatching && source[i] === ')') {
-				level = Math.max(level - 1, 0);
-				const id = group * 100 + level;
+			} else if (source[i] === ')') {
 				characters[i] = getUniqueCharCode(2 * id + 1);
-				if (level === 0) {
+				if (level === 1) {
 					group++;
 				}
+				level = Math.max(level - 1, 0);
 			} else {
 				characters[i] = source.charCodeAt(i);
 			}

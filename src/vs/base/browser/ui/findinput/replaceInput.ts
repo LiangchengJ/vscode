@@ -6,9 +6,9 @@
 import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { IMouseEvent } from 'vs/base/browser/mouseEvent';
-import { Toggle, IToggleStyles } from 'vs/base/browser/ui/toggle/toggle';
+import { Checkbox, ICheckboxStyles } from 'vs/base/browser/ui/checkbox/checkbox';
 import { IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview';
-import { IFindInputToggleOpts } from 'vs/base/browser/ui/findinput/findInputToggles';
+import { IFindInputCheckboxOpts } from 'vs/base/browser/ui/findinput/findInputCheckboxes';
 import { HistoryInputBox, IInputBoxStyles, IInputValidator, IMessage as InputBoxMessage } from 'vs/base/browser/ui/inputbox/inputBox';
 import { Widget } from 'vs/base/browser/ui/widget';
 import { Codicon } from 'vs/base/common/codicons';
@@ -40,10 +40,10 @@ export interface IReplaceInputStyles extends IInputBoxStyles {
 }
 
 const NLS_DEFAULT_LABEL = nls.localize('defaultLabel', "input");
-const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseToggle', "Preserve Case");
+const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseCheckbox', "Preserve Case");
 
-export class PreserveCaseToggle extends Toggle {
-	constructor(opts: IFindInputToggleOpts) {
+export class PreserveCaseCheckbox extends Checkbox {
+	constructor(opts: IFindInputCheckboxOpts) {
 		super({
 			// TODO: does this need its own icon?
 			icon: Codicon.preserveCase,
@@ -83,7 +83,7 @@ export class ReplaceInput extends Widget {
 	private inputValidationErrorBackground?: Color;
 	private inputValidationErrorForeground?: Color;
 
-	private preserveCase: PreserveCaseToggle;
+	private preserveCase: PreserveCaseCheckbox;
 	private cachedOptionsWidth: number = 0;
 	public domNode: HTMLElement;
 	public inputBox: HistoryInputBox;
@@ -164,7 +164,7 @@ export class ReplaceInput extends Widget {
 			flexibleMaxHeight
 		}));
 
-		this.preserveCase = this._register(new PreserveCaseToggle({
+		this.preserveCase = this._register(new PreserveCaseCheckbox({
 			appendTitle: appendPreserveCaseLabel,
 			isChecked: false,
 			inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -302,12 +302,12 @@ export class ReplaceInput extends Widget {
 
 	protected applyStyles(): void {
 		if (this.domNode) {
-			const toggleStyles: IToggleStyles = {
+			const checkBoxStyles: ICheckboxStyles = {
 				inputActiveOptionBorder: this.inputActiveOptionBorder,
 				inputActiveOptionForeground: this.inputActiveOptionForeground,
 				inputActiveOptionBackground: this.inputActiveOptionBackground,
 			};
-			this.preserveCase.style(toggleStyles);
+			this.preserveCase.style(checkBoxStyles);
 
 			const inputBoxStyles: IInputBoxStyles = {
 				inputBackground: this.inputBackground,

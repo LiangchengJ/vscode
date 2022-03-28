@@ -102,7 +102,7 @@ declare module 'vscode' {
 		 * Thus, `  B` can be replaced with ` ABC`, effectively removing a whitespace and inserting `A` and `C`.
 		*/
 		// TODO@API support vscode.SnippetString in addition to string, see CompletionItem#insertText
-		insertText?: string | SnippetString;
+		insertText?: string;
 
 		/**
 		 * @deprecated Use `insertText` instead. Will be removed eventually.

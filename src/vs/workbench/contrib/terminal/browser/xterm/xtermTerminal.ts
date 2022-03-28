@@ -214,10 +214,6 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 		this.raw.clearTextureAtlas();
 	}
 
-	clearDecorations(): void {
-		this._decorationAddon?.clearDecorations(true);
-	}
-
 
 	forceRefresh() {
 		this._core.viewport?._innerRefresh();
@@ -316,8 +312,6 @@ export class XtermTerminal extends DisposableStore implements IXtermTerminal {
 
 	clearBuffer(): void {
 		this.raw.clear();
-		// hack so that the next placeholder shows
-		this._decorationAddon?.registerCommandDecoration({ marker: this.raw.registerMarker(0), hasOutput: false, timestamp: Date.now(), getOutput: () => { return undefined; }, command: '' }, true);
 	}
 
 	private _setCursorBlink(blink: boolean): void {

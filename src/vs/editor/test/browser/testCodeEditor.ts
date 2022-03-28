@@ -14,7 +14,6 @@ import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ILanguageService } from 'vs/editor/common/languages/language';
 import { ILanguageConfigurationService } from 'vs/editor/common/languages/languageConfigurationRegistry';
 import { ITextBufferFactory, ITextModel } from 'vs/editor/common/model';
-import { IEditorWorkerService } from 'vs/editor/common/services/editorWorker';
 import { ILanguageFeatureDebounceService, LanguageFeatureDebounceService } from 'vs/editor/common/services/languageFeatureDebounce';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
 import { LanguageFeaturesService } from 'vs/editor/common/services/languageFeaturesService';
@@ -26,7 +25,6 @@ import { ViewModel } from 'vs/editor/common/viewModel/viewModelImpl';
 import { TestConfiguration } from 'vs/editor/test/browser/config/testConfiguration';
 import { TestCodeEditorService, TestCommandService } from 'vs/editor/test/browser/editorTestServices';
 import { TestLanguageConfigurationService } from 'vs/editor/test/common/modes/testLanguageConfigurationService';
-import { TestEditorWorkerService } from 'vs/editor/test/common/services/testEditorWorkerService';
 import { TestTextResourcePropertiesService } from 'vs/editor/test/common/services/testTextResourcePropertiesService';
 import { instantiateTextModel } from 'vs/editor/test/common/testTextModel';
 import { IAccessibilityService } from 'vs/platform/accessibility/common/accessibility';
@@ -174,7 +172,6 @@ export function createCodeEditorServices(disposables: DisposableStore, services:
 
 	define(IAccessibilityService, TestAccessibilityService);
 	define(IClipboardService, TestClipboardService);
-	define(IEditorWorkerService, TestEditorWorkerService);
 	defineInstance(IOpenerService, NullOpenerService);
 	define(INotificationService, TestNotificationService);
 	define(IDialogService, TestDialogService);
@@ -193,7 +190,7 @@ export function createCodeEditorServices(disposables: DisposableStore, services:
 	define(ILanguageFeatureDebounceService, LanguageFeatureDebounceService);
 	define(ILanguageFeaturesService, LanguageFeaturesService);
 
-	const instantiationService = new TestInstantiationService(services, true);
+	const instantiationService = new TestInstantiationService(services);
 	disposables.add(toDisposable(() => {
 		for (const id of serviceIdentifiers) {
 			const instanceOrDescriptor = services.get(id);

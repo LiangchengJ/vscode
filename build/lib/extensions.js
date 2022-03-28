@@ -115,10 +115,7 @@ function fromLocalWebpack(extensionPath, webpackConfigFileName) {
                     result.emit('error', compilation.warnings.join('\n'));
                 }
             };
-            const webpackConfig = {
-                ...require(webpackConfigPath),
-                ...{ mode: 'production' }
-            };
+            const webpackConfig = Object.assign(Object.assign({}, require(webpackConfigPath)), { mode: 'production' });
             const relativeOutputPath = path.relative(extensionPath, webpackConfig.output.path);
             return webpackGulp(webpackConfig, webpack, webpackDone)
                 .pipe(es.through(function (data) {
@@ -414,7 +411,7 @@ async function webpackExtensions(taskName, isWatch, webpackConfigLocations) {
                     reject();
                 }
                 else {
-                    reporter(stats?.toJson());
+                    reporter(stats === null || stats === void 0 ? void 0 : stats.toJson());
                 }
             });
         }
@@ -425,7 +422,7 @@ async function webpackExtensions(taskName, isWatch, webpackConfigLocations) {
                     reject();
                 }
                 else {
-                    reporter(stats?.toJson());
+                    reporter(stats === null || stats === void 0 ? void 0 : stats.toJson());
                     resolve();
                 }
             });

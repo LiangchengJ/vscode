@@ -606,17 +606,9 @@ export class SimpleFileDialog {
 		return UpdateResult.NotUpdated;
 	}
 
-	private tryUpdateTrailing(value: URI) {
-		const ext = resources.extname(value);
-		if (ext) {
-			this.trailing = resources.basename(value);
-		}
-	}
-
 	private setActiveItems(value: string) {
 		value = this.pathFromUri(this.tildaReplace(value));
-		const asUri = this.remoteUriFrom(value);
-		const inputBasename = resources.basename(asUri);
+		const inputBasename = resources.basename(this.remoteUriFrom(value));
 		const userPath = this.constructFullUserPath();
 		// Make sure that the folder whose children we are currently viewing matches the path in the input
 		const pathsEqual = equalsIgnoreCase(userPath, value.substring(0, userPath.length)) ||
@@ -635,13 +627,11 @@ export class SimpleFileDialog {
 				this.userEnteredPathSegment = (userBasename === inputBasename) ? inputBasename : '';
 				this.autoCompletePathSegment = '';
 				this.filePickBox.activeItems = [];
-				this.tryUpdateTrailing(asUri);
 			}
 		} else {
 			this.userEnteredPathSegment = inputBasename;
 			this.autoCompletePathSegment = '';
 			this.filePickBox.activeItems = [];
-			this.tryUpdateTrailing(asUri);
 		}
 	}
 

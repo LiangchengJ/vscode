@@ -79,7 +79,7 @@
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
-		"@jupyterlab/nbformat": "^3.2.9",
+		"@jupyterlab/coreutils": "^3.1.0",
 		"@types/uuid": "^8.3.1"
 	},
 	"repository": {

@@ -312,10 +312,6 @@ export class NotebookTextDiffList extends WorkbenchList<DiffElementViewModelBase
 		return this.view.elementTop(index);
 	}
 
-	getScrollHeight() {
-		return this.view.scrollHeight;
-	}
-
 	triggerScrollFromMouseWheelEvent(browserEvent: IMouseWheelEvent) {
 		this.view.triggerScrollFromMouseWheelEvent(browserEvent);
 	}

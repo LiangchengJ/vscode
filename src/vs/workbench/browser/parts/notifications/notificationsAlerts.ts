@@ -45,31 +45,31 @@ export class NotificationsAlerts extends Disposable {
 		}
 	}
 
-	private triggerAriaAlert(notification: INotificationViewItem): void {
-		if (notification.silent) {
+	private triggerAriaAlert(notifiation: INotificationViewItem): void {
+		if (notifiation.silent) {
 			return;
 		}
 
 		// Trigger the alert again whenever the message changes
-		const listener = notification.onDidChangeContent(e => {
+		const listener = notifiation.onDidChangeContent(e => {
 			if (e.kind === NotificationViewItemContentChangeKind.MESSAGE) {
-				this.doTriggerAriaAlert(notification);
+				this.doTriggerAriaAlert(notifiation);
 			}
 		});
 
-		Event.once(notification.onDidClose)(() => listener.dispose());
+		Event.once(notifiation.onDidClose)(() => listener.dispose());
 
-		this.doTriggerAriaAlert(notification);
+		this.doTriggerAriaAlert(notifiation);
 	}
 
-	private doTriggerAriaAlert(notification: INotificationViewItem): void {
+	private doTriggerAriaAlert(notifiation: INotificationViewItem): void {
 		let alertText: string;
-		if (notification.severity === Severity.Error) {
-			alertText = localize('alertErrorMessage', "Error: {0}", notification.message.linkedText.toString());
-		} else if (notification.severity === Severity.Warning) {
-			alertText = localize('alertWarningMessage', "Warning: {0}", notification.message.linkedText.toString());
+		if (notifiation.severity === Severity.Error) {
+			alertText = localize('alertErrorMessage', "Error: {0}", notifiation.message.linkedText.toString());
+		} else if (notifiation.severity === Severity.Warning) {
+			alertText = localize('alertWarningMessage', "Warning: {0}", notifiation.message.linkedText.toString());
 		} else {
-			alertText = localize('alertInfoMessage', "Info: {0}", notification.message.linkedText.toString());
+			alertText = localize('alertInfoMessage', "Info: {0}", notifiation.message.linkedText.toString());
 		}
 
 		alert(alertText);

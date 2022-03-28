@@ -11,9 +11,9 @@ import { Codicon, CSSIcon } from 'vs/base/common/codicons';
 import { Color } from 'vs/base/common/color';
 import { Emitter, Event } from 'vs/base/common/event';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import 'vs/css!./toggle';
+import 'vs/css!./checkbox';
 
-export interface IToggleOpts extends IToggleStyles {
+export interface ICheckboxOpts extends ICheckboxStyles {
 	readonly actionClassName?: string;
 	readonly icon?: CSSIcon;
 	readonly title: string;
@@ -21,13 +21,13 @@ export interface IToggleOpts extends IToggleStyles {
 	readonly notFocusable?: boolean;
 }
 
-export interface IToggleStyles {
+export interface ICheckboxStyles {
 	inputActiveOptionBorder?: Color;
 	inputActiveOptionForeground?: Color;
 	inputActiveOptionBackground?: Color;
 }
 
-export interface ICheckboxStyles {
+export interface ISimpleCheckboxStyles {
 	checkboxBackground?: Color;
 	checkboxBorder?: Color;
 	checkboxForeground?: Color;
@@ -39,57 +39,57 @@ const defaultOpts = {
 	inputActiveOptionBackground: Color.fromHex('#0E639C50')
 };
 
-export class ToggleActionViewItem extends BaseActionViewItem {
+export class CheckboxActionViewItem extends BaseActionViewItem {
 
-	protected readonly toggle: Toggle;
+	protected readonly checkbox: Checkbox;
 
 	constructor(context: any, action: IAction, options: IActionViewItemOptions | undefined) {
 		super(context, action, options);
-		this.toggle = this._register(new Toggle({
+		this.checkbox = this._register(new Checkbox({
 			actionClassName: this._action.class,
 			isChecked: !!this._action.checked,
 			title: (<IActionViewItemOptions>this.options).keybinding ? `${this._action.label} (${(<IActionViewItemOptions>this.options).keybinding})` : this._action.label,
 			notFocusable: true
 		}));
-		this._register(this.toggle.onChange(() => this._action.checked = !!this.toggle && this.toggle.checked));
+		this._register(this.checkbox.onChange(() => this._action.checked = !!this.checkbox && this.checkbox.checked));
 	}
 
 	override render(container: HTMLElement): void {
 		this.element = container;
-		this.element.appendChild(this.toggle.domNode);
+		this.element.appendChild(this.checkbox.domNode);
 	}
 
 	override updateEnabled(): void {
-		if (this.toggle) {
+		if (this.checkbox) {
 			if (this.isEnabled()) {
-				this.toggle.enable();
+				this.checkbox.enable();
 			} else {
-				this.toggle.disable();
+				this.checkbox.disable();
 			}
 		}
 	}
 
 	override updateChecked(): void {
-		this.toggle.checked = !!this._action.checked;
+		this.checkbox.checked = !!this._action.checked;
 	}
 
 	override focus(): void {
-		this.toggle.domNode.tabIndex = 0;
-		this.toggle.focus();
+		this.checkbox.domNode.tabIndex = 0;
+		this.checkbox.focus();
 	}
 
 	override blur(): void {
-		this.toggle.domNode.tabIndex = -1;
-		this.toggle.domNode.blur();
+		this.checkbox.domNode.tabIndex = -1;
+		this.checkbox.domNode.blur();
 	}
 
 	override setFocusable(focusable: boolean): void {
-		this.toggle.domNode.tabIndex = focusable ? 0 : -1;
+		this.checkbox.domNode.tabIndex = focusable ? 0 : -1;
 	}
 
 }
 
-export class Toggle extends Widget {
+export class Checkbox extends Widget {
 
 	private readonly _onChange = this._register(new Emitter<boolean>());
 	readonly onChange: Event<boolean /* via keyboard */> = this._onChange.event;
@@ -97,18 +97,18 @@ export class Toggle extends Widget {
 	private readonly _onKeyDown = this._register(new Emitter<IKeyboardEvent>());
 	readonly onKeyDown: Event<IKeyboardEvent> = this._onKeyDown.event;
 
-	private readonly _opts: IToggleOpts;
+	private readonly _opts: ICheckboxOpts;
 	readonly domNode: HTMLElement;
 
 	private _checked: boolean;
 
-	constructor(opts: IToggleOpts) {
+	constructor(opts: ICheckboxOpts) {
 		super();
 
 		this._opts = { ...defaultOpts, ...opts };
 		this._checked = this._opts.isChecked;
 
-		const classes = ['monaco-custom-toggle'];
+		const classes = ['monaco-custom-checkbox'];
 		if (this._opts.icon) {
 			classes.push(...CSSIcon.asClassNameArray(this._opts.icon));
 		}
@@ -178,7 +178,7 @@ export class Toggle extends Widget {
 		return 2 /*margin left*/ + 2 /*border*/ + 2 /*padding*/ + 16 /* icon width */;
 	}
 
-	style(styles: IToggleStyles): void {
+	style(styles: ICheckboxStyles): void {
 		if (styles.inputActiveOptionBorder) {
 			this._opts.inputActiveOptionBorder = styles.inputActiveOptionBorder;
 		}
@@ -213,16 +213,16 @@ export class Toggle extends Widget {
 	}
 }
 
-export class Checkbox extends Widget {
-	private checkbox: Toggle;
-	private styles: ICheckboxStyles;
+export class SimpleCheckbox extends Widget {
+	private checkbox: Checkbox;
+	private styles: ISimpleCheckboxStyles;
 
 	readonly domNode: HTMLElement;
 
 	constructor(private title: string, private isChecked: boolean) {
 		super();
 
-		this.checkbox = new Toggle({ title: this.title, isChecked: this.isChecked, icon: Codicon.check, actionClassName: 'monaco-checkbox' });
+		this.checkbox = new Checkbox({ title: this.title, isChecked: this.isChecked, icon: Codicon.check, actionClassName: 'monaco-simple-checkbox' });
 
 		this.domNode = this.checkbox.domNode;
 
@@ -251,7 +251,7 @@ export class Checkbox extends Widget {
 		return this.domNode === document.activeElement;
 	}
 
-	style(styles: ICheckboxStyles): void {
+	style(styles: ISimpleCheckboxStyles): void {
 		this.styles = styles;
 
 		this.applyStyles();

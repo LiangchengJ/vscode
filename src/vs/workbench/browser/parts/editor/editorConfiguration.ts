@@ -13,7 +13,7 @@ import { IEditorResolverService, RegisteredEditorInfo, RegisteredEditorPriority 
 import { IJSONSchemaMap } from 'vs/base/common/jsonSchema';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 
-export class DynamicEditorResolverConfigurations extends Disposable implements IWorkbenchContribution {
+export class DynamicEditorGroupAutoLockConfiguration extends Disposable implements IWorkbenchContribution {
 
 	private static readonly AUTO_LOCK_DEFAULT_ENABLED = new Set<string>(['terminalEditor']);
 
@@ -30,9 +30,7 @@ export class DynamicEditorResolverConfigurations extends Disposable implements I
 	];
 
 	private configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
-	private autoLockConfigurationNode: IConfigurationNode | undefined;
-	private defaultBinaryEditorConfigurationNode: IConfigurationNode | undefined;
-	private editorAssociationsConfiguratioNnode: IConfigurationNode | undefined;
+	private configurationNode: IConfigurationNode | undefined;
 
 	constructor(
 		@IEditorResolverService private readonly editorResolverService: IEditorResolverService,
@@ -59,28 +57,26 @@ export class DynamicEditorResolverConfigurations extends Disposable implements I
 	}
 
 	private updateConfiguration(): void {
-		const lockableEditors = [...this.editorResolverService.getEditors(), ...DynamicEditorResolverConfigurations.AUTO_LOCK_EXTRA_EDITORS];
-		const binaryEditorCandidates = this.editorResolverService.getEditors().filter(e => e.priority !== RegisteredEditorPriority.exclusive).map(e => e.id);
+		const editors = [...this.editorResolverService.getEditors(), ...DynamicEditorGroupAutoLockConfiguration.AUTO_LOCK_EXTRA_EDITORS];
 
 		// Build config from registered editors
 		const autoLockGroupConfiguration: IJSONSchemaMap = Object.create(null);
-		for (const editor of lockableEditors) {
+		for (const editor of editors) {
 			autoLockGroupConfiguration[editor.id] = {
 				type: 'boolean',
-				default: DynamicEditorResolverConfigurations.AUTO_LOCK_DEFAULT_ENABLED.has(editor.id),
+				default: DynamicEditorGroupAutoLockConfiguration.AUTO_LOCK_DEFAULT_ENABLED.has(editor.id),
 				description: editor.label
 			};
 		}
 
 		// Build default config too
 		const defaultAutoLockGroupConfiguration = Object.create(null);
-		for (const editor of lockableEditors) {
-			defaultAutoLockGroupConfiguration[editor.id] = DynamicEditorResolverConfigurations.AUTO_LOCK_DEFAULT_ENABLED.has(editor.id);
+		for (const editor of editors) {
+			defaultAutoLockGroupConfiguration[editor.id] = DynamicEditorGroupAutoLockConfiguration.AUTO_LOCK_DEFAULT_ENABLED.has(editor.id);
 		}
 
-		// Register settng for auto locking groups
-		const oldAutoLockConfigurationNode = this.autoLockConfigurationNode;
-		this.autoLockConfigurationNode = {
+		const oldConfigurationNode = this.configurationNode;
+		this.configurationNode = {
 			...workbenchConfigurationNodeBase,
 			properties: {
 				'workbench.editor.autoLockGroups': {
@@ -93,40 +89,6 @@ export class DynamicEditorResolverConfigurations extends Disposable implements I
 			}
 		};
 
-		// Registers setting for default binary editors
-		const oldDefaultBinaryEditorConfigurationNode = this.defaultBinaryEditorConfigurationNode;
-		this.defaultBinaryEditorConfigurationNode = {
-			...workbenchConfigurationNodeBase,
-			properties: {
-				'workbench.editor.defaultBinaryEditor': {
-					type: 'string',
-					// This allows for intellisense autocompletion
-					enum: binaryEditorCandidates,
-					description: localize('workbench.editor.defaultBinaryEditor', "The default editor for files detected as binary. If undefined the user will be presented with a picker."),
-				}
-			}
-		};
-
-		// Registers setting for editorAssociations
-		const oldEditorAssociationsConfigurationNode = this.editorAssociationsConfiguratioNnode;
-		this.editorAssociationsConfiguratioNnode = {
-			...workbenchConfigurationNodeBase,
-			properties: {
-				'workbench.editorAssociations': {
-					type: 'object',
-					markdownDescription: localize('editor.editorAssociations', "Configure glob patterns to editors (e.g. `\"*.hex\": \"hexEditor.hexEdit\"`). These have precedence over the default behavior."),
-					patternProperties: {
-						'.*': {
-							type: 'string',
-							enum: binaryEditorCandidates,
-						}
-					}
-				}
-			}
-		};
-
-		this.configurationRegistry.updateConfigurations({ add: [this.autoLockConfigurationNode], remove: oldAutoLockConfigurationNode ? [oldAutoLockConfigurationNode] : [] });
-		this.configurationRegistry.updateConfigurations({ add: [this.defaultBinaryEditorConfigurationNode], remove: oldDefaultBinaryEditorConfigurationNode ? [oldDefaultBinaryEditorConfigurationNode] : [] });
-		this.configurationRegistry.updateConfigurations({ add: [this.editorAssociationsConfiguratioNnode], remove: oldEditorAssociationsConfigurationNode ? [oldEditorAssociationsConfigurationNode] : [] });
+		this.configurationRegistry.updateConfigurations({ add: [this.configurationNode], remove: oldConfigurationNode ? [oldConfigurationNode] : [] });
 	}
 }

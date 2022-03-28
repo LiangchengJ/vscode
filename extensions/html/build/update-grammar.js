@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 // @ts-check
+'use strict';
 
-import * as vscodeGrammarUpdater from 'vscode-grammar-updater';
+var updateGrammar = require('vscode-grammar-updater');
 
 function patchGrammar(grammar) {
 	let patchCount = 0;
@@ -38,6 +39,6 @@ function patchGrammar(grammar) {
 
 const tsGrammarRepo = 'textmate/html.tmbundle';
 const grammarPath = 'Syntaxes/HTML.plist';
-vscodeGrammarUpdater.update(tsGrammarRepo, grammarPath, './syntaxes/html.tmLanguage.json', grammar => patchGrammar(grammar));
+updateGrammar.update(tsGrammarRepo, grammarPath, './syntaxes/html.tmLanguage.json', grammar => patchGrammar(grammar));
 
 

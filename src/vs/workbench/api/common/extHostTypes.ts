@@ -1467,7 +1467,6 @@ export class InlayHint implements vscode.InlayHint {
 	label: string | InlayHintLabelPart[];
 	tooltip?: string | vscode.MarkdownString;
 	position: Position;
-	textEdits?: TextEdit[];
 	kind?: vscode.InlayHintKind;
 	paddingLeft?: boolean;
 	paddingRight?: boolean;
@@ -2349,7 +2348,7 @@ export enum TreeItemCollapsibleState {
 }
 
 @es5ClassCompat
-export class DataTransferItem {
+export class TreeDataTransferItem {
 	async asString(): Promise<string> {
 		return typeof this.value === 'string' ? this.value : JSON.stringify(this.value);
 	}
@@ -2358,7 +2357,7 @@ export class DataTransferItem {
 }
 
 @es5ClassCompat
-export class DataTransfer<T extends DataTransferItem = DataTransferItem> {
+export class TreeDataTransfer<T extends TreeDataTransferItem = TreeDataTransferItem> {
 	private readonly _items: Map<string, T> = new Map();
 	get(mimeType: string): T | undefined {
 		return this._items.get(mimeType);

@@ -56,14 +56,6 @@ export abstract class DiffElementViewModelBase extends Disposable {
 		throw new Error('Use Cell.layoutInfo.outputStatusHeight');
 	}
 
-	set outputMetadataHeight(height: number) {
-		this._layout({ outputMetadataHeight: height });
-	}
-
-	get outputMetadataHeight() {
-		throw new Error('Use Cell.layoutInfo.outputStatusHeight');
-	}
-
 	set editorHeight(height: number) {
 		this._layout({ editorHeight: height });
 	}
@@ -137,7 +129,6 @@ export abstract class DiffElementViewModelBase extends Disposable {
 			rawOutputHeight: 0,
 			outputTotalHeight: 0,
 			outputStatusHeight: 25,
-			outputMetadataHeight: 0,
 			bodyMargin: 32,
 			totalHeight: 82,
 			layoutState: CellLayoutState.Uninitialized
@@ -164,8 +155,7 @@ export abstract class DiffElementViewModelBase extends Disposable {
 		const rawOutputHeight = delta.rawOutputHeight !== undefined ? delta.rawOutputHeight : this._layoutInfo.rawOutputHeight;
 		const outputStatusHeight = delta.outputStatusHeight !== undefined ? delta.outputStatusHeight : this._layoutInfo.outputStatusHeight;
 		const bodyMargin = delta.bodyMargin !== undefined ? delta.bodyMargin : this._layoutInfo.bodyMargin;
-		const outputMetadataHeight = delta.outputMetadataHeight !== undefined ? delta.outputMetadataHeight : this._layoutInfo.outputMetadataHeight;
-		const outputHeight = (delta.recomputeOutput || delta.rawOutputHeight !== undefined || delta.outputMetadataHeight !== undefined) ? this._getOutputTotalHeight(rawOutputHeight, outputMetadataHeight) : this._layoutInfo.outputTotalHeight;
+		const outputHeight = (delta.recomputeOutput || delta.rawOutputHeight !== undefined) ? this._getOutputTotalHeight(rawOutputHeight) : this._layoutInfo.outputTotalHeight;
 
 		const totalHeight = editorHeight
 			+ editorMargin
@@ -185,7 +175,6 @@ export abstract class DiffElementViewModelBase extends Disposable {
 			outputStatusHeight: outputStatusHeight,
 			bodyMargin: bodyMargin,
 			rawOutputHeight: rawOutputHeight,
-			outputMetadataHeight: outputMetadataHeight,
 			totalHeight: totalHeight,
 			layoutState: CellLayoutState.Measured
 		};
@@ -224,10 +213,6 @@ export abstract class DiffElementViewModelBase extends Disposable {
 			changeEvent.bodyMargin = true;
 		}
 
-		if (newLayout.outputMetadataHeight !== this._layoutInfo.outputMetadataHeight) {
-			changeEvent.outputMetadataHeight = true;
-		}
-
 		if (newLayout.totalHeight !== this._layoutInfo.totalHeight) {
 			changeEvent.totalHeight = true;
 		}
@@ -252,7 +237,6 @@ export abstract class DiffElementViewModelBase extends Disposable {
 			+ this._layoutInfo.metadataStatusHeight
 			+ this._layoutInfo.outputTotalHeight
 			+ this._layoutInfo.outputStatusHeight
-			+ this._layoutInfo.outputMetadataHeight
 			+ this._layoutInfo.bodyMargin;
 
 		return totalHeight;
@@ -269,7 +253,7 @@ export abstract class DiffElementViewModelBase extends Disposable {
 			+ verticalScrollbarHeight;
 	}
 
-	private _getOutputTotalHeight(rawOutputHeight: number, metadataHeight: number) {
+	private _getOutputTotalHeight(rawOutputHeight: number) {
 		if (this.outputFoldingState === PropertyFoldingState.Collapsed) {
 			return 0;
 		}
@@ -279,7 +263,7 @@ export abstract class DiffElementViewModelBase extends Disposable {
 				// single line;
 				return 24;
 			}
-			return this.getRichOutputTotalHeight() + metadataHeight;
+			return this.getRichOutputTotalHeight();
 		} else {
 			return rawOutputHeight;
 		}
@@ -402,8 +386,7 @@ export class SideBySideDiffElementViewModel extends DiffElementViewModelBase {
 		}
 
 		return {
-			reason: ret === OutputComparison.Metadata ? 'Output metadata is changed' : undefined,
-			kind: ret
+			reason: ret === OutputComparison.Metadata ? 'Output metadata is changed' : undefined
 		};
 	}
 
@@ -570,38 +553,10 @@ export class SingleSideDiffElementViewModel extends DiffElementViewModelBase {
 	}
 }
 
-export const enum OutputComparison {
+const enum OutputComparison {
 	Unchanged = 0,
 	Metadata = 1,
 	Other = 2
-}
-
-export function outputEqual(a: ICellOutput, b: ICellOutput): OutputComparison {
-	if (hash(a.metadata) === hash(b.metadata)) {
-		return OutputComparison.Other;
-	}
-
-	// metadata not equal
-	for (let j = 0; j < a.outputs.length; j++) {
-		const aOutputItem = a.outputs[j];
-		const bOutputItem = b.outputs[j];
-
-		if (aOutputItem.mime !== bOutputItem.mime) {
-			return OutputComparison.Other;
-		}
-
-		if (aOutputItem.data.buffer.length !== bOutputItem.data.buffer.length) {
-			return OutputComparison.Other;
-		}
-
-		for (let k = 0; k < aOutputItem.data.buffer.length; k++) {
-			if (aOutputItem.data.buffer[k] !== bOutputItem.data.buffer[k]) {
-				return OutputComparison.Other;
-			}
-		}
-	}
-
-	return OutputComparison.Metadata;
 }
 
 function outputsEqual(original: ICellOutput[], modified: ICellOutput[]) {
