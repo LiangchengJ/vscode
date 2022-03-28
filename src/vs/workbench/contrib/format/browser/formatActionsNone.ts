@@ -36,7 +36,7 @@ registerEditorAction(class FormatDocumentMultipleAction extends EditorAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.Shift | KeyMod.Alt | KeyCode.KeyF,
-				linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI },
+				// linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyI },
 				weight: KeybindingWeight.EditorContrib,
 			}
 		});

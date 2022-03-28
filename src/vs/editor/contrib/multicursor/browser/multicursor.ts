@@ -50,10 +50,10 @@ export class InsertCursorAbove extends EditorAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.UpArrow,
-				linux: {
-					primary: KeyMod.Shift | KeyMod.Alt | KeyCode.UpArrow,
-					secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.UpArrow]
-				},
+				// linux: {
+				// 	primary: KeyMod.Shift | KeyMod.Alt | KeyCode.UpArrow,
+				// 	secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.UpArrow]
+				// },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {
@@ -103,10 +103,10 @@ export class InsertCursorBelow extends EditorAction {
 			kbOpts: {
 				kbExpr: EditorContextKeys.editorTextFocus,
 				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.DownArrow,
-				linux: {
-					primary: KeyMod.Shift | KeyMod.Alt | KeyCode.DownArrow,
-					secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.DownArrow]
-				},
+				// linux: {
+				// 	primary: KeyMod.Shift | KeyMod.Alt | KeyCode.DownArrow,
+				// 	secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.DownArrow]
+				// },
 				weight: KeybindingWeight.EditorContrib
 			},
 			menuOpts: {

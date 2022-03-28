@@ -220,9 +220,9 @@ export function getInlayHintsPreferences(config: vscode.WorkspaceConfiguration) 
 		includeInlayParameterNameHints: getInlayParameterNameHintsPreference(config),
 		includeInlayParameterNameHintsWhenArgumentMatchesName: !config.get<boolean>(InlayHintSettingNames.parameterNamesSuppressWhenArgumentMatchesName, true),
 		includeInlayFunctionParameterTypeHints: config.get<boolean>(InlayHintSettingNames.parameterNamesEnabled, false),
-		includeInlayVariableTypeHints: config.get<boolean>(InlayHintSettingNames.variableTypesEnabled, false),
+		includeInlayVariableTypeHints: config.get<boolean>(InlayHintSettingNames.variableTypesEnabled, true),
 		includeInlayPropertyDeclarationTypeHints: config.get<boolean>(InlayHintSettingNames.propertyDeclarationTypesEnabled, false),
-		includeInlayFunctionLikeReturnTypeHints: config.get<boolean>(InlayHintSettingNames.functionLikeReturnTypesEnabled, false),
+		includeInlayFunctionLikeReturnTypeHints: config.get<boolean>(InlayHintSettingNames.functionLikeReturnTypesEnabled, true),
 		includeInlayEnumMemberValueHints: config.get<boolean>(InlayHintSettingNames.enumMemberValuesEnabled, false),
 	} as const;
 }
@@ -232,7 +232,7 @@ function getInlayParameterNameHintsPreference(config: vscode.WorkspaceConfigurat
 		case 'none': return 'none';
 		case 'literals': return 'literals';
 		case 'all': return 'all';
-		default: return undefined;
+		default: return 'all';
 	}
 }
 

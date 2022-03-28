@@ -463,7 +463,7 @@ configurationRegistry.registerConfiguration({
 		'debug.console.fontSize': {
 			type: 'number',
 			description: nls.localize('debug.console.fontSize', "Controls the font size in pixels in the debug console."),
-			default: isMacintosh ? 12 : 14,
+			default: isWeb ? 16.5 : isMacintosh ? 15.4 : 14,
 		},
 		'debug.console.fontFamily': {
 			type: 'string',

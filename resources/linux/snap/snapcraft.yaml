@@ -2,12 +2,12 @@ name: @@NAME@@
 version: @@VERSION@@
 summary: Code editing. Redefined.
 description: |
-  Visual Studio Code is a new choice of tool that combines the
+  @@NAME_LONG@@ is a new choice of tool that combines the
   simplicity of a code editor with what developers need for the core
   edit-build-debug cycle.
 
 architectures:
-  - build-on: amd64
+  - build-on: @@ARCHITECTURE@@
     run-on: @@ARCHITECTURE@@
 
 grade: stable
@@ -19,8 +19,8 @@ parts:
     build-packages:
       - software-properties-common
     override-pull: |
-      add-apt-repository -y ppa:ubuntu-desktop/gnome-3-26
-      apt -y update
+      sudo add-apt-repository -y ppa:ubuntu-desktop/gnome-3-26
+      sudo apt -y update
 
   code:
     after:

@@ -330,7 +330,7 @@
             "%inlayHints.parameterNames.literals%",
             "%inlayHints.parameterNames.all%"
           ],
-          "default": "none",
+          "default": "all",
           "markdownDescription": "%configuration.inlayHints.parameterNames.enabled%",
           "scope": "resource"
         },
@@ -342,7 +342,7 @@
         },
         "javascript.inlayHints.parameterTypes.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "markdownDescription": "%configuration.inlayHints.parameterTypes.enabled%",
           "scope": "resource"
         },
@@ -354,13 +354,13 @@
         },
         "javascript.inlayHints.propertyDeclarationTypes.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "markdownDescription": "%configuration.inlayHints.propertyDeclarationTypes.enabled%",
           "scope": "resource"
         },
         "javascript.inlayHints.functionLikeReturnTypes.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "markdownDescription": "%configuration.inlayHints.functionLikeReturnTypes.enabled%",
           "scope": "resource"
         },

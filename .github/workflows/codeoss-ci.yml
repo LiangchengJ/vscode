@@ -1,0 +1,521 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: CodeOSS CI
+
+on:
+  push:
+    branches:
+      - dev/*
+    tags:
+      - v*.*.*
+  pull_request:
+    branches:
+      - main
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  NODE_VERSION: 14
+  SPLIT_LINE: =============================
+  CODE_ICO_URL: https://raw.githubusercontent.com/LiangchengJ/vscode/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
+  UPDATE_PRODUCT_CONFIGURATION_SH: |
+    PKG_VER=$(node -p "require('./package.json')['version']")
+    VS_ZIP_URL="https://update.code.visualstudio.com/${PKG_VER}/darwin-universal/stable"
+    CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
+    echo "CURL_DO_URL >>> $CURL_DO_URL"
+
+    VS_ZIP_FNAME=VSCode-darwin-universal.zip
+    curl -L -s -o $VS_ZIP_FNAME "$CURL_DO_URL"
+    npm install extract-zip@2.0.1 -g
+    extract-zip $VS_ZIP_FNAME
+    cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
+    node ./.github/updateProduct.js
+
+jobs:
+  build-packages-for-linux:
+    name: Build packages for linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32, armhf]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
+          sudo apt-get install -y fakeroot rpm
+          sudo apt-get install -y snapcraft
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+        shell: bash
+
+      - name: Build and Package
+        run: |
+          yarn
+          yarn gulp vscode-linux-${{ matrix.arch }}-min
+          (cd .. && cp -r VSCode-linux-${{ matrix.arch }} CodeOSS-linux-${{ matrix.arch }})
+          (cd .. && tar -cJf CodeOSS-linux-${{ matrix.arch }}.tar.xz CodeOSS-linux-${{ matrix.arch }})
+          mv ../CodeOSS-linux-${{ matrix.arch }}.tar.xz .
+
+          if [ "${{ matrix.arch }}" != "ia32" ]; then
+          	yarn gulp vscode-reh-linux-${{ matrix.arch }}-min
+          	(cd .. && mv vscode-reh-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }})
+          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}.tar.gz vscode-server-linux-${{ matrix.arch }})
+          	mv ../vscode-server-linux-${{ matrix.arch }}.tar.gz .
+
+          	yarn gulp vscode-reh-web-linux-${{ matrix.arch }}-min
+          	(cd .. && mv vscode-reh-web-linux-${{ matrix.arch }} vscode-server-linux-${{ matrix.arch }}-web)
+          	(cd .. && tar -zcf vscode-server-linux-${{ matrix.arch }}-web.tar.gz vscode-server-linux-${{ matrix.arch }}-web)
+          	mv ../vscode-server-linux-${{ matrix.arch }}-web.tar.gz .
+
+          	yarn gulp vscode-linux-${{ matrix.arch }}-build-rpm
+          	# shellcheck disable=SC2046
+          	# shellcheck disable=SC2012
+          	mv .build/linux/rpm/*/*.rpm CodeOSS-linux-${{ matrix.arch }}.$(ls .build/linux/rpm/*/*.rpm | awk -F "." '{print $5}').rpm
+
+          	yarn gulp vscode-linux-${{ matrix.arch }}-build-deb
+          	cp .build/linux/deb/*/deb/*.deb CodeOSS-linux-${{ matrix.arch }}.deb
+
+          	# yarn gulp vscode-linux-${{ matrix.arch }}-build-snap
+          fi
+
+          if [ "${{ matrix.arch }}" != "x64" ]; then
+          	rm -f ./product.json
+          fi
+
+          if [ "${{ matrix.arch }}" == "x64" ]; then
+          	curl -fsSL https://deno.land/x/install/install.sh | sh
+          	DENO_INSTALL="/home/$(whoami)/.deno"
+          	export DENO_INSTALL
+          	PATH="$DENO_INSTALL/bin:$PATH"
+          	export PATH
+
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+
+          	deno fmt ./product.json
+          	deno run --allow-read --allow-net https://deno.land/std@0.104.0/http/file_server.ts >dfserv.log 2>&1 &
+          	sleep 20 && (netstat -tlnp | grep 4507) && cat dfserv.log
+
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+          	echo "${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}${{ env.SPLIT_LINE }}"
+
+          	mv .build/linux/deb/*/deb/*.deb . && DOWNLOAD_URL="http://127.0.0.1:4507/$(ls *_*.deb)"
+            echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
+          	APPLICATION_NAME=$(node -p "require('./product.json')['applicationName']") && echo "$APPLICATION_NAME"
+          	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']") && echo "$LINUX_ICON_NAME"
+
+          	URI="$(wget -q https://github.com/AppImage/pkg2appimage/releases -O - | grep "pkg2appimage-.*-x86_64.AppImage" | head -n 1 | cut -d '"' -f 2)"
+            curl -L -O -s "https://github.com/${URI}"
+
+          	# shellcheck disable=SC2211
+          	chmod +x ./pkg2appimage-*.AppImage && ./pkg2appimage-*.AppImage .github/CodeOSS-AppImage.yml
+          	mv out/*.AppImage CodeOSS-linux-${{ matrix.arch }}.AppImage
+          fi
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.tar.xz" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+          fi
+
+          if [ -f "vscode-server-linux-${{ matrix.arch }}.tar.gz" ] ; then
+              sha512sum vscode-server-linux-${{ matrix.arch }}.tar.gz | awk '{print $1}' > vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
+          fi
+
+          if [ -f "vscode-server-linux-${{ matrix.arch }}-web.tar.gz" ] ; then
+              sha512sum vscode-server-linux-${{ matrix.arch }}-web.tar.gz | awk '{print $1}' > vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
+          fi
+
+          if [ ! -z "$(ls | grep -E "CodeOSS-linux-${{ matrix.arch }}.*\.rpm$")" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}*.rpm > tmpret && cat tmpret | awk '{print $1}' > "$(cat tmpret | awk '{print $2}')".sha512
+          fi
+
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.deb" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.deb | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.deb.sha512
+          fi
+
+          if [ -f "CodeOSS-linux-${{ matrix.arch }}.AppImage" ] ; then
+              sha512sum CodeOSS-linux-${{ matrix.arch }}.AppImage | awk '{print $1}' > CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+          fi
+
+          if [ -f "product.json" ] ; then
+              sha512sum product.json | awk '{print $1}' > product.json.sha512
+          fi
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSS-linux-${{ matrix.arch }}.tar.xz
+            CodeOSS-linux-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-linux-${{ matrix.arch }}*.rpm
+            CodeOSS-linux-${{ matrix.arch }}*.rpm.sha512
+            CodeOSS-linux-*.deb
+            CodeOSS-linux-*.deb.sha512
+            CodeOSS-linux-${{ matrix.arch }}.AppImage
+            CodeOSS-linux-${{ matrix.arch }}.AppImage.sha512
+            vscode-server-linux-${{ matrix.arch }}.tar.gz
+            vscode-server-linux-${{ matrix.arch }}.tar.gz.sha512
+            vscode-server-linux-${{ matrix.arch }}-web.tar.gz
+            vscode-server-linux-${{ matrix.arch }}-web.tar.gz.sha512
+            product.json
+            product.json.sha512
+
+  build-packages-for-macos:
+    name: Build packages for macOS
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+        shell: bash
+
+      - name: Build and Package
+        run: |
+          yarn
+          yarn gulp vscode-darwin-${{ matrix.arch }}-min
+          ( cd .. && cp -r VSCode-darwin-${{ matrix.arch }} CodeOSS-darwin-${{ matrix.arch }} )
+          ( cd .. && tar -cJf CodeOSS-darwin-${{ matrix.arch }}.tar.xz CodeOSS-darwin-${{ matrix.arch }} )
+          mv ../CodeOSS-darwin-${{ matrix.arch }}.tar.xz .
+
+          npm i -g @ffflorian/jszip-cli@3.1.6
+          ( cd .. && jszip-cli add CodeOSS-darwin-${{ matrix.arch }} --output CodeOSS-darwin-${{ matrix.arch }}.zip )
+          mv ../CodeOSS-darwin-${{ matrix.arch }}.zip .
+
+          if [ "${{ matrix.arch }}" == "x64" ] ; then
+              yarn gulp vscode-reh-darwin-min
+              ( cd .. && mv vscode-reh-darwin vscode-server-darwin )
+              ( cd .. && jszip-cli add vscode-server-darwin --output vscode-server-darwin.zip )
+              mv ../vscode-server-darwin.zip .
+
+              yarn gulp vscode-reh-web-darwin-min
+              ( cd .. && mv vscode-reh-web-darwin vscode-server-darwin-web )
+              ( cd .. && jszip-cli add vscode-server-darwin-web --output vscode-server-darwin-web.zip )
+              mv ../vscode-server-darwin-web.zip .
+          fi
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          npm install -g checksum
+          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
+          checksum -a sha512 CodeOSS-darwin-${{ matrix.arch }}.zip | awk '{print $1}' > CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
+
+          if [ -f "vscode-server-darwin.zip" ] ; then
+              checksum -a sha512 vscode-server-darwin.zip | awk '{print $1}' > vscode-server-darwin.zip.sha512
+          fi
+
+          if [ -f "vscode-server-darwin-web.zip" ] ; then
+              checksum -a sha512 vscode-server-darwin-web.zip | awk '{print $1}' > vscode-server-darwin-web.zip.sha512
+          fi
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSS-darwin-${{ matrix.arch }}.tar.xz
+            CodeOSS-darwin-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-darwin-${{ matrix.arch }}.zip
+            CodeOSS-darwin-${{ matrix.arch }}.zip.sha512
+            vscode-server-darwin.zip
+            vscode-server-darwin.zip.sha512
+            vscode-server-darwin-web.zip
+            vscode-server-darwin-web.zip.sha512
+
+  build-binary-packages-for-windows:
+    name: Build binary packages for Windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build binary packages
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          yarn
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+          ( cd .. && cp -r VSCode-win32-${{ matrix.arch }} CodeOSS-win32-${{ matrix.arch }} )
+          ( cd .. && tar -cJf CodeOSS-win32-${{ matrix.arch }}.tar.xz CodeOSS-win32-${{ matrix.arch }} )
+          mv ../CodeOSS-win32-${{ matrix.arch }}.tar.xz .
+
+          ( cd .. && 7z a CodeOSS-win32-${{ matrix.arch }}.zip CodeOSS-win32-${{ matrix.arch }} -r -mx9 )
+          mv ../CodeOSS-win32-${{ matrix.arch }}.zip .
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          sha512sum CodeOSS-win32-${{ matrix.arch }}.tar.xz | awk '{print $1}' > CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
+          sha512sum CodeOSS-win32-${{ matrix.arch }}.zip | awk '{print $1}' > CodeOSS-win32-${{ matrix.arch }}.zip.sha512
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz
+            CodeOSS-win32-${{ matrix.arch }}.tar.xz.sha512
+            CodeOSS-win32-${{ matrix.arch }}.zip
+            CodeOSS-win32-${{ matrix.arch }}.zip.sha512
+
+  build-user-installer-for-windows:
+    name: Build user installer for Windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build user installer
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          yarn
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-user-setup
+          mv .build/win32-${{ matrix.arch }}/user-setup/VSCodeSetup.exe CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          sha512sum CodeOSSUserSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSUserSetup-win32-${{ matrix.arch }}.exe.sha512
+
+  build-system-installer-for-windows:
+    name: Build system installer for Windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build system installer
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          yarn
+          yarn gulp vscode-win32-${{ matrix.arch }}-min
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-inno-updater
+          curl -L -o -s resources/win32/code.ico ${{ env.CODE_ICO_URL }}
+
+          yarn gulp vscode-win32-${{ matrix.arch }}-system-setup
+          mv .build/win32-${{ matrix.arch }}/system-setup/VSCodeSetup.exe CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          sha512sum CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe | awk '{print $1}' > CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe
+            CodeOSSSystemSetup-win32-${{ matrix.arch }}.exe.sha512
+
+  build-vscode-server-packages-for-windows:
+    name: Build vscode server packages for Windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build vscode server packages
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          yarn
+          if [ "${{ matrix.arch }}" != "arm64" ] ; then
+              yarn gulp vscode-reh-win32-${{ matrix.arch }}-min
+              ( cd .. && mv vscode-reh-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }} )
+              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}.zip vscode-server-win32-${{ matrix.arch }} -r -mx9 )
+              mv ../vscode-server-win32-${{ matrix.arch }}.zip .
+          fi
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          if [ -f "vscode-server-win32-${{ matrix.arch }}.zip" ] ; then
+              sha512sum vscode-server-win32-${{ matrix.arch }}.zip | awk '{print $1}' > vscode-server-win32-${{ matrix.arch }}.zip.sha512
+          fi
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            vscode-server-win32-${{ matrix.arch }}.zip
+            vscode-server-win32-${{ matrix.arch }}.zip.sha512
+
+  build-vscode-server-web-packages-for-windows:
+    name: Build vscode server web packages for Windows
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        arch: [x64, arm64, ia32]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Update product configurations
+        run: |
+          ${{ env.UPDATE_PRODUCT_CONFIGURATION_SH }}
+          node ./.github/updateWin32VisualElementsManifest.js
+        shell: bash
+
+      - name: Build vscode server web packages
+        run: |
+          export npm_config_arch=${{ matrix.arch }}
+          yarn
+          if [ "${{ matrix.arch }}" != "arm64" ] ; then
+              yarn gulp vscode-reh-web-win32-${{ matrix.arch }}-min
+              ( cd .. && mv vscode-reh-web-win32-${{ matrix.arch }} vscode-server-win32-${{ matrix.arch }}-web )
+              ( cd .. && 7z a vscode-server-win32-${{ matrix.arch }}-web.zip vscode-server-win32-${{ matrix.arch }}-web -r -mx9 )
+              mv ../vscode-server-win32-${{ matrix.arch }}-web.zip .
+          fi
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          if [ -f "vscode-server-win32-${{ matrix.arch }}-web.zip" ] ; then
+              sha512sum vscode-server-win32-${{ matrix.arch }}-web.zip | awk '{print $1}' > vscode-server-win32-${{ matrix.arch }}-web.zip.sha512
+          fi
+        shell: bash
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: dev_test_part15
+          tag_name: dev_test_part15
+          prerelease: true
+          files: |
+            vscode-server-win32-${{ matrix.arch }}-web.zip
+            vscode-server-win32-${{ matrix.arch }}-web.zip.sha512
