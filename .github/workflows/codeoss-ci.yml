@@ -19,7 +19,7 @@ env:
   PYTHON_VERSION: "2.x"
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1648396992
+  CACHE_VERSION: 1648478607
   PUBLISH_NAME: dev_test_codeoss_ci
   PUBLISH_TAG_NAME: dev_test_codeoss_ci
   PRE_RELEASE: true
@@ -69,12 +69,13 @@ jobs:
       - name: Do generating ...
         if: ${{ steps.cache-product-configurations.outputs.cache-hit != 'true' }}
         run: |
-          VS_ZIP_NAME=VSCode-darwin-universal.zip
+          VS_ZIP_NAME="VSCode-darwin-universal.zip"
           curl -L -s -o $VS_ZIP_NAME "$CURL_DO_URL"
-          npm install extract-zip@2.0.1 -g
-          extract-zip $VS_ZIP_NAME
-          cp 'Visual Studio Code.app/Contents/Resources/app/product.json' ./vs-product.json
-          node ./.github/generateProductConfigurations.js
+          VS_PRODUCT_JSON_PATH="Visual Studio Code.app/Contents/Resources/app/product.json"
+          unzip $VS_ZIP_NAME "$VS_PRODUCT_JSON_PATH"
+          cp "$VS_PRODUCT_JSON_PATH" vs-product.json
+          node .github/generateProductConfigurations.js
+          rm -rf "Visual Studio Code.app" && rm -f $VS_ZIP_NAME && rm -f vs-product.json
         shell: bash
 
       - name: Write outputs
