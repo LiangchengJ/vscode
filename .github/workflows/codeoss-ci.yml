@@ -273,8 +273,7 @@ jobs:
 
           if [ "$VSCODE_ARCH" == "x64" ]; then
           	echo "::group::Build AppImage package"
-          	npm install -g @liangchengj/nfserv && nfserv >nfserv.log 2>&1 &
-          	sleep 3 && cat nfserv.log
+          	npm install -g @liangchengj/nfserv && (nfserv >nfserv.log 2>&1 &) && (sleep 6 && cat nfserv.log)
           	DOWNLOAD_URL="http://127.0.0.1:9934/$DEB_FILENAME"
           	echo "DOWNLOAD_URL >>> $DOWNLOAD_URL" && export DOWNLOAD_URL
           	LINUX_ICON_NAME=$(node -p "require('./product.json')['linuxIconName']")
