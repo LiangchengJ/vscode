@@ -19,7 +19,7 @@ env:
   PYTHON_VERSION: "2.x"
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1648478607
+  CACHE_VERSION: 1648545524
   PUBLISH_NAME: dev_test_part16
   PUBLISH_TAG_NAME: dev_test_part16
   PRE_RELEASE: true
