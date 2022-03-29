@@ -37,7 +37,7 @@ function generateProductJson() {
   product["win32UserAppId"] = vsProduct["win32UserAppId"];
   product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
   product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
-  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"]);
+  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"]).replace(" ", "");
   product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
   product["darwinExecutable"] = "CodeOSS";
   product["dataFolderName"] = `.${product["applicationName"]}`;
