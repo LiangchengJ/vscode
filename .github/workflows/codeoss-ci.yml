@@ -534,7 +534,9 @@ jobs:
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.win32vem-xml }}' >resources/win32/VisualElementsManifest.xml
+          cat <<EOF >resources/win32/VisualElementsManifest.xml
+          ${{ needs.generate-product-configurations.outputs.win32vem-xml }}
+          EOF
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
