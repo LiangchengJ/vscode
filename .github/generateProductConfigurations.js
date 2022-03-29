@@ -124,5 +124,20 @@ function generateWin32VisualElementsManifest() {
   console.log(`Generate "${outputFileName}" successfully!`);
 }
 
+function generateServerWebManifest() {
+  const outputFileName = "manifest.json";
+  const manifest = require(`../resources/server/${outputFileName}`);
+  const product = require("../product.json");
+  manifest["name"] = product["nameLong"];
+  manifest["short_name"] = product["nameShort"];
+
+  const writeStream = fs.createWriteStream(outputFileName);
+  writeStream.write(JSON.stringify(manifest));
+  writeStream.end();
+
+  console.log(`Generate "${outputFileName}" successfully!`);
+}
+
 generateProductJson();
 generateWin32VisualElementsManifest();
+generateServerWebManifest();
