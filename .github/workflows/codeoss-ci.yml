@@ -329,7 +329,7 @@ jobs:
       - name: Build server artifacts
         run: |
           yarn gulp vscode-reh-linux-${VSCODE_ARCH}-min-ci
-          SERVER_BUILD_NAME="vscode-server-linux-${VSCODE_ARCH}"
+          SERVER_BUILD_NAME="$APPLICATION_NAME-server-linux-${VSCODE_ARCH}"
           SERVER_TARBALL_FILENAME="$SERVER_BUILD_NAME.tar.gz"
           (cd .. && cp -r vscode-reh-linux-${VSCODE_ARCH} $SERVER_BUILD_NAME)
           (cd .. && tar -zcf $SERVER_TARBALL_FILENAME $SERVER_BUILD_NAME)
@@ -337,7 +337,7 @@ jobs:
           echo "SERVER_TARBALL_FILENAME=$SERVER_TARBALL_FILENAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-reh-web-linux-${VSCODE_ARCH}-min-ci
-          SERVER_WEB_BUILD_NAME="vscode-server-linux-${VSCODE_ARCH}-web"
+          SERVER_WEB_BUILD_NAME="$APPLICATION_NAME-server-linux-${VSCODE_ARCH}-web"
           SERVER_WEB_TARBALL_FILENAME="$SERVER_WEB_BUILD_NAME.tar.gz"
           (cd .. && cp -r vscode-reh-web-linux-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
           (cd .. && tar -zcf $SERVER_WEB_TARBALL_FILENAME $SERVER_WEB_BUILD_NAME)
@@ -473,7 +473,7 @@ jobs:
         if: ${{ env.VSCODE_ARCH == 'x64' }}
         run: |
           yarn gulp vscode-reh-darwin-min-ci
-          SERVER_BUILD_NAME="vscode-server-darwin"
+          SERVER_BUILD_NAME="$APPLICATION_NAME-server-darwin"
           SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-darwin $SERVER_BUILD_NAME)
           (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
@@ -481,7 +481,7 @@ jobs:
           echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-reh-web-darwin-min-ci
-          SERVER_WEB_BUILD_NAME="vscode-server-darwin-web"
+          SERVER_WEB_BUILD_NAME="$APPLICATION_NAME-server-darwin-web"
           SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-web-darwin $SERVER_WEB_BUILD_NAME)
           (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
@@ -633,7 +633,7 @@ jobs:
         if: ${{ env.VSCODE_ARCH != 'arm64' }}
         run: |
           yarn gulp vscode-reh-win32-${VSCODE_ARCH}-min-ci
-          SERVER_BUILD_NAME="vscode-server-win32-${VSCODE_ARCH}"
+          SERVER_BUILD_NAME="$APPLICATION_NAME-server-win32-${VSCODE_ARCH}"
           SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-win32-${VSCODE_ARCH} $SERVER_BUILD_NAME)
           (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
@@ -641,7 +641,7 @@ jobs:
           echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
           yarn gulp vscode-reh-web-win32-${VSCODE_ARCH}-min-ci
-          SERVER_WEB_BUILD_NAME="vscode-server-win32-${VSCODE_ARCH}-web"
+          SERVER_WEB_BUILD_NAME="$APPLICATION_NAME-server-win32-${VSCODE_ARCH}-web"
           SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-web-win32-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
           (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
