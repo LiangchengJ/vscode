@@ -37,7 +37,8 @@ function generateProductJson() {
   product["win32UserAppId"] = vsProduct["win32UserAppId"];
   product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
   product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
-  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"]).replace(" ", "");
+  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"])
+    .replace(" ", "");
   product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
   product["darwinExecutable"] = "CodeOSS";
   product["dataFolderName"] = `.${product["applicationName"]}`;
@@ -126,14 +127,23 @@ function generateWin32VisualElementsManifest() {
 
 function generateServerWebManifest() {
   const outputFileName = "manifest.json";
-  const manifest = require(`../resources/server/${outputFileName}`);
   const product = require("../product.json");
+
+  const manifestJsonPath = path.join(
+    process.cwd(),
+    "resources",
+    "server",
+    outputFileName,
+  );
+
+  const manifest = JSON.parse(fs.readFileSync(manifestJsonPath).toString());
   manifest["name"] = product["nameLong"];
   manifest["short_name"] = product["nameShort"];
 
-  const writeStream = fs.createWriteStream(outputFileName);
-  writeStream.write(JSON.stringify(manifest));
-  writeStream.end();
+  fs.writeFileSync(
+    manifestJsonPath,
+    JSON.stringify(manifest),
+  );
 
   console.log(`Generate "${outputFileName}" successfully!`);
 }
