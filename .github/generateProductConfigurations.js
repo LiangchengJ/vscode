@@ -25,7 +25,7 @@ function generateProductJson() {
   const product = require(`../${outputFileName}`);
   const vsProduct = require(`../vs-${outputFileName}`);
 
-  product["nameShort"] = _replaceName(product["nameShort"]);
+  product["nameShort"] = _replaceName(product["nameShort"]).replace(" ", "");
   product["nameLong"] = _replaceName(product["nameLong"]);
   product["applicationName"] = _replaceName(product["applicationName"]);
   product["win32MutexName"] = "codeoss";
@@ -37,7 +37,8 @@ function generateProductJson() {
   product["win32UserAppId"] = vsProduct["win32UserAppId"];
   product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
   product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
-  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"]);
+  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"])
+    .replace(" ", "");
   product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
   product["darwinExecutable"] = "CodeOSS";
   product["dataFolderName"] = `.${product["applicationName"]}`;
@@ -105,7 +106,7 @@ function generateProductJson() {
 function generateWin32VisualElementsManifest() {
   const outputFileName = "VisualElementsManifest.xml";
   // @ts-ignore
-  const _replaceName = (name) => name.replace(/-[ ]/, "");
+  const _replaceName = (name) => name.replace(/[ ]-[ ]/, "");
 
   const visualElementsManifestXmlPath = path.join(
     process.cwd(),
@@ -124,5 +125,29 @@ function generateWin32VisualElementsManifest() {
   console.log(`Generate "${outputFileName}" successfully!`);
 }
 
+function generateServerWebManifest() {
+  const outputFileName = "manifest.json";
+  const product = require("../product.json");
+
+  const manifestJsonPath = path.join(
+    process.cwd(),
+    "resources",
+    "server",
+    outputFileName,
+  );
+
+  const manifest = JSON.parse(fs.readFileSync(manifestJsonPath).toString());
+  manifest["name"] = product["nameLong"];
+  manifest["short_name"] = product["nameShort"];
+
+  fs.writeFileSync(
+    manifestJsonPath,
+    JSON.stringify(manifest),
+  );
+
+  console.log(`Generate "${outputFileName}" successfully!`);
+}
+
 generateProductJson();
 generateWin32VisualElementsManifest();
+generateServerWebManifest();
