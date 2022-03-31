@@ -77,6 +77,7 @@ function prepareDebPackage(arch) {
 			function () {
 				const that = this;
 				gulp.src('resources/linux/debian/control.template', { base: '.' })
+					.pipe(replace('@@NAME_LONG@@', product.nameLong))
 					.pipe(replace('@@NAME@@', product.applicationName))
 					.pipe(replace('@@VERSION@@', packageJson.version + '-' + linuxPackageRevision))
 					.pipe(replace('@@ARCHITECTURE@@', debArch))
@@ -254,6 +255,7 @@ function prepareSnapPackage(arch) {
 			.pipe(rename(function (p) { p.dirname = `usr/share/${product.applicationName}/${p.dirname}`; }));
 
 		const snapcraft = gulp.src('resources/linux/snap/snapcraft.yaml', { base: '.' })
+			.pipe(replace('@@NAME_LONG@@', product.nameLong))
 			.pipe(replace('@@NAME@@', product.applicationName))
 			.pipe(replace('@@VERSION@@', commit.substr(0, 8)))
 			// Possible run-on values https://snapcraft.io/docs/architectures
