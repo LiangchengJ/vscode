@@ -15,11 +15,11 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NODE_VERSION: 14
-  PYTHON_VERSION: "2.x"
+  NODE_VERSION: 16
+  PYTHON_VERSION: "3.x"
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1648725832
+  CACHE_VERSION: 1648746129
   PUBLISH_NAME: dev_test_part16
   PUBLISH_TAG_NAME: dev_test_part16
   PRE_RELEASE: true
@@ -36,7 +36,7 @@ jobs:
       vscode-quality: ${{ steps.write-outputs.outputs.vscode-quality }}
       version: ${{ steps.write-outputs.outputs.version }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -97,7 +97,7 @@ jobs:
       VSCODE_ARCH: x64
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -158,7 +158,7 @@ jobs:
         arch: [x64, arm64, armhf]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -398,7 +398,7 @@ jobs:
         arch: [x64, arm64]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -521,14 +521,14 @@ jobs:
 
   build-for-windows:
     name: Build for Windows
-    runs-on: windows-2019
+    runs-on: windows-2022
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
         arch: [x64, arm64, ia32]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
