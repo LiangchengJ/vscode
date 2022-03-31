@@ -19,7 +19,7 @@ env:
   PYTHON_VERSION: "2.x"
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1648725334
+  CACHE_VERSION: 1648545524
   PUBLISH_NAME: dev_test_part16
   PUBLISH_TAG_NAME: dev_test_part16
   PRE_RELEASE: true
@@ -31,7 +31,6 @@ jobs:
     outputs:
       product-json: ${{ steps.write-outputs.outputs.product-json }}
       win32vem-xml: ${{ steps.write-outputs.outputs.win32vem-xml }}
-      manifest-json: ${{ steps.write-outputs.outputs.manifest-json }}
       application-name: ${{ steps.write-outputs.outputs.application-name }}
       vscode-quality: ${{ steps.write-outputs.outputs.vscode-quality }}
       version: ${{ steps.write-outputs.outputs.version }}
@@ -84,7 +83,6 @@ jobs:
         run: |
           echo "::set-output name=product-json::$(cat product.json)"
           echo "::set-output name=win32vem-xml::$(tail resources/win32/VisualElementsManifest.xml | base64 -w 0)"
-          echo "::set-output name=manifest-json::$(cat resources/server/manifest.json)"
           echo "::set-output name=application-name::$(node -p "require('./product.json')['applicationName']")"
           echo "::set-output name=vscode-quality::$(node -p "require('./product.json')['quality']||''")"
           echo "::set-output name=version::$VERSION"
@@ -165,7 +163,6 @@ jobs:
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           VSCODE_ARCH=${{ matrix.arch }}
           echo "VSCODE_ARCH=$VSCODE_ARCH" >>"$GITHUB_ENV"
           NPM_ARCH=$VSCODE_ARCH
@@ -405,7 +402,6 @@ jobs:
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
         shell: bash
@@ -541,7 +537,6 @@ jobs:
           WIN32_VEM_XML_PATH=resources/win32/VisualElementsManifest.xml
           echo '${{ needs.generate-product-configurations.outputs.win32vem-xml }}' >$WIN32_VEM_XML_PATH
           base64 -d $WIN32_VEM_XML_PATH >tmpfile && mv tmpfile $WIN32_VEM_XML_PATH
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
