@@ -8,13 +8,11 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { IStorage } from 'vs/base/parts/storage/common/storage';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IEnvironmentMainService } from 'vs/platform/environment/electron-main/environmentMainService';
-import { IFileService } from 'vs/platform/files/common/files';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ILifecycleMainService, LifecycleMainPhase, ShutdownReason } from 'vs/platform/lifecycle/electron-main/lifecycleMainService';
 import { ILogService } from 'vs/platform/log/common/log';
 import { AbstractStorageService, IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { GlobalStorageMain, InMemoryStorageMain, IStorageMain, IStorageMainOptions, WorkspaceStorageMain } from 'vs/platform/storage/electron-main/storageMain';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IAnyWorkspaceIdentifier, IEmptyWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
 
 //#region Storage Main Service (intent: make global and workspace storage accessible to windows from main process)
@@ -51,9 +49,7 @@ export class StorageMainService extends Disposable implements IStorageMainServic
 	constructor(
 		@ILogService private readonly logService: ILogService,
 		@IEnvironmentService private readonly environmentService: IEnvironmentService,
-		@ILifecycleMainService private readonly lifecycleMainService: ILifecycleMainService,
-		@IFileService private readonly fileService: IFileService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService
+		@ILifecycleMainService private readonly lifecycleMainService: ILifecycleMainService
 	) {
 		super();
 
@@ -106,7 +102,7 @@ export class StorageMainService extends Disposable implements IStorageMainServic
 	private createGlobalStorage(): IStorageMain {
 		this.logService.trace(`StorageMainService: creating global storage`);
 
-		const globalStorage = new GlobalStorageMain(this.getStorageOptions(), this.logService, this.environmentService, this.fileService, this.telemetryService);
+		const globalStorage = new GlobalStorageMain(this.getStorageOptions(), this.logService, this.environmentService);
 
 		once(globalStorage.onDidCloseStorage)(() => {
 			this.logService.trace(`StorageMainService: closed global storage`);
@@ -145,10 +141,10 @@ export class StorageMainService extends Disposable implements IStorageMainServic
 			// Workaround for native crashes that we see when
 			// SQLite DBs are being created even after shutdown
 			// https://github.com/microsoft/vscode/issues/143186
-			return new InMemoryStorageMain(this.logService, this.fileService, this.telemetryService);
+			return new InMemoryStorageMain(this.logService);
 		}
 
-		return new WorkspaceStorageMain(workspace, this.getStorageOptions(), this.logService, this.environmentService, this.fileService, this.telemetryService);
+		return new WorkspaceStorageMain(workspace, this.getStorageOptions(), this.logService, this.environmentService);
 	}
 
 	//#endregion

@@ -1826,7 +1826,7 @@ export class TerminalProfile implements vscode.TerminalProfile {
 		public options: vscode.TerminalOptions | vscode.ExtensionTerminalOptions
 	) {
 		if (typeof options !== 'object') {
-			throw illegalArgument('options');
+			illegalArgument('options');
 		}
 	}
 }

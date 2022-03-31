@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { CancellationError } from 'vs/base/common/errors';
+import { canceled } from 'vs/base/common/errors';
 import { ISplice } from 'vs/base/common/sequence';
 
 /**
@@ -257,7 +257,7 @@ export function topAsync<T>(array: T[], compare: (a: T, b: T) => number, n: numb
 					await new Promise(resolve => setTimeout(resolve)); // any other delay function would starve I/O
 				}
 				if (token && token.isCancellationRequested) {
-					throw new CancellationError();
+					throw canceled();
 				}
 				topStep(array, compare, result, i, m);
 			}

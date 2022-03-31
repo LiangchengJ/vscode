@@ -230,9 +230,7 @@ export class MarkerHoverParticipant implements IEditorHoverParticipant<MarkerHov
 						context.hide();
 						controller?.showCodeActions(markerCodeActionTrigger, actions, {
 							x: elementPosition.left + 6,
-							y: elementPosition.top + elementPosition.height + 6,
-							width: elementPosition.width,
-							height: elementPosition.height
+							y: elementPosition.top + elementPosition.height + 6
 						});
 					}
 				});
