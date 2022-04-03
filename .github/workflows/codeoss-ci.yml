@@ -685,3 +685,84 @@ jobs:
             ${{ env.SERVER_ZIP_NAME }}.sha512
             ${{ env.SERVER_WEB_ZIP_NAME }}
             ${{ env.SERVER_WEB_ZIP_NAME }}.sha512
+
+  build-for-web:
+    name: Build for Web
+    runs-on: ubuntu-latest
+    needs: [generate-product-configurations, compile]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Update product configurations
+        run: |
+          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
+          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+        shell: bash
+
+      - name: Download compilation output
+        uses: actions/download-artifact@v3
+        with:
+          name: Compilation
+
+      - name: Extract compilation output
+        run: tar -xJf compilation.tar.xz
+        shell: bash
+
+      - name: Compute node modules cache key
+        id: compute-node-modules-cache-key
+        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
+
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
+
+      - name: Install dependencies
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
+        run: |
+          for i in {1..3}; do
+          	yarn --frozen-lockfile --check-files && break
+          	if [ "$i" -eq 3 ]; then
+          		echo "Yarn failed too many times" >&2
+          		exit 1
+          	fi
+          	echo "Yarn failed $i, trying again..."
+          done
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
+
+      - name: Build artifact
+        run: |
+          yarn gulp vscode-web-min-ci
+          WEB_BUILD_NAME="$APPLICATION_NAME-web"
+          WEB_TARBALL_FILENAME="$APPLICATION_NAME-web.tar.gz"
+          (cd .. && cp -r vscode-web $WEB_BUILD_NAME)
+          (cd .. && tar --owner=0 --group=0 -czf $WEB_TARBALL_FILENAME $WEB_BUILD_NAME)
+          mv ../$WEB_TARBALL_FILENAME .
+          echo "WEB_TARBALL_FILENAME=$WEB_TARBALL_FILENAME" >>"$GITHUB_ENV"
+        shell: bash
+
+      - name: Generate SHA512 checksum file
+        run: |
+          gensha512() { (sha512sum "$1" | awk '{print $1}' >"$1".sha512); }
+          ([ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME") || echo >/dev/null
+        shell: bash
+
+      - name: Publish artifact
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ env.PUBLISH_NAME }}
+          tag_name: ${{ env.PUBLISH_TAG_NAME }}
+          prerelease: ${{ env.PRE_RELEASE }}
+          files: |
+            ${{ env.WEB_TARBALL_FILENAME }}
+            ${{ env.WEB_TARBALL_FILENAME }}.sha512
