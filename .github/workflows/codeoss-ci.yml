@@ -48,12 +48,12 @@ jobs:
         run: |
           GITHUB_API_URL=https://api.github.com/repos/microsoft/vscode/releases
           curl -H "Accept: application/vnd.github.v3+json" -s $GITHUB_API_URL >releases.json
-          # shellcheck disable=SC2034
           REMOTE_VERSION=$(node -p "require('./releases.json')[0]['tag_name']")
           VERSION=$(node -p "require('./package.json')['version']")
           echo "VERSION=$VERSION" >>"$GITHUB_ENV"
 
           UNIVERSAL_ZIP_VERSION=$VERSION
+          [ "$GITHUB_REF_NAME" == "dev/real-time-synchronization" ] && UNIVERSAL_ZIP_VERSION=$REMOTE_VERSION
           VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
           echo "CURL_DO_URL=$CURL_DO_URL" >>"$GITHUB_ENV"
