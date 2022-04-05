@@ -148,6 +148,29 @@ function generateServerWebManifest() {
   console.log(`Generate "${outputFileName}" successfully!`);
 }
 
+function generateAppImageYAML() {
+  const outputFileName = "AppImage.yml";
+  const product = require("../product.json");
+
+  const ymlPath = path.join(
+    process.cwd(),
+    "resources",
+    "linux",
+    outputFileName,
+  );
+  const yml = fs.readFileSync(ymlPath).toString();
+  fs.writeFileSync(
+    ymlPath,
+    yml.replace(/@@NAME_SHORT@@/g, product["nameShort"]).replace(
+      /@@NAME@@/g,
+      product["applicationName"],
+    ).replace(/@@ICON@@/g, product["linuxIconName"]),
+  );
+
+  console.log(`Generate "${outputFileName}" successfully!`);
+}
+
 generateProductJson();
 generateWin32VisualElementsManifest();
 generateServerWebManifest();
+generateAppImageYAML();
