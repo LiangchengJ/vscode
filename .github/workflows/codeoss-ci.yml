@@ -19,7 +19,7 @@ env:
   PYTHON_VERSION: "3.x"
   CODE_ICO_URL: https://github.com/LiangchengJ/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1649001883
+  CACHE_VERSION: 1649136596
   PUBLISH_NAME: dev_test_part17
   PUBLISH_TAG_NAME: dev_test_part17
   PRE_RELEASE: true
@@ -67,6 +67,7 @@ jobs:
           path: |
             product.json
             resources/win32/VisualElementsManifest.xml
+            resources/server/manifest.json
             resources/linux/AppImage.yml
           key: "${{ runner.os }}${{ steps.compute-product-configurations-cache-key.outputs.key }}"
 
@@ -448,10 +449,6 @@ jobs:
           export npm_config_arch
           npm_config_node_gyp=$(which node-gyp)
           export npm_config_node_gyp
-          # Electron <= 13 does not ship with correct config.gypi headers,
-          # remove this once we update to newer versions.
-          # Refs https://github.com/nodejs/node-gyp/pull/2497
-          export npm_config_force_process_config=true
 
           for i in {1..3}; do
           	yarn --frozen-lockfile --check-files && break
@@ -472,12 +469,11 @@ jobs:
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
           XZ_TARBALL_NAME=$BUILD.tar.xz
-          (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
+          (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
           mv ../$XZ_TARBALL_NAME .
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
-          npm i -g @ffflorian/jszip-cli@3.1.6
           ZIP_NAME=$BUILD.zip
-          (cd .. && jszip-cli add $BUILD --output $ZIP_NAME)
+          (cd ../$BUILD && zip -r -X -y -q ../$ZIP_NAME ./*.app)
           mv ../$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
         shell: bash
@@ -526,6 +522,101 @@ jobs:
             ${{ env.SERVER_ZIP_NAME }}.sha512
             ${{ env.SERVER_WEB_ZIP_NAME }}
             ${{ env.SERVER_WEB_ZIP_NAME }}.sha512
+
+  build-universal-application:
+    name: Build universal application
+    runs-on: macos-latest
+    needs: [generate-product-configurations, build-for-macos]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Update product configurations
+        run: |
+          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
+          echo "VSCODE_ARCH=universal" >>"$GITHUB_ENV"
+          echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
+          echo "GITHUB_REPOSITORY=${{ github.repository }}" >>"$GITHUB_ENV"
+          echo "AGENT_BUILDDIRECTORY=$PWD/.." >>"$GITHUB_ENV"
+        shell: bash
+
+      - name: Compute node modules cache key
+        id: compute-node-modules-cache-key
+        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
+
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
+
+      - name: Install dependencies
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
+        run: |
+          npm install -g node-gyp@latest
+          npm_config_arch=$VSCODE_ARCH
+          export npm_config_arch
+          npm_config_node_gyp=$(which node-gyp)
+          export npm_config_node_gyp
+
+          for i in {1..3}; do
+          	yarn --frozen-lockfile --check-files && break
+          	if [ "$i" -eq 3 ]; then
+          		echo "Yarn failed too many times" >&2
+          		exit 1
+          	fi
+          	echo "Yarn failed $i, trying again..."
+          done
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
+
+      - name: Create Universal App
+        run: |
+          DOWNLOAD_URL_PREFIX="https://github.com/$GITHUB_REPOSITORY/releases/download/$PUBLISH_TAG_NAME"
+          curl -L -O -s "$DOWNLOAD_URL_PREFIX/$NAME_SHORT-darwin-arm64.tar.xz"
+          curl -L -O -s "$DOWNLOAD_URL_PREFIX/$NAME_SHORT-darwin-x64.tar.xz"
+          tar -xJf "$NAME_SHORT-darwin-arm64.tar.xz"
+          mkdir ../VSCode-darwin-arm64 && mv ./*.app ../VSCode-darwin-arm64/
+          tar -xJf "$NAME_SHORT-darwin-x64.tar.xz"
+          mkdir ../VSCode-darwin-x64 && mv ./*.app ../VSCode-darwin-x64/
+          DEBUG=* node build/darwin/create-universal-app.js
+          BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
+          (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
+          XZ_TARBALL_NAME=$BUILD.tar.xz
+          (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
+          mv ../$XZ_TARBALL_NAME .
+          echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
+          ZIP_NAME=$BUILD.zip
+          (cd ../$BUILD && zip -r -X -y -q ../$ZIP_NAME ./*.app)
+          mv ../$ZIP_NAME .
+          echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
+
+      - name: Generate SHA512 checksum files
+        run: |
+          npm install -g checksum@1.0.0
+          gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
+          [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
+          ([ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME") || echo >/dev/null
+        shell: bash
+
+      - name: Publish artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ env.PUBLISH_NAME }}
+          tag_name: ${{ env.PUBLISH_TAG_NAME }}
+          prerelease: ${{ env.PRE_RELEASE }}
+          files: |
+            ${{ env.XZ_TARBALL_NAME }}
+            ${{ env.XZ_TARBALL_NAME }}.sha512
+            ${{ env.ZIP_NAME }}
+            ${{ env.ZIP_NAME }}.sha512
 
   build-for-windows:
     name: Build for Windows
@@ -767,7 +858,7 @@ jobs:
           ([ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME") || echo >/dev/null
         shell: bash
 
-      - name: Publish artifact
+      - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ env.PUBLISH_NAME }}
