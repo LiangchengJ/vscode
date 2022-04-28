@@ -153,7 +153,7 @@ const editorConfiguration: IConfigurationNode = {
 		},
 		'diffEditor.ignoreTrimWhitespace': {
 			type: 'boolean',
-			default: true,
+			default: false,
 			description: nls.localize('ignoreTrimWhitespace', "When enabled, the diff editor ignores changes in leading or trailing whitespace.")
 		},
 		'diffEditor.renderIndicators': {
