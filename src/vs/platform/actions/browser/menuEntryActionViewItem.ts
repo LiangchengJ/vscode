@@ -11,7 +11,7 @@ import { ActionRunner, IAction, IRunEvent, Separator, SubmenuAction } from 'vs/b
 import { Event } from 'vs/base/common/event';
 import { UILabelProvider } from 'vs/base/common/keybindingLabels';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import { DisposableStore, IDisposable, MutableDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { combinedDisposable, DisposableStore, IDisposable, MutableDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { isLinux, isWindows, OS } from 'vs/base/common/platform';
 import 'vs/css!./menuEntryActionViewItem';
 import { localize } from 'vs/nls';
@@ -23,7 +23,8 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { INotificationService } from 'vs/platform/notification/common/notification';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
-import { ThemeIcon } from 'vs/platform/theme/common/themeService';
+import { IThemeService, ThemeIcon } from 'vs/platform/theme/common/themeService';
+import { isDark } from 'vs/platform/theme/common/theme';
 
 export function createAndFillInContextMenuActions(menu: IMenu, options: IMenuActionOptions | undefined, target: IAction[] | { primary: IAction[]; secondary: IAction[] }, primaryGroup?: string): IDisposable {
 	const groups = menu.getActions(options);
@@ -123,6 +124,7 @@ function fillInActions(
 
 export interface IMenuEntryActionViewItemOptions {
 	draggable?: boolean;
+	keybinding?: string;
 }
 
 export class MenuEntryActionViewItem extends ActionViewItem {
@@ -136,9 +138,10 @@ export class MenuEntryActionViewItem extends ActionViewItem {
 		options: IMenuEntryActionViewItemOptions | undefined,
 		@IKeybindingService protected readonly _keybindingService: IKeybindingService,
 		@INotificationService protected _notificationService: INotificationService,
-		@IContextKeyService protected _contextKeyService: IContextKeyService
+		@IContextKeyService protected _contextKeyService: IContextKeyService,
+		@IThemeService protected _themeService: IThemeService
 	) {
-		super(undefined, _action, { icon: !!(_action.class || _action.item.icon), label: !_action.class && !_action.item.icon, draggable: options?.draggable });
+		super(undefined, _action, { icon: !!(_action.class || _action.item.icon), label: !_action.class && !_action.item.icon, draggable: options?.draggable, keybinding: options?.keybinding });
 		this._altKey = ModifierKeyEmitter.getInstance();
 	}
 
@@ -234,7 +237,7 @@ export class MenuEntryActionViewItem extends ActionViewItem {
 				if (this._menuItemAction.alt) {
 					this._updateItemClass(this._menuItemAction.alt.item);
 				}
-			} else if (this._menuItemAction.alt) {
+			} else {
 				this._updateItemClass(this._menuItemAction.item);
 			}
 		}
@@ -264,18 +267,22 @@ export class MenuEntryActionViewItem extends ActionViewItem {
 
 		} else {
 			// icon path/url
-			if (icon.light) {
-				label.style.setProperty('--menu-entry-icon-light', asCSSUrl(icon.light));
-			}
-			if (icon.dark) {
-				label.style.setProperty('--menu-entry-icon-dark', asCSSUrl(icon.dark));
-			}
+			label.style.backgroundImage = (
+				isDark(this._themeService.getColorTheme().type)
+					? asCSSUrl(icon.dark)
+					: asCSSUrl(icon.light)
+			);
 			label.classList.add('icon');
-			this._itemClassDispose.value = toDisposable(() => {
-				label.classList.remove('icon');
-				label.style.removeProperty('--menu-entry-icon-light');
-				label.style.removeProperty('--menu-entry-icon-dark');
-			});
+			this._itemClassDispose.value = combinedDisposable(
+				toDisposable(() => {
+					label.style.backgroundImage = '';
+					label.classList.remove('icon');
+				}),
+				this._themeService.onDidColorThemeChange(() => {
+					// refresh when the theme changes in case we go between dark <-> light
+					this.updateClass();
+				})
+			);
 		}
 	}
 }
@@ -313,7 +320,12 @@ export class SubmenuEntryActionViewItem extends DropdownMenuActionViewItem {
 	}
 }
 
-class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
+export interface IDropdownWithDefaultActionViewItemOptions extends IDropdownMenuActionViewItemOptions {
+	renderKeybindingWithDefaultActionLabel?: boolean;
+}
+
+export class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
+	private readonly _options: IDropdownWithDefaultActionViewItemOptions | undefined;
 	private _defaultAction: ActionViewItem;
 	private _dropdown: DropdownMenuActionViewItem;
 	private _container: HTMLElement | null = null;
@@ -325,7 +337,7 @@ class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
 
 	constructor(
 		submenuAction: SubmenuItemAction,
-		options: IDropdownMenuActionViewItemOptions | undefined,
+		options: IDropdownWithDefaultActionViewItemOptions | undefined,
 		@IKeybindingService protected readonly _keybindingService: IKeybindingService,
 		@INotificationService protected _notificationService: INotificationService,
 		@IContextMenuService protected _contextMenuService: IContextMenuService,
@@ -334,7 +346,7 @@ class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
 		@IStorageService protected _storageService: IStorageService
 	) {
 		super(null, submenuAction);
-
+		this._options = options;
 		this._storageKey = `${submenuAction.item.submenu._debugName}_lastActionId`;
 
 		// determine default action
@@ -347,7 +359,7 @@ class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
 			defaultAction = submenuAction.actions[0];
 		}
 
-		this._defaultAction = this._instaService.createInstance(MenuEntryActionViewItem, <MenuItemAction>defaultAction, undefined);
+		this._defaultAction = this._instaService.createInstance(MenuEntryActionViewItem, <MenuItemAction>defaultAction, { keybinding: this._getDefaultActionKeybindingLabel(defaultAction) });
 
 		const dropdownOptions = Object.assign({}, options ?? Object.create(null), {
 			menuAsChild: options?.menuAsChild ?? true,
@@ -367,7 +379,7 @@ class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
 		this._storageService.store(this._storageKey, lastAction.id, StorageScope.WORKSPACE, StorageTarget.USER);
 
 		this._defaultAction.dispose();
-		this._defaultAction = this._instaService.createInstance(MenuEntryActionViewItem, lastAction, undefined);
+		this._defaultAction = this._instaService.createInstance(MenuEntryActionViewItem, lastAction, { keybinding: this._getDefaultActionKeybindingLabel(lastAction) });
 		this._defaultAction.actionRunner = new class extends ActionRunner {
 			override async runAction(action: IAction, context?: unknown): Promise<void> {
 				await action.run(undefined);
@@ -377,6 +389,17 @@ class DropdownWithDefaultActionViewItem extends BaseActionViewItem {
 		if (this._container) {
 			this._defaultAction.render(prepend(this._container, $('.action-container')));
 		}
+	}
+
+	private _getDefaultActionKeybindingLabel(defaultAction: IAction) {
+		let defaultActionKeybinding: string | undefined;
+		if (this._options?.renderKeybindingWithDefaultActionLabel) {
+			const kb = this._keybindingService.lookupKeybinding(defaultAction.id);
+			if (kb) {
+				defaultActionKeybinding = `(${kb.getLabel()})`;
+			}
+		}
+		return defaultActionKeybinding;
 	}
 
 	override setActionContext(newContext: unknown): void {
