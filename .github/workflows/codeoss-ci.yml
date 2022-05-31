@@ -375,8 +375,8 @@ jobs:
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "PUBLISH_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
-          echo "PUBLISH_TAG_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
         shell: bash
 
@@ -518,8 +518,8 @@ jobs:
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "PUBLISH_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
-          echo "PUBLISH_TAG_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
         shell: bash
 
@@ -625,8 +625,8 @@ jobs:
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "PUBLISH_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
-          echo "PUBLISH_TAG_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
         shell: bash
 
@@ -794,8 +794,8 @@ jobs:
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "PUBLISH_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
-          echo "PUBLISH_TAG_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
         shell: bash
 
@@ -893,8 +893,8 @@ jobs:
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "PUBLISH_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
-          echo "PUBLISH_TAG_NAME=$APPIMAGE_FILENAME" >>"$GITHUB_ENV"
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
         shell: bash
 
