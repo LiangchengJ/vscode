@@ -24,10 +24,6 @@ env:
   PUBLISH_TAG_NAME: dev_test_part18
   PRE_RELEASE: true
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   generate-product-configurations:
     name: Generate product configurations
@@ -62,6 +58,7 @@ jobs:
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
           echo "CURL_DO_URL=$CURL_DO_URL" >>"$GITHUB_ENV"
           echo "::set-output name=key::$(echo "$CURL_DO_URL#$CACHE_VERSION" | sha512sum | awk '{print $1}')"
+        shell: bash
 
       - name: Cache product configurations
         id: cache-product-configurations
@@ -84,6 +81,7 @@ jobs:
           cp "$VS_PRODUCT_JSON_PATH" vs-product.json
           node .github/generateProductConfigurations.js
           rm -rf "Visual Studio Code.app" && rm -f $VS_ZIP_NAME && rm -f vs-product.json
+        shell: bash
 
       - name: Write outputs
         id: write-outputs
@@ -96,6 +94,7 @@ jobs:
           echo "::set-output name=name-short::$(node -p "require('./product.json')['nameShort']")"
           echo "::set-output name=vscode-quality::$(node -p "require('./product.json')['quality']||''")"
           echo "::set-output name=version::$VERSION"
+        shell: bash
 
   compile:
     name: Compile
@@ -113,10 +112,12 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -131,18 +132,22 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Compile & Hygiene
         run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check
+        shell: bash
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
         run: |
           yarn --cwd test/smoke compile
           yarn --cwd test/integration/browser compile
+        shell: bash
 
       - name: Compress compilation artifact
         run: tar -cvJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out
+        shell: bash
 
       - name: Publish compilation artifact
         uses: actions/upload-artifact@v3
@@ -153,21 +158,10 @@ jobs:
   build-for-linux:
     name: Build for Linux
     runs-on: ubuntu-latest
-    container:
-      image: vscodehub.azurecr.io/vscode-linux-build-agent:${{ matrix.image-tag }}
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      options: --privileged --user 0:0 --cap-add SYS_ADMIN
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
-        include:
-          - arch: x64
-            image-tag: bionic-x64
-          - arch: arm64
-            image-tag: stretch-arm64
-          - arch: armhf
-            image-tag: stretch-armhf
+        arch: [x64, arm64, armhf]
 
     steps:
       - uses: actions/checkout@v3
@@ -191,6 +185,7 @@ jobs:
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "VSCODE_QUALITY=${{ needs.generate-product-configurations.outputs.vscode-quality }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Setup system services
         if: ${{ env.VSCODE_ARCH == 'x64' }}
@@ -203,6 +198,7 @@ jobs:
           # Start dbus session
           DBUS_LAUNCH_RESULT=$(sudo dbus-daemon --config-file=/usr/share/dbus-1/system.conf --print-address)
           echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_LAUNCH_RESULT" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -211,10 +207,12 @@ jobs:
 
       - name: Extract compilation output
         run: tar -xJf compilation.tar.xz
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -240,6 +238,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Build client artifacts
         run: |
@@ -337,6 +336,7 @@ jobs:
           	-e SNAP_FILENAME=$SNAP_FILENAME \
           	--entrypoint=bash $DOCKER_IMAGE_NAME -ex "/workspace/$SNAP_BUILD_SH_NAME"
           echo "::endgroup::"
+        shell: bash
 
       - name: Build server artifacts
         run: |
@@ -355,6 +355,7 @@ jobs:
           (cd .. && tar -zcf $SERVER_WEB_TARBALL_FILENAME $SERVER_WEB_BUILD_NAME)
           mv ../$SERVER_WEB_TARBALL_FILENAME .
           echo "SERVER_WEB_TARBALL_FILENAME=$SERVER_WEB_TARBALL_FILENAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -369,6 +370,7 @@ jobs:
           [ -f "$APPIMAGE_FILENAME" ] && gensha512 "$APPIMAGE_FILENAME"
           [ "$VSCODE_ARCH" != "x64" ] && rm -f product.json
           ([ -f product.json ] && gensha512 product.json) || echo >/dev/null
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -416,6 +418,7 @@ jobs:
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -424,10 +427,12 @@ jobs:
 
       - name: Extract compilation output
         run: tar -xJf compilation.tar.xz
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -456,6 +461,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Build client artifacts
         run: |
@@ -470,6 +476,7 @@ jobs:
           (cd ../$BUILD && zip -r -X -y -q ../$ZIP_NAME ./*.app)
           mv ../$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Build server artifacts
         run: |
@@ -488,6 +495,7 @@ jobs:
           (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
           mv ../$SERVER_WEB_ZIP_NAME .
           echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -497,6 +505,7 @@ jobs:
           [ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
           ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -531,10 +540,12 @@ jobs:
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "GITHUB_REPOSITORY=${{ github.repository }}" >>"$GITHUB_ENV"
           echo "AGENT_BUILDDIRECTORY=$PWD/.." >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -563,6 +574,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Create Universal App
         run: |
@@ -584,6 +596,7 @@ jobs:
           (cd ../$BUILD && zip -r -X -y -q ../$ZIP_NAME ./*.app)
           mv ../$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -591,6 +604,7 @@ jobs:
           gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
           [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
           ([ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME") || echo >/dev/null
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -631,6 +645,7 @@ jobs:
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -639,10 +654,12 @@ jobs:
 
       - name: Extract compilation output
         run: tar -xJf compilation.tar.xz
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -654,6 +671,7 @@ jobs:
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
         run: tar -xJf .build/node_modules_cache/cache.tar.xz
+        shell: bash
 
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
@@ -674,6 +692,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Create node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
@@ -681,6 +700,7 @@ jobs:
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
+        shell: bash
 
       - name: Build client artifacts
         run: |
@@ -714,6 +734,7 @@ jobs:
           mv .build/win32-${VSCODE_ARCH}/user-setup/VSCodeSetup.exe $USER_SETUP_NAME
           echo "USER_SETUP_NAME=$USER_SETUP_NAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
+        shell: bash
 
       - name: Build server artifacts
         if: ${{ env.VSCODE_ARCH != 'arm64' }}
@@ -733,6 +754,7 @@ jobs:
           (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
           mv ../$SERVER_WEB_ZIP_NAME .
           echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Generate SHA512 checksum files
         run: |
@@ -743,6 +765,7 @@ jobs:
           [ -f "$USER_SETUP_NAME" ] && gensha512 "$USER_SETUP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
           ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -779,6 +802,7 @@ jobs:
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
           echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -787,10 +811,12 @@ jobs:
 
       - name: Extract compilation output
         run: tar -xJf compilation.tar.xz
+        shell: bash
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
         run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        shell: bash
 
       - name: Cache node modules
         id: cache-node-modules
@@ -813,6 +839,7 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        shell: bash
 
       - name: Build artifact
         run: |
@@ -823,11 +850,13 @@ jobs:
           (cd .. && tar --owner=0 --group=0 -czf $WEB_TARBALL_FILENAME $WEB_BUILD_NAME)
           mv ../$WEB_TARBALL_FILENAME .
           echo "WEB_TARBALL_FILENAME=$WEB_TARBALL_FILENAME" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Generate SHA512 checksum file
         run: |
           gensha512() { (sha512sum "$1" | awk '{print $1}' >"$1".sha512); }
           ([ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME") || echo >/dev/null
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1

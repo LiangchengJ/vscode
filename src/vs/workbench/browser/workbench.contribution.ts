@@ -294,14 +294,14 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			},
 			'workbench.localHistory.maxFileSize': {
 				'type': 'number',
-				'default': 1024,
+				'default': 256,
 				'minimum': 1,
 				'description': localize('localHistoryMaxFileSize', "Controls the maximum size of a file (in KB) to be considered for local file history. Files that are larger will not be added to the local file history. Changing this setting has no effect on existing local file history entries."),
 				'scope': ConfigurationScope.RESOURCE
 			},
 			'workbench.localHistory.maxFileEntries': {
 				'type': 'number',
-				'default': 300,
+				'default': 50,
 				'minimum': 0,
 				'description': localize('localHistoryMaxFileEntries', "Controls the maximum number of local file history entries per file. When the number of local file history entries exceeds this number for a file, the oldest entries will be discarded."),
 				'scope': ConfigurationScope.RESOURCE

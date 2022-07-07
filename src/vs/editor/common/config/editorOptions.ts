@@ -3696,9 +3696,9 @@ export type InternalGuidesOptions = Readonly<Required<IGuidesOptions>>;
 class GuideOptions extends BaseEditorOption<EditorOption.guides, IGuidesOptions, InternalGuidesOptions> {
 	constructor() {
 		const defaults: InternalGuidesOptions = {
-			bracketPairs: true,
-			bracketPairsHorizontal: false,
-			highlightActiveBracketPair: false,
+			bracketPairs: false,
+			bracketPairsHorizontal: 'active',
+			highlightActiveBracketPair: true,
 
 			indentation: true,
 			highlightActiveIndentation: true
