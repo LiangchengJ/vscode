@@ -158,7 +158,7 @@ jobs:
       image: vscodehub.azurecr.io/vscode-linux-build-agent:${{ matrix.image-tag }}
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-      options: --privileged --user 0:0 --cap-add SYS_ADMIN
+      options: --user 0:0 --cap-add SYS_ADMIN
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
