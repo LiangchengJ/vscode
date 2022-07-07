@@ -153,10 +153,21 @@ jobs:
   build-for-linux:
     name: Build for Linux
     runs-on: ubuntu-latest
+    container:
+      image: vscodehub.azurecr.io/vscode-linux-build-agent:${{ matrix.image-tag }}
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      options: --privileged --user 0:0 --cap-add SYS_ADMIN
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
-        arch: [x64, arm64, armhf]
+        include:
+          - arch: x64
+            image-tag: bionic-x64
+          - arch: arm64
+            image-tag: stretch-arm64
+          - arch: armhf
+            image-tag: stretch-armhf
 
     steps:
       - uses: actions/checkout@v3
