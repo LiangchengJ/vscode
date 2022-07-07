@@ -309,7 +309,7 @@ class TerminalTabsRenderer implements IListRenderer<ITerminalInstance, ITerminal
 		}
 
 		const shellIntegrationString = getShellIntegrationTooltip(instance, true, this._configurationService);
-		const iconId = getIconId(instance);
+		const iconId = this._instantiationService.invokeFunction(getIconId, instance);
 		const hasActionbar = !this.shouldHideActionBar();
 		let label: string = '';
 		if (!hasText) {
@@ -625,7 +625,7 @@ class TerminalTabsDragAndDrop implements IListDragAndDrop<ITerminalInstance> {
 		this._autoFocusInstance = undefined;
 
 		let sourceInstances: ITerminalInstance[] | undefined;
-		let promises: Promise<IProcessDetails | undefined>[] = [];
+		const promises: Promise<IProcessDetails | undefined>[] = [];
 		const resources = getTerminalResourcesFromDragEvent(originalEvent);
 		if (resources) {
 			for (const uri of resources) {
