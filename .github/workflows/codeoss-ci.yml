@@ -153,7 +153,7 @@ jobs:
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
       - name: Compile & Hygiene
-        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check
+        run: yarn npm-run-all -lp core-ci-pr extensions-ci-pr hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
