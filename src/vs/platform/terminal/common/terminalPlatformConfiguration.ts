@@ -413,7 +413,7 @@ export function registerTerminalDefaultProfileConfiguration(detectedProfiles?: {
 				restricted: true,
 				markdownDescription: localize('terminal.integrated.defaultProfile.windows', "The default terminal profile on Windows."),
 				type: ['string', 'null'],
-				default: null,
+				default: 'Git Bash',
 				enum: detectedProfiles?.os === OperatingSystem.Windows ? profileEnum?.values : undefined,
 				markdownEnumDescriptions: detectedProfiles?.os === OperatingSystem.Windows ? profileEnum?.markdownDescriptions : undefined
 			},
