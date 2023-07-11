@@ -567,7 +567,7 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 			},
 			'window.commandCenter': {
 				type: 'boolean',
-				default: false,
+				default: true,
 				tags: ['experimental'],
 				markdownDescription: isWeb ?
 					localize('window.commandCenterWeb', "Show command launcher together with the window title.") :

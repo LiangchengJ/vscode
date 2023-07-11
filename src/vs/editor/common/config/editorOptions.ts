@@ -4076,7 +4076,7 @@ class GuideOptions extends BaseEditorOption<EditorOption.guides, IGuidesOptions,
 	constructor() {
 		const defaults: InternalGuidesOptions = {
 			bracketPairs: true,
-			bracketPairsHorizontal: false,
+			bracketPairsHorizontal: 'active',
 			highlightActiveBracketPair: false,
 
 			indentation: true,
