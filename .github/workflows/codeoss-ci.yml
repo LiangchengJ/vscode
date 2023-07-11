@@ -445,6 +445,14 @@ jobs:
           [ "$VSCODE_ARCH" != "x64" ] && rm -f product.json
           ([ -f product.json ] && gensha512 product.json) || echo >/dev/null
 
+      - name: Switch to tag name
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
+        shell: bash
+
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
@@ -584,6 +592,14 @@ jobs:
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
           ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
 
+      - name: Switch to tag name
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
+        shell: bash
+
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
@@ -688,6 +704,14 @@ jobs:
           gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
           [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
           ([ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME") || echo >/dev/null
+
+      - name: Switch to tag name
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -841,6 +865,14 @@ jobs:
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
           ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
 
+      - name: Switch to tag name
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
+        shell: bash
+
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
         with:
@@ -932,6 +964,14 @@ jobs:
         run: |
           gensha512() { (sha512sum "$1" | awk '{print $1}' >"$1".sha512); }
           ([ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME") || echo >/dev/null
+
+      - name: Switch to tag name
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
+          echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
+        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
