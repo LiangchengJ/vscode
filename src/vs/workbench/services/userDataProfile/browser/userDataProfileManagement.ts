@@ -3,23 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { CancellationError } from 'vs/base/common/errors';
 import { Disposable } from 'vs/base/common/lifecycle';
-import { joinPath } from 'vs/base/common/resources';
-import { URI } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
-import { ILocalExtension, Metadata } from 'vs/platform/extensionManagement/common/extensionManagement';
-import { IExtensionsProfileScannerService } from 'vs/platform/extensionManagement/common/extensionsProfileScannerService';
-import { ExtensionType } from 'vs/platform/extensions/common/extensions';
-import { IFileService } from 'vs/platform/files/common/files';
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { DidChangeProfilesEvent, EXTENSIONS_RESOURCE_NAME, IUserDataProfile, IUserDataProfilesService, UseDefaultProfileFlags, WorkspaceIdentifier } from 'vs/platform/userDataProfile/common/userDataProfile';
-import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
+import { InstantiationType, registerSingleton } from 'vs/platform/instantiation/common/extensions';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { DidChangeProfilesEvent, IUserDataProfile, IUserDataProfileOptions, IUserDataProfilesService, IUserDataProfileUpdateOptions } from 'vs/platform/userDataProfile/common/userDataProfile';
+import { IWorkspaceContextService, toWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
-import { IExtensionManagementServerService, IWorkbenchExtensionManagementService } from 'vs/workbench/services/extensionManagement/common/extensionManagement';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
-import { IUserDataProfileManagementService, IUserDataProfileService } from 'vs/workbench/services/userDataProfile/common/userDataProfile';
+import { DidChangeUserDataProfileEvent, IUserDataProfileManagementService, IUserDataProfileService } from 'vs/workbench/services/userDataProfile/common/userDataProfile';
+
+export type ProfileManagementActionExecutedClassification = {
+	owner: 'sandy081';
+	comment: 'Logged when profile management action is excuted';
+	id: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The identifier of the action that was run.' };
+};
+
+export type ProfileManagementActionExecutedEvent = {
+	id: string;
+};
 
 export class UserDataProfileManagementService extends Disposable implements IUserDataProfileManagementService {
 	readonly _serviceBrand: undefined;
@@ -27,61 +32,62 @@ export class UserDataProfileManagementService extends Disposable implements IUse
 	constructor(
 		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
 		@IUserDataProfileService private readonly userDataProfileService: IUserDataProfileService,
-		@IFileService private readonly fileService: IFileService,
-		@IExtensionManagementServerService private readonly extensionManagementServerService: IExtensionManagementServerService,
-		@IWorkbenchExtensionManagementService private readonly extensionManagementService: IWorkbenchExtensionManagementService,
-		@IExtensionsProfileScannerService private readonly extensionsProfileScannerService: IExtensionsProfileScannerService,
 		@IHostService private readonly hostService: IHostService,
 		@IDialogService private readonly dialogService: IDialogService,
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 		this._register(userDataProfilesService.onDidChangeProfiles(e => this.onDidChangeProfiles(e)));
-	}
-
-	private async checkAndCreateExtensionsProfileResource(): Promise<URI> {
-		if (this.userDataProfileService.currentProfile.extensionsResource) {
-			return this.userDataProfileService.currentProfile.extensionsResource;
-		}
-		if (!this.userDataProfilesService.defaultProfile.extensionsResource) {
-			// Extensions profile is not yet created for default profile, create it now
-			return this.createDefaultExtensionsProfile(joinPath(this.userDataProfilesService.defaultProfile.location, EXTENSIONS_RESOURCE_NAME));
-		}
-		throw new Error('Invalid Profile');
+		this._register(userDataProfilesService.onDidResetWorkspaces(() => this.onDidResetWorkspaces()));
+		this._register(userDataProfileService.onDidChangeCurrentProfile(e => this.onDidChangeCurrentProfile(e)));
 	}
 
 	private onDidChangeProfiles(e: DidChangeProfilesEvent): void {
 		if (e.removed.some(profile => profile.id === this.userDataProfileService.currentProfile.id)) {
-			this.enterProfile(this.userDataProfilesService.defaultProfile, false, localize('reload message when removed', "The current profile has been removed. Please reload to switch back to default profile"));
-			return;
-		}
-		if (this.userDataProfileService.currentProfile.isDefault) {
-			this.userDataProfileService.updateCurrentProfile(this.userDataProfilesService.defaultProfile, false);
+			this.enterProfile(this.userDataProfilesService.defaultProfile, localize('reload message when removed', "The current profile has been removed. Please reload to switch back to default profile"));
 			return;
 		}
 	}
 
-	async createAndEnterProfile(name: string, useDefaultFlags?: UseDefaultProfileFlags, fromExisting?: boolean): Promise<IUserDataProfile> {
-		const workspaceIdentifier = this.getWorkspaceIdentifier();
-		const promises: Promise<any>[] = [];
-		const newProfile = this.userDataProfilesService.newProfile(name, useDefaultFlags);
-		await this.fileService.createFolder(newProfile.location);
-		const extensionsProfileResourcePromise = this.checkAndCreateExtensionsProfileResource();
-		promises.push(extensionsProfileResourcePromise);
-		if (fromExisting) {
-			// Storage copy is handled by storage service while entering profile
-			promises.push(this.fileService.copy(this.userDataProfileService.currentProfile.settingsResource, newProfile.settingsResource));
-			promises.push((async () => this.fileService.copy(await extensionsProfileResourcePromise, newProfile.extensionsResource))());
-			promises.push(this.fileService.copy(this.userDataProfileService.currentProfile.keybindingsResource, newProfile.keybindingsResource));
-			promises.push(this.fileService.copy(this.userDataProfileService.currentProfile.tasksResource, newProfile.tasksResource));
-			promises.push(this.fileService.copy(this.userDataProfileService.currentProfile.snippetsHome, newProfile.snippetsHome));
+	private onDidResetWorkspaces(): void {
+		if (!this.userDataProfileService.currentProfile.isDefault) {
+			this.enterProfile(this.userDataProfilesService.defaultProfile, localize('reload message when removed', "The current profile has been removed. Please reload to switch back to default profile"));
+			return;
 		}
-		await Promise.allSettled(promises);
-		const createdProfile = await this.userDataProfilesService.createProfile(newProfile, workspaceIdentifier);
-		await this.enterProfile(createdProfile, !!fromExisting);
-		return createdProfile;
+	}
+
+	private async onDidChangeCurrentProfile(e: DidChangeUserDataProfileEvent): Promise<void> {
+		if (e.previous.isTransient) {
+			await this.userDataProfilesService.cleanUpTransientProfiles();
+		}
+	}
+
+	async createAndEnterProfile(name: string, options?: IUserDataProfileOptions): Promise<IUserDataProfile> {
+		const profile = await this.userDataProfilesService.createNamedProfile(name, options, toWorkspaceIdentifier(this.workspaceContextService.getWorkspace()));
+		await this.enterProfile(profile);
+		this.telemetryService.publicLog2<ProfileManagementActionExecutedEvent, ProfileManagementActionExecutedClassification>('profileManagementActionExecuted', { id: 'createAndEnterProfile' });
+		return profile;
+	}
+
+	async createAndEnterTransientProfile(): Promise<IUserDataProfile> {
+		const profile = await this.userDataProfilesService.createTransientProfile(toWorkspaceIdentifier(this.workspaceContextService.getWorkspace()));
+		await this.enterProfile(profile);
+		this.telemetryService.publicLog2<ProfileManagementActionExecutedEvent, ProfileManagementActionExecutedClassification>('profileManagementActionExecuted', { id: 'createAndEnterTransientProfile' });
+		return profile;
+	}
+
+	async updateProfile(profile: IUserDataProfile, updateOptions: IUserDataProfileUpdateOptions): Promise<void> {
+		if (!this.userDataProfilesService.profiles.some(p => p.id === profile.id)) {
+			throw new Error(`Profile ${profile.name} does not exist`);
+		}
+		if (profile.isDefault) {
+			throw new Error(localize('cannotRenameDefaultProfile', "Cannot rename the default profile"));
+		}
+		await this.userDataProfilesService.updateProfile(profile, updateOptions);
+		this.telemetryService.publicLog2<ProfileManagementActionExecutedEvent, ProfileManagementActionExecutedClassification>('profileManagementActionExecuted', { id: 'updateProfile' });
 	}
 
 	async removeProfile(profile: IUserDataProfile): Promise<void> {
@@ -91,65 +97,51 @@ export class UserDataProfileManagementService extends Disposable implements IUse
 		if (profile.isDefault) {
 			throw new Error(localize('cannotDeleteDefaultProfile', "Cannot delete the default profile"));
 		}
-		if (profile.id === this.userDataProfileService.currentProfile.id) {
-			throw new Error(localize('cannotDeleteCurrentProfile', "Cannot delete the current profile"));
-		}
-		const defaultExtensionsResourceToDelete = this.userDataProfilesService.profiles.length === 2 ? this.userDataProfilesService.defaultProfile.extensionsResource : undefined;
 		await this.userDataProfilesService.removeProfile(profile);
-		if (defaultExtensionsResourceToDelete) {
-			try { await this.fileService.del(defaultExtensionsResourceToDelete); } catch (error) { /* ignore */ }
-		}
+		this.telemetryService.publicLog2<ProfileManagementActionExecutedEvent, ProfileManagementActionExecutedClassification>('profileManagementActionExecuted', { id: 'removeProfile' });
 	}
 
 	async switchProfile(profile: IUserDataProfile): Promise<void> {
-		const workspaceIdentifier = this.getWorkspaceIdentifier();
+		const workspaceIdentifier = toWorkspaceIdentifier(this.workspaceContextService.getWorkspace());
 		if (!this.userDataProfilesService.profiles.some(p => p.id === profile.id)) {
 			throw new Error(`Profile ${profile.name} does not exist`);
 		}
 		if (this.userDataProfileService.currentProfile.id === profile.id) {
 			return;
 		}
-		await this.userDataProfilesService.setProfileForWorkspace(profile, workspaceIdentifier);
-		await this.enterProfile(profile, false);
+		await this.userDataProfilesService.setProfileForWorkspace(workspaceIdentifier, profile);
+		await this.enterProfile(profile);
+		this.telemetryService.publicLog2<ProfileManagementActionExecutedEvent, ProfileManagementActionExecutedClassification>('profileManagementActionExecuted', { id: 'switchProfile' });
 	}
 
-	private getWorkspaceIdentifier(): WorkspaceIdentifier {
-		const workspace = this.workspaceContextService.getWorkspace();
-		switch (this.workspaceContextService.getWorkbenchState()) {
-			case WorkbenchState.FOLDER:
-				return { uri: workspace.folders[0].uri, id: workspace.id };
-			case WorkbenchState.WORKSPACE:
-				return { configPath: workspace.configuration!, id: workspace.id };
+	private async enterProfile(profile: IUserDataProfile, reloadMessage?: string): Promise<void> {
+		const isRemoteWindow = !!this.environmentService.remoteAuthority;
+
+		if (!isRemoteWindow) {
+			if (!(await this.extensionService.stopExtensionHosts(localize('switch profile', "Switching to a profile.")))) {
+				// If extension host did not stop, do not switch profile
+				if (this.userDataProfilesService.profiles.some(p => p.id === this.userDataProfileService.currentProfile.id)) {
+					await this.userDataProfilesService.setProfileForWorkspace(toWorkspaceIdentifier(this.workspaceContextService.getWorkspace()), this.userDataProfileService.currentProfile);
+				}
+				throw new CancellationError();
+			}
 		}
-		return 'empty-window';
-	}
 
-	private async enterProfile(profile: IUserDataProfile, preserveData: boolean, reloadMessage?: string): Promise<void> {
-		if (this.environmentService.remoteAuthority) {
-			const result = await this.dialogService.confirm({
-				type: 'info',
+		// In a remote window update current profile before reloading so that data is preserved from current profile if asked to preserve
+		await this.userDataProfileService.updateCurrentProfile(profile);
+
+		if (isRemoteWindow) {
+			const { confirmed } = await this.dialogService.confirm({
 				message: reloadMessage ?? localize('reload message', "Switching a profile requires reloading VS Code."),
 				primaryButton: localize('reload button', "&&Reload"),
 			});
-			if (result.confirmed) {
+			if (confirmed) {
 				await this.hostService.reload();
 			}
-			return;
+		} else {
+			await this.extensionService.startExtensionHosts();
 		}
-
-		this.extensionService.stopExtensionHosts();
-		await this.userDataProfileService.updateCurrentProfile(profile, preserveData);
-		await this.extensionService.startExtensionHosts();
-	}
-
-	private async createDefaultExtensionsProfile(extensionsProfileResource: URI): Promise<URI> {
-		try { await this.fileService.del(extensionsProfileResource); } catch (error) { /* ignore */ }
-		const extensionManagementService = this.extensionManagementServerService.localExtensionManagementServer?.extensionManagementService ?? this.extensionManagementService;
-		const userExtensions = await extensionManagementService.getInstalled(ExtensionType.User);
-		const extensions: [ILocalExtension, Metadata | undefined][] = await Promise.all(userExtensions.map(async e => ([e, await this.extensionManagementService.getMetadata(e)])));
-		await this.extensionsProfileScannerService.addExtensionsToProfile(extensions, extensionsProfileResource);
-		return extensionsProfileResource;
 	}
 }
 
-registerSingleton(IUserDataProfileManagementService, UserDataProfileManagementService);
+registerSingleton(IUserDataProfileManagementService, UserDataProfileManagementService, InstantiationType.Eager /* Eager because it updates the current window profile by listening to profiles changes */);

@@ -4,26 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
-import { DisposableStore } from 'vs/base/common/lifecycle';
+import { Disposable, DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
+import { assertType } from 'vs/base/common/types';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { EditorCommand, registerEditorCommand, registerEditorContribution } from 'vs/editor/browser/editorExtensions';
+import { EditorCommand, EditorContributionInstantiation, registerEditorCommand, registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
-import { ISelection } from 'vs/editor/common/core/selection';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { CompletionItem, CompletionItemKind, CompletionItemProvider } from 'vs/editor/common/languages';
 import { ILanguageConfigurationService } from 'vs/editor/common/languages/languageConfigurationRegistry';
 import { ITextModel } from 'vs/editor/common/model';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
-import { Choice, SnippetParser } from 'vs/editor/contrib/snippet/browser/snippetParser';
+import { Choice } from 'vs/editor/contrib/snippet/browser/snippetParser';
 import { showSimpleSuggestions } from 'vs/editor/contrib/suggest/browser/suggest';
 import { OvertypingCapturer } from 'vs/editor/contrib/suggest/browser/suggestOvertypingCapturer';
 import { localize } from 'vs/nls';
 import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { ILogService } from 'vs/platform/log/common/log';
-import { SnippetSession } from './snippetSession';
+import { ISnippetEdit, SnippetSession } from './snippetSession';
 
 export interface ISnippetInsertOptions {
 	overwriteBefore: number;
@@ -66,7 +66,7 @@ export class SnippetController2 implements IEditorContribution {
 	private _modelVersionId: number = -1;
 	private _currentChoice?: Choice;
 
-	private _choiceCompletionItemProvider?: CompletionItemProvider;
+	private _choiceCompletions?: { provider: CompletionItemProvider; enable(): void; disable(): void };
 
 	constructor(
 		private readonly _editor: ICodeEditor,
@@ -86,6 +86,19 @@ export class SnippetController2 implements IEditorContribution {
 		this._hasNextTabstop.reset();
 		this._session?.dispose();
 		this._snippetListener.dispose();
+	}
+
+	apply(edits: ISnippetEdit[], opts?: Partial<ISnippetInsertOptions>) {
+		try {
+			this._doInsert(edits, typeof opts === 'undefined' ? _defaultOptions : { ..._defaultOptions, ...opts });
+
+		} catch (e) {
+			this.cancel();
+			this._logService.error(e);
+			this._logService.error('snippet_error');
+			this._logService.error('insert_edits=', edits);
+			this._logService.error('existing_template=', this._session ? this._session._logInfo() : '<no_session>');
+		}
 	}
 
 	insert(
@@ -108,7 +121,7 @@ export class SnippetController2 implements IEditorContribution {
 	}
 
 	private _doInsert(
-		template: string,
+		template: string | ISnippetEdit[],
 		opts: ISnippetInsertOptions
 	): void {
 		if (!this._editor.hasModel()) {
@@ -123,11 +136,17 @@ export class SnippetController2 implements IEditorContribution {
 			this._editor.getModel().pushStackElement();
 		}
 
+		// don't merge
+		if (this._session && typeof template !== 'string') {
+			this.cancel();
+		}
+
 		if (!this._session) {
 			this._modelVersionId = this._editor.getModel().getAlternativeVersionId();
 			this._session = new SnippetSession(this._editor, template, opts, this._languageConfigurationService);
 			this._session.insert();
 		} else {
+			assertType(typeof template === 'string');
 			this._session.merge(template, opts);
 		}
 
@@ -137,7 +156,8 @@ export class SnippetController2 implements IEditorContribution {
 
 		// regster completion item provider when there is any choice element
 		if (this._session?.hasChoice) {
-			this._choiceCompletionItemProvider = {
+			const provider: CompletionItemProvider = {
+				_debugDisplayName: 'snippetChoiceCompletions',
 				provideCompletionItems: (model: ITextModel, position: Position) => {
 					if (!this._session || model !== this._editor.getModel() || !Position.equals(this._editor.getPosition(), position)) {
 						return undefined;
@@ -166,13 +186,29 @@ export class SnippetController2 implements IEditorContribution {
 				}
 			};
 
-			const registration = this._languageFeaturesService.completionProvider.register({
-				language: this._editor.getModel().getLanguageId(),
-				pattern: this._editor.getModel().uri.fsPath,
-				scheme: this._editor.getModel().uri.scheme
-			}, this._choiceCompletionItemProvider);
+			const model = this._editor.getModel();
+
+			let registration: IDisposable = Disposable.None;
+			let isRegistered = false;
+			const disable = () => {
+				registration.dispose();
+				isRegistered = false;
+			};
+
+			const enable = () => {
+				if (!isRegistered) {
+					registration = this._languageFeaturesService.completionProvider.register({
+						language: model.getLanguageId(),
+						pattern: model.uri.fsPath,
+						scheme: model.uri.scheme,
+						exclusive: true
+					}, provider);
+					isRegistered = true;
+				}
+			};
 
 			this._snippetListener.add(registration);
+			this._choiceCompletions = { provider, enable, disable };
 		}
 
 		this._updateState();
@@ -219,7 +255,8 @@ export class SnippetController2 implements IEditorContribution {
 		}
 
 		const { activeChoice } = this._session;
-		if (!activeChoice || !this._choiceCompletionItemProvider) {
+		if (!activeChoice || !this._choiceCompletions) {
+			this._choiceCompletions?.disable();
 			this._currentChoice = undefined;
 			return;
 		}
@@ -227,9 +264,11 @@ export class SnippetController2 implements IEditorContribution {
 		if (this._currentChoice !== activeChoice.choice) {
 			this._currentChoice = activeChoice.choice;
 
+			this._choiceCompletions.enable();
+
 			// trigger suggest with the special choice completion provider
 			queueMicrotask(() => {
-				showSimpleSuggestions(this._editor, this._choiceCompletionItemProvider!);
+				showSimpleSuggestions(this._editor, this._choiceCompletions!.provider);
 			});
 		}
 	}
@@ -260,16 +299,12 @@ export class SnippetController2 implements IEditorContribution {
 	}
 
 	prev(): void {
-		if (this._session) {
-			this._session.prev();
-		}
+		this._session?.prev();
 		this._updateState();
 	}
 
 	next(): void {
-		if (this._session) {
-			this._session.next();
-		}
+		this._session?.next();
 		this._updateState();
 	}
 
@@ -286,7 +321,7 @@ export class SnippetController2 implements IEditorContribution {
 }
 
 
-registerEditorContribution(SnippetController2.ID, SnippetController2);
+registerEditorContribution(SnippetController2.ID, SnippetController2, EditorContributionInstantiation.Lazy);
 
 const CommandCtor = EditorCommand.bindToContribution<SnippetController2>(SnippetController2.get);
 
@@ -332,60 +367,3 @@ registerEditorCommand(new CommandCtor({
 	// 	primary: KeyCode.Enter,
 	// }
 }));
-
-
-// ---
-
-export function performSnippetEdit(editor: ICodeEditor, snippet: string, selections: ISelection[]): boolean {
-	const controller = SnippetController2.get(editor);
-	if (!controller) {
-		return false;
-	}
-	editor.focus();
-	editor.setSelections(selections ?? []);
-	controller.insert(snippet);
-	return controller.isInSnippet();
-}
-
-
-export type ISnippetEdit = {
-	range: Range;
-	snippet: string;
-};
-
-// ---
-
-export function performSnippetEdits(editor: ICodeEditor, edits: ISnippetEdit[]) {
-
-	if (!editor.hasModel()) {
-		return false;
-	}
-	if (edits.length === 0) {
-		return false;
-	}
-
-	const model = editor.getModel();
-	let newText = '';
-	let last: ISnippetEdit | undefined;
-	edits.sort((a, b) => Range.compareRangesUsingStarts(a.range, b.range));
-
-	for (const item of edits) {
-		if (last) {
-			const between = Range.fromPositions(last.range.getEndPosition(), item.range.getStartPosition());
-			const text = model.getValueInRange(between);
-			newText += SnippetParser.escape(text);
-		}
-		newText += item.snippet;
-		last = item;
-	}
-
-	const controller = SnippetController2.get(editor);
-	if (!controller) {
-		return false;
-	}
-	model.pushStackElement();
-	const range = Range.plusRange(edits[0].range, edits[edits.length - 1].range);
-	editor.setSelection(range);
-	controller.insert(newText, { undoStopBefore: false });
-	return controller.isInSnippet();
-}

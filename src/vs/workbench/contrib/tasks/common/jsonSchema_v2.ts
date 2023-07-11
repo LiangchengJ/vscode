@@ -13,7 +13,7 @@ import { ProblemMatcherRegistry } from 'vs/workbench/contrib/tasks/common/proble
 import { TaskDefinitionRegistry } from './taskDefinitionRegistry';
 import * as ConfigurationResolverUtils from 'vs/workbench/services/configurationResolver/common/configurationResolverUtils';
 import { inputsSchema } from 'vs/workbench/services/configurationResolver/common/configurationResolverSchema';
-import { Codicon } from 'vs/base/common/codicons';
+import { getAllCodicons } from 'vs/base/common/codicons';
 
 function fixReferences(literal: any) {
 	if (Array.isArray(literal)) {
@@ -43,6 +43,13 @@ const shellCommand: IJSONSchema = {
 		}
 	],
 	deprecationMessage: nls.localize('JsonSchema.tasks.isShellCommand.deprecated', 'The property isShellCommand is deprecated. Use the type property of the task and the shell property in the options instead. See also the 1.14 release notes.')
+};
+
+
+const hide: IJSONSchema = {
+	type: 'boolean',
+	description: nls.localize('JsonSchema.hide', 'Hide this task from the run task quick pick'),
+	default: true
 };
 
 const taskIdentifier: IJSONSchema = {
@@ -102,8 +109,8 @@ const icon: IJSONSchema = {
 		id: {
 			description: nls.localize('JsonSchema.tasks.icon.id', 'An optional codicon ID to use'),
 			type: ['string', 'null'],
-			enum: Array.from(Codicon.getAll(), icon => icon.id),
-			markdownEnumDescriptions: Array.from(Codicon.getAll(), icon => `$(${icon.id})`),
+			enum: Array.from(getAllCodicons(), icon => icon.id),
+			markdownEnumDescriptions: Array.from(getAllCodicons(), icon => `$(${icon.id})`),
 		},
 		color: {
 			description: nls.localize('JsonSchema.tasks.icon.color', 'An optional color of the icon'),
@@ -407,6 +414,7 @@ const taskConfiguration: IJSONSchema = {
 		},
 		presentation: Objects.deepClone(presentation),
 		icon: Objects.deepClone(icon),
+		hide: Objects.deepClone(hide),
 		options: options,
 		problemMatcher: {
 			$ref: '#/definitions/problemMatcherType',
@@ -479,6 +487,7 @@ taskDescriptionProperties.command = Objects.deepClone(command);
 taskDescriptionProperties.args = Objects.deepClone(args);
 taskDescriptionProperties.isShellCommand = Objects.deepClone(shellCommand);
 taskDescriptionProperties.dependsOn = dependsOn;
+taskDescriptionProperties.hide = Objects.deepClone(hide);
 taskDescriptionProperties.dependsOrder = dependsOrder;
 taskDescriptionProperties.identifier = Objects.deepClone(identifier);
 taskDescriptionProperties.type = Objects.deepClone(taskType);
