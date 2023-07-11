@@ -215,6 +215,8 @@ async function initializeWindowsProfiles(testPwshSourcePaths?: string[]): Promis
 			`${process.env['UserProfile']}\\scoop\\apps\\git-with-openssh\\current\\bin\\bash.exe`,
 			`${process.env['AllUsersProfile']}\\scoop\\apps\\git-with-openssh\\current\\bin\\bash.exe`,
 			`${process.env['UserProfile']}\\Git\\bin\\bash.exe`,
+			`${process.env['UserProfile']}\\Git\\usr\\bin\\bash.exe`,
+			'C:\\Git\\bin\\bash.exe',
 			'C:\\Git\\usr\\bin\\bash.exe'
 		],
 		args: ['--login']
