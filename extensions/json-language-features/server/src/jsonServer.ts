@@ -11,7 +11,7 @@ import {
 
 import { runSafe, runSafeAsync } from './utils/runner';
 import { DiagnosticsSupport, registerDiagnosticsPullSupport, registerDiagnosticsPushSupport } from './utils/validation';
-import { TextDocument, JSONDocument, JSONSchema, getLanguageService, DocumentLanguageSettings, SchemaConfiguration, ClientCapabilities, Range, Position } from 'vscode-json-languageservice';
+import { TextDocument, JSONDocument, JSONSchema, getLanguageService, DocumentLanguageSettings, SchemaConfiguration, ClientCapabilities, Range, Position, SortOptions } from 'vscode-json-languageservice';
 import { getLanguageModelCache } from './languageModelCache';
 import { Utils, URI } from 'vscode-uri';
 
@@ -39,6 +39,20 @@ namespace LanguageStatusRequest {
 	export const type: RequestType<string, JSONLanguageStatus, any> = new RequestType('json/languageStatus');
 }
 
+export interface DocumentSortingParams {
+	/**
+	 * The uri of the document to sort.
+	 */
+	uri: string;
+	/**
+	 * The sort options
+	 */
+	options: SortOptions;
+}
+
+namespace DocumentSortingRequest {
+	export const type: RequestType<DocumentSortingParams, TextEdit[], any> = new RequestType('json/sort');
+}
 
 const workspaceContext = {
 	resolveRelativePath: (relativePath: string, resource: string) => {
@@ -106,10 +120,13 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	let hierarchicalDocumentSymbolSupport = false;
 
 	let foldingRangeLimitDefault = Number.MAX_VALUE;
-	let foldingRangeLimit = Number.MAX_VALUE;
 	let resultLimit = Number.MAX_VALUE;
-	let formatterMaxNumberOfEdits = Number.MAX_VALUE;
+	let jsonFoldingRangeLimit = Number.MAX_VALUE;
+	let jsoncFoldingRangeLimit = Number.MAX_VALUE;
+	let jsonColorDecoratorLimit = Number.MAX_VALUE;
+	let jsoncColorDecoratorLimit = Number.MAX_VALUE;
 
+	let formatterMaxNumberOfEdits = Number.MAX_VALUE;
 	let diagnosticsSupport: DiagnosticsSupport | undefined;
 
 
@@ -184,8 +201,13 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		json?: {
 			schemas?: JSONSchemaSettings[];
 			format?: { enable?: boolean };
+			keepLines?: { enable?: boolean };
 			validate?: { enable?: boolean };
 			resultLimit?: number;
+			jsonFoldingLimit?: number;
+			jsoncFoldingLimit?: number;
+			jsonColorDecoratorLimit?: number;
+			jsoncColorDecoratorLimit?: number;
 		};
 		http?: {
 			proxy?: string;
@@ -197,6 +219,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		fileMatch?: string[];
 		url?: string;
 		schema?: JSONSchema;
+		folderUri?: string;
 	}
 
 
@@ -205,17 +228,23 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	let schemaAssociations: ISchemaAssociations | SchemaConfiguration[] | undefined = undefined;
 	let formatterRegistrations: Thenable<Disposable>[] | null = null;
 	let validateEnabled = true;
+	let keepLinesEnabled = false;
 
-	// The settings have changed. Is send on server activation as well.
+	// The settings have changed. Is sent on server activation as well.
 	connection.onDidChangeConfiguration((change) => {
 		const settings = <Settings>change.settings;
 		runtime.configureHttpRequests?.(settings?.http?.proxy, !!settings.http?.proxyStrictSSL);
 		jsonConfigurationSettings = settings.json?.schemas;
 		validateEnabled = !!settings.json?.validate?.enable;
+		keepLinesEnabled = settings.json?.keepLines?.enable || false;
 		updateConfiguration();
 
-		foldingRangeLimit = Math.trunc(Math.max(settings.json?.resultLimit || foldingRangeLimitDefault, 0));
-		resultLimit = Math.trunc(Math.max(settings.json?.resultLimit || Number.MAX_VALUE, 0));
+		const sanitizeLimitSetting = (settingValue: any) => Math.trunc(Math.max(settingValue, 0));
+		resultLimit = sanitizeLimitSetting(settings.json?.resultLimit || Number.MAX_VALUE);
+		jsonFoldingRangeLimit = sanitizeLimitSetting(settings.json?.jsonFoldingLimit || foldingRangeLimitDefault);
+		jsoncFoldingRangeLimit = sanitizeLimitSetting(settings.json?.jsoncFoldingLimit || foldingRangeLimitDefault);
+		jsonColorDecoratorLimit = sanitizeLimitSetting(settings.json?.jsonColorDecoratorLimit || Number.MAX_VALUE);
+		jsoncColorDecoratorLimit = sanitizeLimitSetting(settings.json?.jsoncColorDecoratorLimit || Number.MAX_VALUE);
 
 		// dynamically enable & disable the formatter
 		if (dynamicFormatterRegistration) {
@@ -278,6 +307,16 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		}
 	});
 
+	connection.onRequest(DocumentSortingRequest.type, async params => {
+		const uri = params.uri;
+		const options = params.options;
+		const document = documents.get(uri);
+		if (document) {
+			return languageService.sort(document, options);
+		}
+		return [];
+	});
+
 	function updateConfiguration() {
 		const languageSettings = {
 			validate: validateEnabled,
@@ -305,7 +344,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 					uri = schema.schema.id || `vscode://schemas/custom/${index}`;
 				}
 				if (uri) {
-					languageSettings.schemas.push({ uri, fileMatch: schema.fileMatch, schema: schema.schema });
+					languageSettings.schemas.push({ uri, fileMatch: schema.fileMatch, schema: schema.schema, folderUri: schema.folderUri });
 				}
 			});
 		}
@@ -386,6 +425,8 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	});
 
 	function onFormat(textDocument: TextDocumentIdentifier, range: Range | undefined, options: FormattingOptions): TextEdit[] {
+
+		options.keepLines = keepLinesEnabled;
 		const document = documents.get(textDocument.uri);
 		if (document) {
 			const edits = languageService.format(document, range ?? getFullRange(document), options);
@@ -412,6 +453,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 			if (document) {
 
 				const jsonDocument = getJSONDocument(document);
+				const resultLimit = document.languageId === 'jsonc' ? jsoncColorDecoratorLimit : jsonColorDecoratorLimit;
 				return languageService.findDocumentColors(document, jsonDocument, { resultLimit });
 			}
 			return [];
@@ -433,7 +475,8 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 		return runSafe(runtime, () => {
 			const document = documents.get(params.textDocument.uri);
 			if (document) {
-				return languageService.getFoldingRanges(document, { rangeLimit: foldingRangeLimit });
+				const rangeLimit = document.languageId === 'jsonc' ? jsoncFoldingRangeLimit : jsonFoldingRangeLimit;
+				return languageService.getFoldingRanges(document, { rangeLimit });
 			}
 			return null;
 		}, null, `Error while computing folding ranges for ${params.textDocument.uri}`, token);

@@ -52,11 +52,13 @@ const CORE_TYPES = [
 	'BigInt64Array',
 	'btoa',
 	'atob',
+	'AbortController',
 	'AbortSignal',
 	'MessageChannel',
 	'MessagePort',
 	'URL',
-	'URLSearchParams'
+	'URLSearchParams',
+	'ReadonlyArray',
 ];
 
 // Types that are defined in a common layer but are known to be only
@@ -66,7 +68,9 @@ const NATIVE_TYPES = [
 	'INativeEnvironmentService',
 	'AbstractNativeEnvironmentService',
 	'INativeWindowConfiguration',
-	'ICommonNativeHostService'
+	'ICommonNativeHostService',
+	'INativeHostService',
+	'IMainProcessService'
 ];
 
 const RULES: IRule[] = [
@@ -75,12 +79,6 @@ const RULES: IRule[] = [
 	{
 		target: '**/vs/**/test/**',
 		skip: true // -> skip all test files
-	},
-
-	// TODO@bpasero remove me once electron utility process has landed
-	{
-		target: '**/vs/workbench/services/extensions/electron-sandbox/nativeLocalProcessExtensionHost.ts',
-		skip: true
 	},
 
 	// Common: vs/base/common/platform.ts
@@ -200,12 +198,6 @@ const RULES: IRule[] = [
 		]
 	},
 
-	// Electron (renderer): skip
-	{
-		target: '**/vs/**/electron-browser/**',
-		skip: true // -> supports all types
-	},
-
 	// Electron (main)
 	{
 		target: '**/vs/**/electron-main/**',
@@ -268,7 +260,7 @@ function checkFile(program: ts.Program, sourceFile: ts.SourceFile, rule: IRule) 
 
 		if (rule.disallowedTypes?.some(disallowed => disallowed === text)) {
 			const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
-			console.log(`[build/lib/layersChecker.ts]: Reference to type '${text}' violates layer '${rule.target}' (${sourceFile.fileName} (${line + 1},${character + 1})`);
+			console.log(`[build/lib/layersChecker.ts]: Reference to type '${text}' violates layer '${rule.target}' (${sourceFile.fileName} (${line + 1},${character + 1}). Learn more about our source code organization at https://github.com/microsoft/vscode/wiki/Source-Code-Organization.`);
 
 			hasErrors = true;
 			return;
@@ -295,7 +287,7 @@ function checkFile(program: ts.Program, sourceFile: ts.SourceFile, rule: IRule) 
 									if (definitionFileName.indexOf(disallowedDefinition) >= 0) {
 										const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
 
-										console.log(`[build/lib/layersChecker.ts]: Reference to symbol '${text}' from '${disallowedDefinition}' violates layer '${rule.target}' (${sourceFile.fileName} (${line + 1},${character + 1})`);
+										console.log(`[build/lib/layersChecker.ts]: Reference to symbol '${text}' from '${disallowedDefinition}' violates layer '${rule.target}' (${sourceFile.fileName} (${line + 1},${character + 1}) Learn more about our source code organization at https://github.com/microsoft/vscode/wiki/Source-Code-Organization.`);
 
 										hasErrors = true;
 										return;
