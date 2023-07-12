@@ -632,7 +632,7 @@ jobs:
           echo "VSCODE_ARCH=universal" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "GITHUB_REPOSITORY=${{ github.repository }}" >>"$GITHUB_ENV"
-          echo "AGENT_BUILDDIRECTORY=$PWD/.." >>"$GITHUB_ENV"
+          echo "AGENT_BUILDDIRECTORY=$(cd .. && pwd)" >>"$GITHUB_ENV"
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
@@ -686,7 +686,7 @@ jobs:
           mkdir ../VSCode-darwin-arm64 && mv ./*.app ../VSCode-darwin-arm64/
           tar -xJf "$NAME_SHORT-darwin-x64.tar.xz"
           mkdir ../VSCode-darwin-x64 && mv ./*.app ../VSCode-darwin-x64/
-          DEBUG=* node build/darwin/create-universal-app.js ../
+          DEBUG=* node build/darwin/create-universal-app.js "$AGENT_BUILDDIRECTORY"
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
           XZ_TARBALL_NAME=$BUILD.tar.xz
