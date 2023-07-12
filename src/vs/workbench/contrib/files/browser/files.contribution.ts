@@ -302,7 +302,7 @@ configurationRegistry.registerConfiguration({
 		[FILES_READONLY_FROM_PERMISSIONS_CONFIG]: {
 			'type': 'boolean',
 			'markdownDescription': nls.localize('filesReadonlyFromPermissions', "Marks files as read-only when their file permissions indicate as such. This can be overridden via `#files.readonlyInclude#` and `#files.readonlyExclude#` settings."),
-			'default': false
+			'default': true
 		},
 		'files.restoreUndoStack': {
 			'type': 'boolean',
