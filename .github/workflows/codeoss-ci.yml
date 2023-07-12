@@ -926,7 +926,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
 
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
