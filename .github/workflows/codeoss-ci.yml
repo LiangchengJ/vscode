@@ -566,9 +566,9 @@ jobs:
           yarn gulp vscode-darwin-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
-          (cd cli && cargo build --release --bin=$APPLICATION_NAME)
+          (cd cli && cargo build --release)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
-          mv cli/target/release/"$APPLICATION_NAME" ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
+          mv cli/target/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
           (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
           mv ../$XZ_TARBALL_NAME .
@@ -826,9 +826,9 @@ jobs:
           yarn gulp vscode-win32-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-win32-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-win32-${VSCODE_ARCH} $BUILD)
-          (cd cli && cargo build --release --bin=$APPLICATION_NAME)
+          (cd cli && cargo build --release)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
-          mv cli/target/release/"$APPLICATION_NAME.exe" ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
+          mv cli/target/release/code.exe ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
           (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
           mv ../$XZ_TARBALL_NAME .
