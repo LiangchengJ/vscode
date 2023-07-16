@@ -19,9 +19,9 @@ env:
   PYTHON_VERSION: "3.x"
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1689087480
-  PUBLISH_NAME: dev_test_part20
-  PUBLISH_TAG_NAME: dev_test_part20
+  CACHE_VERSION: 1689231181
+  PUBLISH_NAME: dev_test_part21
+  PUBLISH_TAG_NAME: dev_test_part21
   PRE_RELEASE: true
 
 defaults:
@@ -38,6 +38,7 @@ jobs:
       manifest-json: ${{ steps.write-outputs.outputs.manifest-json }}
       appimage-yml: ${{ steps.write-outputs.outputs.appimage-yml }}
       application-name: ${{ steps.write-outputs.outputs.application-name }}
+      tunnel-application-name: ${{ steps.write-outputs.outputs.tunnel-application-name }}
       name-short: ${{ steps.write-outputs.outputs.name-short }}
       vscode-quality: ${{ steps.write-outputs.outputs.vscode-quality }}
       version: ${{ steps.write-outputs.outputs.version }}
@@ -94,6 +95,7 @@ jobs:
           echo "::set-output name=manifest-json::$(cat resources/server/manifest.json)"
           echo "::set-output name=appimage-yml::$(base64 -w 0 resources/linux/AppImage.yml)"
           echo "::set-output name=application-name::$(node -p "require('./product.json')['applicationName']")"
+          echo "::set-output name=tunnel-application-name::$(node -p "require('./product.json')['tunnelApplicationName']")"
           echo "::set-output name=name-short::$(node -p "require('./product.json')['nameShort']")"
           echo "::set-output name=vscode-quality::$(node -p "require('./product.json')['quality']||''")"
           echo "::set-output name=version::$VERSION"
@@ -192,6 +194,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
+      - uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -207,6 +212,7 @@ jobs:
           echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
           [ "$VSCODE_ARCH" == "x64" ] && echo "DISPLAY=:10" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "VSCODE_QUALITY=${{ needs.generate-product-configurations.outputs.vscode-quality }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
@@ -492,12 +498,16 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
+      - uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
           echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
 
       - name: Download compilation output
@@ -556,6 +566,9 @@ jobs:
           yarn gulp vscode-darwin-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
+          (cd cli && cargo build --release --bin=$APPLICATION_NAME)
+          APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
+          mv cli/target/release/"$APPLICATION_NAME" ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
           (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
           mv ../$XZ_TARBALL_NAME .
@@ -741,6 +754,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      - uses: ATiltedTree/setup-rust@v1
+        with:
+          rust-version: stable
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -750,6 +766,7 @@ jobs:
           echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
           echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
 
@@ -809,6 +826,9 @@ jobs:
           yarn gulp vscode-win32-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-win32-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-win32-${VSCODE_ARCH} $BUILD)
+          (cd cli && cargo build --release --bin=$APPLICATION_NAME)
+          APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
+          mv cli/target/release/"$APPLICATION_NAME.exe" ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
           (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
           mv ../$XZ_TARBALL_NAME .

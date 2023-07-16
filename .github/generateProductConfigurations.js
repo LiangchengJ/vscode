@@ -9,165 +9,169 @@
 const fs = require("fs");
 const path = require("path");
 const process = require("process");
-const child_process = require("child_process");
+const childProcess = require("child_process");
+
+const productJsonFileName = "product.json";
+const productJson = require(`../${productJsonFileName}`);
+const vsProductJson = require(`../vs-${productJsonFileName}`);
 
 const getCommitHash = () =>
-  child_process.execSync("git log -1 --format='%H'")
-    .toString()
-    .replace(/\r/g, "")
-    .replace(/\n/g, "");
+	childProcess.execSync("git log -1 --format='%H'")
+		.toString()
+		.replace(/\r/g, "")
+		.replace(/\n/g, "");
 
 function generateProductJson() {
-  const outputFileName = "product.json";
-  // @ts-ignore
-  const _replaceName = (name) => name.replace(/-[ ]*/, "");
+	// @ts-ignore
+	const _replaceName = (/** @type {string} */ name) => name.replace(/-[ ]*/, "");
 
-  const product = require(`../${outputFileName}`);
-  const vsProduct = require(`../vs-${outputFileName}`);
+	productJson["nameShort"] = _replaceName(productJson["nameShort"]).replace(" ", "");
+	productJson["nameLong"] = _replaceName(productJson["nameLong"]);
+	productJson["applicationName"] = _replaceName(productJson["applicationName"]);
+	productJson["tunnelApplicationName"] = `${productJson["applicationName"]}-tunnel`;
+	productJson["tunnelApplicationConfig"] = vsProductJson["tunnelApplicationConfig"];
 
-  product["nameShort"] = _replaceName(product["nameShort"]).replace(" ", "");
-  product["nameLong"] = _replaceName(product["nameLong"]);
-  product["applicationName"] = _replaceName(product["applicationName"]);
-  product["win32MutexName"] = "codeoss";
-  product["win32DirName"] = vsProduct["win32DirName"];
-  // product["win32RegValueName"] = vsProduct["win32RegValueName"];
-  product["win32AppId"] = vsProduct["win32AppId"];
-  product["win32x64AppId"] = vsProduct["win32x64AppId"];
-  product["win32arm64AppId"] = vsProduct["win32arm64AppId"];
-  product["win32UserAppId"] = vsProduct["win32UserAppId"];
-  product["win32x64UserAppId"] = vsProduct["win32x64UserAppId"];
-  product["win32arm64UserAppId"] = vsProduct["win32arm64UserAppId"];
-  product["win32ShellNameShort"] = _replaceName(product["win32ShellNameShort"])
-    .replace(" ", "");
-  product["darwinBundleIdentifier"] = vsProduct["darwinBundleIdentifier"];
-  product["darwinExecutable"] = "CodeOSS";
-  product["dataFolderName"] = `.${product["applicationName"]}`;
-  product["serverApplicationName"] = `${product["applicationName"]}-server`;
-  product["serverDataFolderName"] = `${product["dataFolderName"]}-server`;
-  product["webviewContentExternalBaseUrlTemplate"] =
-    vsProduct["webviewContentExternalBaseUrlTemplate"];
-  product["urlProtocol"] = "vscode";
-  // product["serverGreeting"] = vsProduct["serverGreeting"];
-  product["quality"] = vsProduct["quality"];
-  product["extensionsGallery"] = vsProduct["extensionsGallery"];
-  product["extensionTips"] = vsProduct["extensionTips"];
-  product["extensionImportantTips"] = vsProduct["extensionImportantTips"];
-  product["keymapExtensionTips"] = vsProduct["keymapExtensionTips"];
-  product["languageExtensionTips"] = vsProduct["languageExtensionTips"];
-  product["configBasedExtensionTips"] = vsProduct["configBasedExtensionTips"];
-  product["exeBasedExtensionTips"] = vsProduct["exeBasedExtensionTips"];
-  product["webExtensionTips"] = vsProduct["webExtensionTips"];
-  product["remoteExtensionTips"] = vsProduct["remoteExtensionTips"];
-  product["extensionKeywords"] = vsProduct["extensionKeywords"];
-  product["extensionAllowedBadgeProviders"] =
-    vsProduct["extensionAllowedBadgeProviders"];
-  product["extensionAllowedBadgeProvidersRegex"] =
-    vsProduct["extensionAllowedBadgeProvidersRegex"];
-  product["crashReporter"] = vsProduct["crashReporter"];
-  product["appCenter"] = vsProduct["appCenter"];
-  product["enableTelemetry"] = false;
-  product["aiConfig"] = vsProduct["aiConfig"];
-  product["msftInternalDomains"] = vsProduct["msftInternalDomains"];
-  // product["sendASmile"] = vsProduct["sendASmile"];
-  product["extensionAllowedProposedApi"] =
-    vsProduct["extensionAllowedProposedApi"];
-  product["extensionKind"] = vsProduct["extensionKind"];
-  product["extensionPointExtensionKind"] =
-    vsProduct["extensionPointExtensionKind"];
-  product["extensionSyncedKeys"] = vsProduct["extensionSyncedKeys"];
-  product["extensionVirtualWorkspacesSupport"] =
-    vsProduct["extensionVirtualWorkspacesSupport"];
-  product["linkProtectionTrustedDomains"] =
-    vsProduct["linkProtectionTrustedDomains"];
-  product["auth"] = vsProduct["auth"];
-  product["configurationSync.store"] = vsProduct["configurationSync.store"];
-  product["builtInExtensions"] = vsProduct["builtInExtensions"];
-  product["commit"] = `${getCommitHash()}`;
-  product["date"] = new Date().toJSON();
+	productJson["win32MutexName"] = productJson["applicationName"];
+	productJson["win32TunnelServiceMutex"] = `${productJson["applicationName"]}-tunnelservice`;
+	productJson["win32TunnelMutex"] = productJson["tunnelApplicationName"];
+	productJson["win32DirName"] = vsProductJson["win32DirName"];
+	productJson["win32AppId"] = vsProductJson["win32AppId"];
+	productJson["win32x64AppId"] = vsProductJson["win32x64AppId"];
+	productJson["win32arm64AppId"] = vsProductJson["win32arm64AppId"];
+	productJson["win32UserAppId"] = vsProductJson["win32UserAppId"];
+	productJson["win32x64UserAppId"] = vsProductJson["win32x64UserAppId"];
+	productJson["win32arm64UserAppId"] = vsProductJson["win32arm64UserAppId"];
+	productJson["win32ShellNameShort"] = _replaceName(productJson["win32ShellNameShort"])
+		.replace(" ", "");
 
-  // product["settingsSearchBuildId"] = vsProduct["settingsSearchBuildId"];
-  // product["darwinUniversalAssetId"] = vsProduct["darwinUniversalAssetId"];
+	productJson["darwinBundleIdentifier"] = vsProductJson["darwinBundleIdentifier"];
+	productJson["darwinExecutable"] = "CodeOSS";
+	productJson["dataFolderName"] = `.${productJson["applicationName"]}`;
+	productJson["urlProtocol"] = "vscode";
+	productJson["serverApplicationName"] = `${productJson["applicationName"]}-server`;
+	productJson["serverDataFolderName"] = `${productJson["dataFolderName"]}-server`;
+	productJson["serverLicense"] = [
+		"*",
+		`* ${productJson["nameLong"]} Server`,
+		"*",
+		"* By using the software, you agree to",
+		`* the ${productJson["nameLong"]} Server License Terms (${productJson["serverLicenseUrl"]}).`,
+		"*"
+	];
+	productJson["serverLicensePrompt"] = vsProductJson["serverLicensePrompt"];
+	productJson["quality"] = vsProductJson["quality"];
+	productJson["linuxIconName"] = productJson["applicationName"];
+	productJson["extensionsGallery"] = vsProductJson["extensionsGallery"];
+	productJson["profileTemplatesUrl"] = vsProductJson["profileTemplatesUrl"];
+	productJson["extensionRecommendations"] = vsProductJson["extensionRecommendations"];
+	productJson["keymapExtensionTips"] = vsProductJson["keymapExtensionTips"];
+	productJson["languageExtensionTips"] = vsProductJson["languageExtensionTips"];
+	productJson["configBasedExtensionTips"] = vsProductJson["configBasedExtensionTips"];
+	productJson["exeBasedExtensionTips"] = vsProductJson["exeBasedExtensionTips"];
+	productJson["webExtensionTips"] = vsProductJson["webExtensionTips"];
+	productJson["virtualWorkspaceExtensionTips"] = vsProductJson["virtualWorkspaceExtensionTips"];
+	productJson["remoteExtensionTips"] = vsProductJson["remoteExtensionTips"];
+	productJson["commandPaletteSuggestedCommandIds"] = vsProductJson["commandPaletteSuggestedCommandIds"];
+	productJson["extensionKeywords"] = vsProductJson["extensionKeywords"];
 
-  // for (let i in product["serverGreeting"]) {
-  //   let item = product["serverGreeting"][i];
-  //   product["serverGreeting"][i] = item.replace(
-  //     vsProduct["nameLong"],
-  //     product["nameLong"],
-  //   );
-  // }
+	productJson["extensionAllowedBadgeProviders"] =
+		vsProductJson["extensionAllowedBadgeProviders"];
+	productJson["extensionAllowedBadgeProvidersRegex"] =
+		vsProductJson["extensionAllowedBadgeProvidersRegex"];
+	productJson["crashReporter"] = vsProductJson["crashReporter"];
+	productJson["appCenter"] = vsProductJson["appCenter"];
+	productJson["enableTelemetry"] = false;
+	productJson["aiConfig"] = vsProductJson["aiConfig"];
+	productJson["msftInternalDomains"] = vsProductJson["msftInternalDomains"];
 
-  const writeStream = fs.createWriteStream(outputFileName);
-  writeStream.write(JSON.stringify(product));
-  writeStream.end();
+	productJson["documentationUrl"] = vsProductJson["documentationUrl"];
+	productJson["serverDocumentationUrl"] = vsProductJson["serverDocumentationUrl"];
+	productJson["settingsSearchUrl"] = vsProductJson["settingsSearchUrl"];
 
-  console.log(`Generate "${outputFileName}" successfully!`);
+	productJson["extensionEnabledApiProposals"] = vsProductJson["extensionEnabledApiProposals"];
+	productJson["extensionKind"] = vsProductJson["extensionKind"];
+	productJson["extensionPointExtensionKind"] =
+		vsProductJson["extensionPointExtensionKind"];
+	productJson["extensionSyncedKeys"] = vsProductJson["extensionSyncedKeys"];
+	productJson["extensionVirtualWorkspacesSupport"] =
+		vsProductJson["extensionVirtualWorkspacesSupport"];
+
+	productJson["linkProtectionTrustedDomains"] =
+		vsProductJson["linkProtectionTrustedDomains"];
+	productJson["trustedExtensionAuthAccess"] =
+		vsProductJson["trustedExtensionAuthAccess"];
+	productJson["auth"] = vsProductJson["auth"];
+	productJson["configurationSync.store"] = vsProductJson["configurationSync.store"];
+	productJson["editSessions.store"] = vsProductJson["editSessions.store"];
+	productJson["builtInExtensions"] = vsProductJson["builtInExtensions"];
+
+	productJson["commit"] = `${getCommitHash()}`;
+	productJson["date"] = new Date().toJSON();
+
+	const writeStream = fs.createWriteStream(productJsonFileName);
+	writeStream.write(JSON.stringify(productJson));
+	writeStream.end();
+
+	console.log(`Generate "${productJsonFileName}" successfully!`);
 }
 
 function generateWin32VisualElementsManifest() {
-  const outputFileName = "VisualElementsManifest.xml";
-  // @ts-ignore
-  const _replaceName = (name) => name.replace(/[ ]-[ ]/, "");
+	const outputFileName = "VisualElementsManifest.xml";
+	const visualElementsManifestXmlPath = path.join(
+		process.cwd(),
+		"resources",
+		"win32",
+		outputFileName,
+	);
 
-  const visualElementsManifestXmlPath = path.join(
-    process.cwd(),
-    "resources",
-    "win32",
-    outputFileName,
-  );
+	const xml = fs.readFileSync(visualElementsManifestXmlPath).toString();
+	fs.writeFileSync(
+		visualElementsManifestXmlPath,
+		xml.replace(/@@NAME_SHORT@@/g, productJson["nameShort"]),
+	);
 
-  const contents = fs.readFileSync(visualElementsManifestXmlPath);
-
-  fs.writeFileSync(
-    visualElementsManifestXmlPath,
-    _replaceName(contents.toString()),
-  );
-
-  console.log(`Generate "${outputFileName}" successfully!`);
+	console.log(`Generate "${outputFileName}" successfully!`);
 }
 
 function generateServerWebManifest() {
-  const outputFileName = "manifest.json";
-  const product = require("../product.json");
+	const outputFileName = "manifest.json";
+	const manifestJsonPath = path.join(
+		process.cwd(),
+		"resources",
+		"server",
+		outputFileName,
+	);
 
-  const manifestJsonPath = path.join(
-    process.cwd(),
-    "resources",
-    "server",
-    outputFileName,
-  );
+	const manifest = JSON.parse(fs.readFileSync(manifestJsonPath).toString());
+	manifest["name"] = productJson["nameLong"];
+	manifest["short_name"] = productJson["nameShort"];
+	fs.writeFileSync(
+		manifestJsonPath,
+		JSON.stringify(manifest),
+	);
 
-  const manifest = JSON.parse(fs.readFileSync(manifestJsonPath).toString());
-  manifest["name"] = product["nameLong"];
-  manifest["short_name"] = product["nameShort"];
-
-  fs.writeFileSync(
-    manifestJsonPath,
-    JSON.stringify(manifest),
-  );
-
-  console.log(`Generate "${outputFileName}" successfully!`);
+	console.log(`Generate "${outputFileName}" successfully!`);
 }
 
 function generateAppImageYAML() {
-  const outputFileName = "AppImage.yml";
-  const product = require("../product.json");
+	const outputFileName = "AppImage.yml";
+	const ymlPath = path.join(
+		process.cwd(),
+		"resources",
+		"linux",
+		outputFileName,
+	);
 
-  const ymlPath = path.join(
-    process.cwd(),
-    "resources",
-    "linux",
-    outputFileName,
-  );
-  const yml = fs.readFileSync(ymlPath).toString();
-  fs.writeFileSync(
-    ymlPath,
-    yml.replace(/@@NAME_SHORT@@/g, product["nameShort"]).replace(
-      /@@NAME@@/g,
-      product["applicationName"],
-    ).replace(/@@ICON@@/g, product["linuxIconName"]),
-  );
+	const yml = fs.readFileSync(ymlPath).toString();
+	fs.writeFileSync(
+		ymlPath,
+		yml.replace(/@@NAME_SHORT@@/g, productJson["nameShort"]).replace(
+			/@@NAME@@/g,
+			productJson["applicationName"],
+		).replace(/@@ICON@@/g, productJson["linuxIconName"]),
+	);
 
-  console.log(`Generate "${outputFileName}" successfully!`);
+	console.log(`Generate "${outputFileName}" successfully!`);
 }
 
 generateProductJson();
