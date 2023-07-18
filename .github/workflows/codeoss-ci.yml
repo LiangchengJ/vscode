@@ -204,10 +204,13 @@ jobs:
         include:
           - arch: x64
             image-tag: bionic-x64
+            rust-host-triple: x86_64-unknown-linux-gnu
           - arch: arm64
             image-tag: stretch-arm64
+            rust-host-triple: aarch64-unknown-linux-gnu
           - arch: armhf
             image-tag: stretch-armhf
+            rust-host-triple: armv7-unknown-linux-gnueabihf
 
     steps:
       - uses: actions/checkout@v3
@@ -216,7 +219,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+              --default-toolchain "$RUST_VERSION" \
+              --profile minimal \
+              --default-host ${{ matrix.rust-host-triple }}
         env:
           PATH: $HOME/.cargo/bin:$PATH
 
@@ -514,7 +521,11 @@ jobs:
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
-        arch: [x64, arm64]
+        include:
+          - arch: x64
+            rust-host-triple-arch: x86_64
+          - arch: arm64
+            rust-host-triple-arch: aarch64
 
     steps:
       - uses: actions/checkout@v3
@@ -523,7 +534,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        run: |
+          xcode-select --install
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+              --default-toolchain "$RUST_VERSION" \
+              --profile minimal \
+              --default-host ${{ matrix.rust-host-triple-arch }}-apple-darwin
         env:
           PATH: $HOME/.cargo/bin:$PATH
 
@@ -772,7 +788,13 @@ jobs:
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
-        arch: [x64, arm64, ia32]
+        include:
+          - arch: x64
+            rust-host-triple-arch: x86_64
+          - arch: arm64
+            rust-host-triple-arch: aarch64
+          - arch: ia32
+            rust-host-triple-arch: i686
     env:
       RUSTFLAGS: "-C target-feature=+crt-static"
 
@@ -786,7 +808,11 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Setup Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+              --default-toolchain "$RUST_VERSION" \
+              --profile minimal \
+              --default-host ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
         env:
           PATH: $HOME/.cargo/bin:$PATH
 
