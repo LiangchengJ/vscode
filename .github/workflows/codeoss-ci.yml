@@ -214,9 +214,12 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
-        with:
-          channel: ${{ env.RUST_VERSION }}
+
+      - name: Setup Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        env:
+          PATH: $HOME/.cargo/bin:$PATH
+
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -518,9 +521,12 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
-        with:
-          channel: ${{ env.RUST_VERSION }}
+
+      - name: Setup Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        env:
+          PATH: $HOME/.cargo/bin:$PATH
+
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -778,9 +784,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
-        with:
-          channel: ${{ env.RUST_VERSION }}
+
+      - name: Setup Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ env.RUST_VERSION }} --profile minimal
+        env:
+          PATH: $HOME/.cargo/bin:$PATH
+
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
