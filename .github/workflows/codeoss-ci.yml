@@ -17,11 +17,12 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NODE_VERSION: 16
   PYTHON_VERSION: "3.x"
+  RUST_VERSION: stable
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
   CACHE_VERSION: 1689231181
-  PUBLISH_NAME: dev_test_part21
-  PUBLISH_TAG_NAME: dev_test_part21
+  PUBLISH_NAME: dev_test_part22
+  PUBLISH_TAG_NAME: dev_test_part22
   PRE_RELEASE: true
 
 defaults:
@@ -163,8 +164,27 @@ jobs:
           yarn --cwd test/smoke compile
           yarn --cwd test/integration/browser compile
 
+      - name: Compute openssl prebuilt cache key
+        id: compute-openssl-prebuilt-cache-key
+        run: echo "::set-output name=key::$(echo "OPENSSL_PREBUILT#$CACHE_VERSION" | sha512sum | awk '{print $1}')"
+
+      - name: Cache openssl prebuilt
+        id: cache-openssl-prebuilt
+        uses: actions/cache@v2
+        with:
+          path: openssl
+          key: "${{ runner.os }}${{ steps.compute-openssl-prebuilt-cache-key.outputs.key }}"
+
+      - name: Download & Extract openssl prebuilt
+        if: ${{ steps.cache-openssl-prebuilt.outputs.cache-hit != 'true' }}
+        run: |
+          OPENSSL_PREBUILT_VERSION=0.0.5
+          npm pack @vscode/openssl-prebuilt@$OPENSSL_PREBUILT_VERSION
+          mkdir openssl
+          tar -xvzf vscode-openssl-prebuilt-$OPENSSL_PREBUILT_VERSION.tgz --strip-components=2 -C openssl package/out/
+
       - name: Compress compilation artifact
-        run: tar -cvJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out
+        run: tar -cvJ --ignore-failed-read -f compilation.tar.xz .build out-* test/integration/browser/out test/smoke/out test/automation/out openssl
 
       - name: Publish compilation artifact
         uses: actions/upload-artifact@v3
@@ -194,9 +214,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: ATiltedTree/setup-rust@v1
+      - uses: moonrepo/setup-rust@v0.6.1
         with:
-          rust-version: stable
+          channel: ${{ env.RUST_VERSION }}
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -498,9 +518,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: ATiltedTree/setup-rust@v1
+      - uses: moonrepo/setup-rust@v0.6.1
         with:
-          rust-version: stable
+          channel: ${{ env.RUST_VERSION }}
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -566,6 +586,8 @@ jobs:
           yarn gulp vscode-darwin-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
+          export OPENSSL_LIB_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/lib"
+          export OPENSSL_INCLUDE_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/include"
           (cd cli && cargo build --release)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
@@ -745,6 +767,8 @@ jobs:
     strategy:
       matrix:
         arch: [x64, arm64, ia32]
+    env:
+      RUSTFLAGS: "-C target-feature=+crt-static"
 
     steps:
       - uses: actions/checkout@v3
@@ -754,9 +778,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: ATiltedTree/setup-rust@v1
+      - uses: moonrepo/setup-rust@v0.6.1
         with:
-          rust-version: stable
+          channel: ${{ env.RUST_VERSION }}
       - name: Update product configurations
         run: |
           echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
@@ -826,6 +850,9 @@ jobs:
           yarn gulp vscode-win32-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-win32-${VSCODE_ARCH}
           (cd .. && cp -r VSCode-win32-${VSCODE_ARCH} $BUILD)
+          OPENSSL_PREBUILT_ARCH=$([ "$VSCODE_ARCH" == "ia32" ] && echo "x86" || echo "$VSCODE_ARCH")
+          export OPENSSL_LIB_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/lib"
+          export OPENSSL_INCLUDE_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/include"
           (cd cli && cargo build --release)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code.exe ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
