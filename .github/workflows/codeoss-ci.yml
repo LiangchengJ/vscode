@@ -600,7 +600,7 @@ jobs:
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
           export OPENSSL_LIB_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/include"
-          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE")
+          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
@@ -874,7 +874,7 @@ jobs:
           OPENSSL_PREBUILT_ARCH=$([ "$VSCODE_ARCH" == "ia32" ] && echo "x86" || echo "$VSCODE_ARCH")
           export OPENSSL_LIB_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/include"
-          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE")
+          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code.exe ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
