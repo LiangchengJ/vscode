@@ -217,15 +217,10 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-              --default-toolchain "$RUST_VERSION" \
-              --profile minimal \
-              --default-host ${{ matrix.rust-host-triple }}
-        env:
-          PATH: $HOME/.cargo/bin:$PATH
+      - uses: moonrepo/setup-rust@v0.6.1
+        with:
+          channel: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.rust-host-triple }}
 
       - name: Update product configurations
         run: |
@@ -532,16 +527,10 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Rust
-        run: |
-          xcode-select --install
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-              --default-toolchain "$RUST_VERSION" \
-              --profile minimal \
-              --default-host ${{ matrix.rust-host-triple-arch }}-apple-darwin
-        env:
-          PATH: $HOME/.cargo/bin:$PATH
+      - uses: moonrepo/setup-rust@v0.6.1
+        with:
+          channel: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.rust-host-triple-arch }}-apple-darwin
 
       - name: Update product configurations
         run: |
@@ -551,6 +540,7 @@ jobs:
           echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
           echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
+          echo "RUST_HOST_TRIPLE=${{ matrix.rust-host-triple-arch }}-apple-darwin" >>"$GITHUB_ENV"
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -610,7 +600,7 @@ jobs:
           (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
           export OPENSSL_LIB_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/include"
-          (cd cli && cargo build --release)
+          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE")
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
@@ -806,15 +796,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Setup Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-              --default-toolchain "$RUST_VERSION" \
-              --profile minimal \
-              --default-host ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
-        env:
-          PATH: $HOME/.cargo/bin:$PATH
+      - uses: moonrepo/setup-rust@v0.6.1
+        with:
+          channel: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
 
       - name: Update product configurations
         run: |
@@ -828,6 +813,7 @@ jobs:
           echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
           echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
           echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
+          echo "RUST_HOST_TRIPLE=${{ matrix.rust-host-triple-arch }}-pc-windows-msvc" >>"$GITHUB_ENV"
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -888,7 +874,7 @@ jobs:
           OPENSSL_PREBUILT_ARCH=$([ "$VSCODE_ARCH" == "ia32" ] && echo "x86" || echo "$VSCODE_ARCH")
           export OPENSSL_LIB_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/include"
-          (cd cli && cargo build --release)
+          (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE")
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
           mv cli/target/release/code.exe ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
