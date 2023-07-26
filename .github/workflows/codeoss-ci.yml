@@ -602,7 +602,7 @@ jobs:
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/include"
           (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
           APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
-          mv cli/target/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
+          mv cli/target/"$RUST_HOST_TRIPLE"/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
           (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
           mv ../$XZ_TARBALL_NAME .
@@ -875,8 +875,7 @@ jobs:
           export OPENSSL_LIB_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/include"
           (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
-          APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
-          mv cli/target/release/code.exe ../$BUILD/"$APP_NAME"/bin/"$CLI_APP_NAME.exe"
+          mv cli/target/"$RUST_HOST_TRIPLE"/release/code.exe ../$BUILD/bin/"$CLI_APP_NAME.exe"
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
           (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
           mv ../$XZ_TARBALL_NAME .
