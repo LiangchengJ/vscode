@@ -869,13 +869,14 @@ jobs:
         run: |
           echo "::group::Build binary package"
           yarn gulp vscode-win32-${VSCODE_ARCH}-min-ci
-          BUILD=$NAME_SHORT-win32-${VSCODE_ARCH}
-          (cd .. && cp -r VSCode-win32-${VSCODE_ARCH} $BUILD)
           OPENSSL_PREBUILT_ARCH=$([ "$VSCODE_ARCH" == "ia32" ] && echo "x86" || echo "$VSCODE_ARCH")
           export OPENSSL_LIB_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${OPENSSL_PREBUILT_ARCH}-windows-static-md/include"
           (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
-          mv cli/target/"$RUST_HOST_TRIPLE"/release/code.exe ../$BUILD/bin/"$CLI_APP_NAME.exe"
+          DEFAULT_BUILD=VSCode-win32-${VSCODE_ARCH}
+          mv cli/target/"$RUST_HOST_TRIPLE"/release/code.exe ../$DEFAULT_BUILD/bin/"$CLI_APP_NAME.exe"
+          BUILD=$NAME_SHORT-win32-${VSCODE_ARCH}
+          (cd .. && cp -r $DEFAULT_BUILD $BUILD)
           XZ_TARBALL_NAME=$BUILD-$VERSION.tar.xz
           (cd .. && tar -cJf $XZ_TARBALL_NAME $BUILD)
           mv ../$XZ_TARBALL_NAME .
