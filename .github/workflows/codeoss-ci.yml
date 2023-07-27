@@ -64,7 +64,7 @@ jobs:
           VS_ZIP_URL="https://update.code.visualstudio.com/${UNIVERSAL_ZIP_VERSION}/darwin-universal/stable"
           CURL_DO_URL=$(curl -is "$VS_ZIP_URL" | grep Location | awk -F ": " '{print $2}' | tr -d "\r|\n")
           echo "CURL_DO_URL=$CURL_DO_URL" >>"$GITHUB_ENV"
-          echo "::set-output name=key::$(echo "$CURL_DO_URL#$CACHE_VERSION" | sha512sum | awk '{print $1}')"
+          echo "key=$(echo "$CURL_DO_URL#$CACHE_VERSION" | sha512sum | awk '{print $1}')" >>"$GITHUB_OUTPUT"
 
       - name: Cache product configurations
         id: cache-product-configurations
@@ -91,15 +91,15 @@ jobs:
       - name: Write outputs
         id: write-outputs
         run: |
-          echo "::set-output name=product-json::$(cat product.json)"
-          echo "::set-output name=win32vem-xml::$(base64 -w 0 resources/win32/VisualElementsManifest.xml)"
-          echo "::set-output name=manifest-json::$(cat resources/server/manifest.json)"
-          echo "::set-output name=appimage-yml::$(base64 -w 0 resources/linux/AppImage.yml)"
-          echo "::set-output name=application-name::$(node -p "require('./product.json')['applicationName']")"
-          echo "::set-output name=tunnel-application-name::$(node -p "require('./product.json')['tunnelApplicationName']")"
-          echo "::set-output name=name-short::$(node -p "require('./product.json')['nameShort']")"
-          echo "::set-output name=vscode-quality::$(node -p "require('./product.json')['quality']||''")"
-          echo "::set-output name=version::$VERSION"
+          echo "product-json=$(cat product.json)" >>"$GITHUB_OUTPUT"
+          echo "win32vem-xml=$(base64 -w 0 resources/win32/VisualElementsManifest.xml)" >>"$GITHUB_OUTPUT"
+          echo "manifest-json=$(cat resources/server/manifest.json)" >>"$GITHUB_OUTPUT"
+          echo "appimage-yml=$(base64 -w 0 resources/linux/AppImage.yml)" >>"$GITHUB_OUTPUT"
+          echo "application-name=$(node -p "require('./product.json')['applicationName']")" >>"$GITHUB_OUTPUT"
+          echo "tunnel-application-name=$(node -p "require('./product.json')['tunnelApplicationName']")" >>"$GITHUB_OUTPUT"
+          echo "name-short=$(node -p "require('./product.json')['nameShort']")" >>"$GITHUB_OUTPUT"
+          echo "vscode-quality=$(node -p "require('./product.json')['quality']||''")" >>"$GITHUB_OUTPUT"
+          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
 
   compile:
     name: Compile
@@ -120,7 +120,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
@@ -166,7 +166,7 @@ jobs:
 
       - name: Compute openssl prebuilt cache key
         id: compute-openssl-prebuilt-cache-key
-        run: echo "::set-output name=key::$(echo "OPENSSL_PREBUILT#$CACHE_VERSION" | sha512sum | awk '{print $1}')"
+        run: echo "key=$(echo "OPENSSL_PREBUILT#$CACHE_VERSION" | sha512sum | awk '{print $1}')" >>"$GITHUB_OUTPUT"
 
       - name: Cache openssl prebuilt
         id: cache-openssl-prebuilt
@@ -261,7 +261,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
@@ -552,7 +552,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
@@ -683,7 +683,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
@@ -825,7 +825,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
@@ -987,7 +987,7 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "::set-output name=key::$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
