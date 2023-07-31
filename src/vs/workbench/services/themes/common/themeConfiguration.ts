@@ -29,7 +29,7 @@ function formatSettingAsLink(str: string) {
 const colorThemeSettingSchema: IConfigurationPropertySchema = {
 	type: 'string',
 	description: nls.localize('colorTheme', "Specifies the color theme used in the workbench."),
-	default: ThemeSettingDefaults.COLOR_THEME_DARK,
+	default: ThemeSettingDefaults.COLOR_THEME_LIGHT,
 	enum: colorThemeSettingEnum,
 	enumDescriptions: colorThemeSettingEnumDescriptions,
 	enumItemLabels: colorThemeSettingEnumItemLabels,

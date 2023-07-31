@@ -184,7 +184,7 @@ import { applicationConfigurationNodeBase } from 'vs/workbench/common/configurat
 			},
 			'window.zoomLevel': {
 				'type': 'number',
-				'default': isMacintosh ? 0.96 : 0.22,
+				'default': isMacintosh ? 0.99 : isWindows ? 1.13 : 1,
 				'minimum': -5,
 				'description': localize('zoomLevel', "Adjust the zoom level of the window. The original size is 0 and each increment above (e.g. 1) or below (e.g. -1) represents zooming 20% larger or smaller. You can also enter decimals to adjust the zoom level with a finer granularity."),
 				ignoreSync: true,
