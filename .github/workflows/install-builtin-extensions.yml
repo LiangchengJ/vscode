@@ -8,22 +8,22 @@ outputs:
     description: "The built-in extensions cache key"
     value: ${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}
 runs:
-  using: "node16"
-steps:
-  - name: Create .build folder
-    run: mkdir -p .build
+  using: "composite"
+  steps:
+    - name: Create .build folder
+      run: mkdir -p .build
 
-  - name: Prepare built-in extensions cache key
-    id: prepare-built-in-extensions-cache-key
-    run: echo "key=$(node build/azure-pipelines/common/computeBuiltInDepsCacheKey.js)" >>"$GITHUB_OUTPUT"
+    - name: Prepare built-in extensions cache key
+      id: prepare-built-in-extensions-cache-key
+      run: echo "key=$(node build/azure-pipelines/common/computeBuiltInDepsCacheKey.js)" >>"$GITHUB_OUTPUT"
 
-  - name: Restore built-in extensions cache
-    id: restore-built-in-extensions-cache
-    uses: actions/cache@v3
-    with:
-      path: ".build/builtInExtensions"
-      key: "builtin-extensions${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}${{ inputs.cache-version }}"
+    - name: Restore built-in extensions cache
+      id: restore-built-in-extensions-cache
+      uses: actions/cache@v3
+      with:
+        path: ".build/builtInExtensions"
+        key: "builtin-extensions${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}${{ inputs.cache-version }}"
 
-  - name: Download built-in extensions
-    if: ${{ steps.restore-built-in-extensions-cache.outputs.cache-hit != 'true' }}
-    run: node build/lib/builtInExtensions.js
+    - name: Download built-in extensions
+      if: ${{ steps.restore-built-in-extensions-cache.outputs.cache-hit != 'true' }}
+      run: node build/lib/builtInExtensions.js
