@@ -1,4 +1,5 @@
 steps:
+  - uses: actions/checkout@v3
   - name: Create .build folder
     run: mkdir -p .build
 
