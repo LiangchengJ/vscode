@@ -45,7 +45,7 @@ jobs:
       version: ${{ steps.write-outputs.outputs.version }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -68,7 +68,7 @@ jobs:
 
       - name: Cache product configurations
         id: cache-product-configurations
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             product.json
@@ -109,7 +109,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install build tools
@@ -124,7 +124,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}GenericNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
@@ -175,7 +175,7 @@ jobs:
 
       - name: Cache openssl prebuilt
         id: cache-openssl-prebuilt
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: openssl
           key: "${{ runner.os }}${{ steps.compute-openssl-prebuilt-cache-key.outputs.key }}"
@@ -225,7 +225,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: moonrepo/setup-rust@v0.6.1
@@ -276,7 +276,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
@@ -537,7 +537,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: moonrepo/setup-rust@v0.6.1
@@ -569,7 +569,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
@@ -684,7 +684,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Update product configurations
@@ -701,7 +701,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
@@ -776,7 +776,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - uses: actions/setup-python@v2
@@ -815,7 +815,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
@@ -967,7 +967,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Update product configurations
@@ -990,7 +990,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
           key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
