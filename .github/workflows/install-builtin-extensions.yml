@@ -1,8 +1,15 @@
-# runs:
-#   using: "node16"
-
+name: "Install Built-in Extensions"
+inputs:
+  cache-version:
+    description: "The cache version"
+    required: true
+outputs:
+  greeting:
+    description: "The built-in extensions cache key"
+    value: ${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}
+runs:
+  using: "node16"
 steps:
-  - uses: actions/checkout@v3
   - name: Create .build folder
     run: mkdir -p .build
 
@@ -15,7 +22,7 @@ steps:
     uses: actions/cache@v3
     with:
       path: ".build/builtInExtensions"
-      key: "builtin-extensions${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+      key: "builtin-extensions${{ steps.prepare-built-in-extensions-cache-key.outputs.key }}${{ inputs.cache-version }}"
 
   - name: Download built-in extensions
     if: ${{ steps.restore-built-in-extensions-cache.outputs.cache-hit != 'true' }}
