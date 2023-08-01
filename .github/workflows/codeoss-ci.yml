@@ -158,7 +158,7 @@ jobs:
       - name: Check /build/ folder
         run: yarn --cwd build compile && ./.github/workflows/check-clean-git-state.sh
 
-      - uses: ./.github/workflows/install-builtin-extensions.yml
+      - uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -360,7 +360,7 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions.yml
+      - uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -609,7 +609,7 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions.yml
+      - uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -857,7 +857,7 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions.yml
+      - uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 

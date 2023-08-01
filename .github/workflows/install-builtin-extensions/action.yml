@@ -1,4 +1,5 @@
 name: "Install Built-in Extensions"
+description: "Install built-in extensions for CodeOSS CI"
 inputs:
   cache-version:
     description: "The cache version"
@@ -12,10 +13,12 @@ runs:
   steps:
     - name: Create .build folder
       run: mkdir -p .build
+      shell: bash
 
     - name: Prepare built-in extensions cache key
       id: prepare-built-in-extensions-cache-key
       run: echo "key=$(node build/azure-pipelines/common/computeBuiltInDepsCacheKey.js)" >>"$GITHUB_OUTPUT"
+      shell: bash
 
     - name: Restore built-in extensions cache
       id: restore-built-in-extensions-cache
@@ -27,3 +30,4 @@ runs:
     - name: Download built-in extensions
       if: ${{ steps.restore-built-in-extensions-cache.outputs.cache-hit != 'true' }}
       run: node build/lib/builtInExtensions.js
+      shell: bash
