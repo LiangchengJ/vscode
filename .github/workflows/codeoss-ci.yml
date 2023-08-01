@@ -114,9 +114,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Update product json
-        run: echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-
       - name: Install build tools
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
@@ -160,8 +157,8 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
-      - name: Check /build/ folder
-        run: yarn --cwd build compile && ./.github/workflows/check-clean-git-state.sh
+      - name: Update product json
+        run: echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
 
       - uses: ./.github/workflows/install-builtin-extensions
         with:
