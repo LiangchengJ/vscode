@@ -159,6 +159,8 @@ jobs:
         run: yarn --cwd build compile && ./.github/workflows/check-clean-git-state.sh
 
       - uses: ./.github/workflows/install-builtin-extensions.yml
+        with:
+          cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Compile & Hygiene
         run: yarn npm-run-all -lp core-ci-pr extensions-ci-pr hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
@@ -359,6 +361,8 @@ jobs:
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
       - uses: ./.github/workflows/install-builtin-extensions.yml
+        with:
+          cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Build client artifacts
         run: |
@@ -606,6 +610,8 @@ jobs:
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
       - uses: ./.github/workflows/install-builtin-extensions.yml
+        with:
+          cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Build client artifacts
         run: |
@@ -852,6 +858,8 @@ jobs:
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
       - uses: ./.github/workflows/install-builtin-extensions.yml
+        with:
+          cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Generate Group Policy definitions
         run: |
