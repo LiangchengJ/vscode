@@ -104,6 +104,7 @@ jobs:
   compile:
     name: Compile
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       VSCODE_ARCH: x64
 
