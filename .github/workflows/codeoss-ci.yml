@@ -20,7 +20,7 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1690988493
+  CACHE_VERSION: 1690995880
   PUBLISH_NAME: dev_test_part24
   PUBLISH_TAG_NAME: dev_test_part24
   PRE_RELEASE: true
@@ -104,7 +104,7 @@ jobs:
   compile:
     name: Compile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       VSCODE_ARCH: x64
 
