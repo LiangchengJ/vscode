@@ -865,9 +865,6 @@ jobs:
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
-      - name: Generate group policy definitions
-        run: node build\lib\policies
-
       - name: Build client artifacts
         run: |
           echo "::group::Build binary package"
