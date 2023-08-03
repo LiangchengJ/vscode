@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691042662
-  PUBLISH_NAME: dev_test_part25
-  PUBLISH_TAG_NAME: dev_test_part25
+  CACHE_VERSION: 1691055881
+  PUBLISH_NAME: dev_test_part26
+  PUBLISH_TAG_NAME: dev_test_part26
   PRE_RELEASE: true
 
 defaults:
@@ -32,7 +32,7 @@ defaults:
 jobs:
   generate-product-configurations:
     name: Generate product configurations
-    runs-on: windows-latest
+    runs-on: windows-2019
     outputs:
       product-json: ${{ steps.write-outputs.outputs.product-json }}
       win32vem-xml: ${{ steps.write-outputs.outputs.win32vem-xml }}
@@ -103,7 +103,7 @@ jobs:
 
   compile:
     name: Compile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       VSCODE_ARCH: x64
 
@@ -207,7 +207,7 @@ jobs:
 
   build-for-linux:
     name: Build for Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container:
       image: vscodehub.azurecr.io/vscode-linux-build-agent:${{ matrix.image-tag }}
       options: --user 0:0 --cap-add SYS_ADMIN
@@ -530,7 +530,7 @@ jobs:
 
   build-for-macos:
     name: Build for macOS
-    runs-on: macos-latest
+    runs-on: macos-11
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
@@ -688,7 +688,7 @@ jobs:
 
   build-universal-application:
     name: Build universal application
-    runs-on: macos-latest
+    runs-on: macos-11
     needs: [generate-product-configurations, build-for-macos]
 
     steps:
@@ -963,7 +963,7 @@ jobs:
 
   build-for-web:
     name: Build for Web
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: [generate-product-configurations, compile]
 
     steps:
