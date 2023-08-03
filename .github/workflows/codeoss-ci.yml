@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691035012
-  PUBLISH_NAME: dev_test_part24
-  PUBLISH_TAG_NAME: dev_test_part24
+  CACHE_VERSION: 1691042662
+  PUBLISH_NAME: dev_test_part25
+  PUBLISH_TAG_NAME: dev_test_part25
   PRE_RELEASE: true
 
 defaults:
@@ -156,7 +156,8 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions
+      - name: Install built-in extensions
+        uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -229,9 +230,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
+      - uses: ATiltedTree/setup-rust@v1.0.5
         with:
-          channel: ${{ env.RUST_VERSION }}
+          rust-version: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.rust-host-triple }}
 
       - name: Update product configurations
@@ -359,7 +360,8 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions
+      - name: Install built-in extensions
+        uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -543,9 +545,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
+      - uses: ATiltedTree/setup-rust@v1.0.5
         with:
-          channel: ${{ env.RUST_VERSION }}
+          rust-version: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.rust-host-triple-arch }}-apple-darwin
 
       - name: Update product configurations
@@ -584,6 +586,7 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
+          npm install -g node-gyp
           npm_config_arch=$VSCODE_ARCH
           export npm_config_arch
           npm_config_node_gyp=$(which node-gyp)
@@ -608,7 +611,8 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions
+      - name: Install built-in extensions
+        uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
@@ -784,12 +788,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: moonrepo/setup-rust@v0.6.1
+      - uses: ATiltedTree/setup-rust@v1.0.5
         with:
-          channel: ${{ env.RUST_VERSION }}
+          rust-version: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
 
       - name: Update product configurations
@@ -856,20 +860,13 @@ jobs:
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
 
-      - uses: ./.github/workflows/install-builtin-extensions
+      - name: Install built-in extensions
+        uses: ./.github/workflows/install-builtin-extensions
         with:
           cache-version: ${{ env.CACHE_VERSION }}
 
-      - name: Generate Group Policy definitions
-        run: |
-          for i in {1..3}; do
-            node build\lib\policies && break
-            if [ "$i" -eq 3 ]; then
-              echo "Generating group policy failed too many times" >&2
-              exit 1
-            fi
-            echo "Generating group policy failed $i, trying again..."
-          done
+      - name: Generate group policy definitions
+        run: node build\lib\policies
 
       - name: Build client artifacts
         run: |
