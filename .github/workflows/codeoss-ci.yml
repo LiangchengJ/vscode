@@ -162,7 +162,7 @@ jobs:
           cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Compile & Hygiene
-        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
+        run: yarn npm-run-all -lp core-ci-pr extensions-ci-pr hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
