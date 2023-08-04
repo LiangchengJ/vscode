@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691067417
-  PUBLISH_NAME: dev_test_part26
-  PUBLISH_TAG_NAME: dev_test_part26
+  CACHE_VERSION: 1691163687
+  PUBLISH_NAME: dev_test_part27
+  PUBLISH_TAG_NAME: dev_test_part27
   PRE_RELEASE: true
 
 defaults:
@@ -117,7 +117,7 @@ jobs:
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
           sudo apt update -y
-          sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin
+          sudo apt install -y build-essential pkg-config libx11-dev libx11-xcb-dev libxkbfile-dev libsecret-1-dev libnotify-bin libkrb5-dev
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
@@ -163,7 +163,7 @@ jobs:
 
       - name: Compile & Hygiene
         timeout-minutes: 60
-        run: yarn npm-run-all -lp core-ci-pr extensions-ci-pr hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
+        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
