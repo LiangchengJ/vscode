@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691242495
-  PUBLISH_NAME: dev_test_part30
-  PUBLISH_TAG_NAME: dev_test_part30
+  CACHE_VERSION: 1691245569
+  PUBLISH_NAME: dev_test_part31
+  PUBLISH_TAG_NAME: dev_test_part31
   PRE_RELEASE: true
 
 defaults:
@@ -172,9 +172,9 @@ jobs:
       - name: Compile & Hygiene
         timeout-minutes: 90
         run: |
-          yarn npm-run-all -lp core-ci extensions-ci hygiene
-          yarn npm-run-all -lp eslint
-          yarn npm-run-all -lp valid-layers-check vscode-dts-compile-check tsec-compile-check
+          yarn npm-run-all -lp --max-parallel 3 \
+              core-ci extensions-ci hygiene eslint \
+              valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
