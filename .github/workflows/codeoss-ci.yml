@@ -20,7 +20,7 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691224280
+  CACHE_VERSION: 1691227766
   PUBLISH_NAME: dev_test_part29
   PUBLISH_TAG_NAME: dev_test_part29
   PRE_RELEASE: true
@@ -89,7 +89,6 @@ jobs:
           name: Product configurations
           path: |
             product.json
-            vs-product.json
             resources/win32/VisualElementsManifest.xml
             resources/server/manifest.json
             resources/linux/AppImage.yml
@@ -171,7 +170,7 @@ jobs:
           cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Compile & Hygiene
-        timeout-minutes: 60
+        timeout-minutes: 90
         run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
