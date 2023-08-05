@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691166635
-  PUBLISH_NAME: dev_test_part28
-  PUBLISH_TAG_NAME: dev_test_part28
+  CACHE_VERSION: 1691224280
+  PUBLISH_NAME: dev_test_part29
+  PUBLISH_TAG_NAME: dev_test_part29
   PRE_RELEASE: true
 
 defaults:
@@ -34,15 +34,11 @@ jobs:
     name: Generate product configurations
     runs-on: windows-2019
     outputs:
-      product-json: ${{ steps.write-outputs.outputs.product-json }}
-      win32vem-xml: ${{ steps.write-outputs.outputs.win32vem-xml }}
-      manifest-json: ${{ steps.write-outputs.outputs.manifest-json }}
-      appimage-yml: ${{ steps.write-outputs.outputs.appimage-yml }}
-      application-name: ${{ steps.write-outputs.outputs.application-name }}
-      tunnel-application-name: ${{ steps.write-outputs.outputs.tunnel-application-name }}
-      name-short: ${{ steps.write-outputs.outputs.name-short }}
-      vscode-quality: ${{ steps.write-outputs.outputs.vscode-quality }}
-      version: ${{ steps.write-outputs.outputs.version }}
+      application-name: ${{ steps.write-job-variables.outputs.application-name }}
+      tunnel-application-name: ${{ steps.write-job-variables.outputs.tunnel-application-name }}
+      name-short: ${{ steps.write-job-variables.outputs.name-short }}
+      vscode-quality: ${{ steps.write-job-variables.outputs.vscode-quality }}
+      version: ${{ steps.write-job-variables.outputs.version }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -86,15 +82,21 @@ jobs:
           unzip $VS_ZIP_NAME "$VS_PRODUCT_JSON_PATH"
           cp "$VS_PRODUCT_JSON_PATH" vs-product.json
           node .github/generateProductConfigurations.js
-          rm -rf "Visual Studio Code.app" && rm -f $VS_ZIP_NAME && rm -f vs-product.json
 
-      - name: Write outputs
-        id: write-outputs
+      - name: Publish product configurations
+        uses: actions/upload-artifact@v3
+        with:
+          name: Product configurations
+          path: |
+            product.json
+            vs-product.json
+            resources/win32/VisualElementsManifest.xml
+            resources/server/manifest.json
+            resources/linux/AppImage.yml
+
+      - name: Write job variables
+        id: write-job-variables
         run: |
-          echo "product-json=$(cat product.json)" >>"$GITHUB_OUTPUT"
-          echo "win32vem-xml=$(base64 -w 0 resources/win32/VisualElementsManifest.xml)" >>"$GITHUB_OUTPUT"
-          echo "manifest-json=$(cat resources/server/manifest.json)" >>"$GITHUB_OUTPUT"
-          echo "appimage-yml=$(base64 -w 0 resources/linux/AppImage.yml)" >>"$GITHUB_OUTPUT"
           echo "application-name=$(node -p "require('./product.json')['applicationName']")" >>"$GITHUB_OUTPUT"
           echo "tunnel-application-name=$(node -p "require('./product.json')['tunnelApplicationName']")" >>"$GITHUB_OUTPUT"
           echo "name-short=$(node -p "require('./product.json')['nameShort']")" >>"$GITHUB_OUTPUT"
@@ -104,14 +106,21 @@ jobs:
   compile:
     name: Compile
     runs-on: ubuntu-20.04
+    needs: generate-product-configurations
     env:
       VSCODE_ARCH: x64
+      VSCODE_QUALITY: ${{ needs.generate-product-configurations.outputs.vscode-quality }}
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
 
       - name: Install build tools
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
@@ -163,7 +172,7 @@ jobs:
 
       - name: Compile & Hygiene
         timeout-minutes: 60
-        run: yarn npm-run-all -lp core-ci-pr extensions-ci-pr hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
+        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
@@ -224,6 +233,14 @@ jobs:
           - arch: armhf
             image-tag: stretch-armhf
             rust-host-triple: armv7-unknown-linux-gnueabihf
+    env:
+      VSCODE_ARCH: ${{ matrix.arch }}
+      APPLICATION_NAME: ${{ needs.generate-product-configurations.outputs.application-name }}
+      CLI_APP_NAME: ${{ needs.generate-product-configurations.outputs.tunnel-application-name }}
+      NAME_SHORT: ${{ needs.generate-product-configurations.outputs.name-short }}
+      VSCODE_QUALITY: ${{ needs.generate-product-configurations.outputs.vscode-quality }}
+      VERSION: ${{ needs.generate-product-configurations.outputs.version }}
+      RUST_HOST_TRIPLE: ${{ matrix.rust-host-triple }}
 
     steps:
       - uses: actions/checkout@v3
@@ -235,25 +252,17 @@ jobs:
           rust-version: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.rust-host-triple }}
 
-      - name: Update product configurations
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
+
+      - name: Initialize job variables
         run: |
-          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
-          APPIMAGE_YML_PATH=resources/linux/AppImage.yml
-          echo '${{ needs.generate-product-configurations.outputs.appimage-yml }}' >$APPIMAGE_YML_PATH
-          base64 -d $APPIMAGE_YML_PATH | tr -d "\r" >tmpfile && mv tmpfile $APPIMAGE_YML_PATH
-          echo "APPIMAGE_YML_PATH=$APPIMAGE_YML_PATH" >>"$GITHUB_ENV"
-          VSCODE_ARCH=${{ matrix.arch }}
-          echo "VSCODE_ARCH=$VSCODE_ARCH" >>"$GITHUB_ENV"
           NPM_ARCH=$VSCODE_ARCH
           [ "${NPM_ARCH}" == "armhf" ] && NPM_ARCH=armv7l
           echo "NPM_ARCH=$NPM_ARCH" >>"$GITHUB_ENV"
           [ "$VSCODE_ARCH" == "x64" ] && echo "DISPLAY=:10" >>"$GITHUB_ENV"
-          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
-          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
-          echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
-          echo "VSCODE_QUALITY=${{ needs.generate-product-configurations.outputs.vscode-quality }}" >>"$GITHUB_ENV"
-          echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
 
       - name: Setup system services
         if: ${{ env.VSCODE_ARCH == 'x64' }}
@@ -491,8 +500,6 @@ jobs:
           [ -f "$DEB_FILENAME" ] && gensha512 "$DEB_FILENAME"
           [ -f "$SNAP_FILENAME" ] && gensha512 "$SNAP_FILENAME"
           [ -f "$APPIMAGE_FILENAME" ] && gensha512 "$APPIMAGE_FILENAME"
-          [ "$VSCODE_ARCH" != "x64" ] && rm -f product.json
-          ([ -f product.json ] && gensha512 product.json) || echo >/dev/null
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -500,7 +507,6 @@ jobs:
           echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
-        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -525,8 +531,6 @@ jobs:
             ${{ env.SERVER_TARBALL_FILENAME }}.sha512
             ${{ env.SERVER_WEB_TARBALL_FILENAME }}
             ${{ env.SERVER_WEB_TARBALL_FILENAME }}.sha512
-            product.json
-            product.json.sha512
 
   build-for-macos:
     name: Build for macOS
@@ -539,6 +543,12 @@ jobs:
             rust-host-triple-arch: x86_64
           - arch: arm64
             rust-host-triple-arch: aarch64
+    env:
+      VSCODE_ARCH: ${{ matrix.arch }}
+      APPLICATION_NAME: ${{ needs.generate-product-configurations.outputs.application-name }}
+      CLI_APP_NAME: ${{ needs.generate-product-configurations.outputs.tunnel-application-name }}
+      NAME_SHORT: ${{ needs.generate-product-configurations.outputs.name-short }}
+      RUST_HOST_TRIPLE: ${{ matrix.rust-host-triple-arch }}-apple-darwin
 
     steps:
       - uses: actions/checkout@v3
@@ -548,17 +558,12 @@ jobs:
       - uses: ATiltedTree/setup-rust@v1.0.5
         with:
           rust-version: ${{ env.RUST_VERSION }}
-          targets: ${{ matrix.rust-host-triple-arch }}-apple-darwin
+          targets: ${{ env.RUST_HOST_TRIPLE }}
 
-      - name: Update product configurations
-        run: |
-          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
-          echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
-          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
-          echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
-          echo "RUST_HOST_TRIPLE=${{ matrix.rust-host-triple-arch }}-apple-darwin" >>"$GITHUB_ENV"
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -586,19 +591,19 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
-          npm install -g node-gyp
+          npm install -g node-gyp@latest
           npm_config_arch=$VSCODE_ARCH
           export npm_config_arch
           npm_config_node_gyp=$(which node-gyp)
           export npm_config_node_gyp
 
           for i in {1..5}; do # try 5 times
-          	yarn --frozen-lockfile --check-files && break
-          	if [ "$i" -eq 3 ]; then
-          		echo "Yarn failed too many times" >&2
-          		exit 1
-          	fi
-          	echo "Yarn failed $i, trying again..."
+            yarn --frozen-lockfile --check-files && break
+            if [ $i -eq 3 ]; then
+              echo "Yarn failed too many times" >&2
+              exit 1
+            fi
+            echo "Yarn failed $i, trying again..."
           done
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
@@ -631,7 +636,7 @@ jobs:
           mv ../$XZ_TARBALL_NAME .
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           ZIP_NAME=$BUILD.zip
-          (cd ../$BUILD && zip -r -X -y -q ../$ZIP_NAME ./*.app)
+          (cd ../$BUILD && zip -Xry -q ../$ZIP_NAME ./*.app)
           mv ../$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
 
@@ -641,7 +646,7 @@ jobs:
           SERVER_BUILD_NAME="$APPLICATION_NAME-server-darwin-$VSCODE_ARCH"
           SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-darwin-$VSCODE_ARCH $SERVER_BUILD_NAME)
-          (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
+          (cd .. && zip -Xry -q $SERVER_ZIP_NAME $SERVER_BUILD_NAME)
           mv ../$SERVER_ZIP_NAME .
           echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
@@ -649,18 +654,17 @@ jobs:
           SERVER_WEB_BUILD_NAME="$APPLICATION_NAME-server-darwin-$VSCODE_ARCH-web"
           SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-web-darwin-$VSCODE_ARCH $SERVER_WEB_BUILD_NAME)
-          (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
+          (cd .. && zip -Xry -q $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME)
           mv ../$SERVER_WEB_ZIP_NAME .
           echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
 
       - name: Generate SHA512 checksum files
         run: |
-          npm install -g checksum@1.0.0
-          gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
+          gensha512() { (shasum -a 512 "$1" | awk '{print $1}' >"$1".sha512); }
           [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
           [ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
-          ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
+          [ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME"
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -668,7 +672,6 @@ jobs:
           echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
-        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -690,19 +693,21 @@ jobs:
     name: Build universal application
     runs-on: macos-11
     needs: [generate-product-configurations, build-for-macos]
+    env:
+      VSCODE_ARCH: universal
+      NAME_SHORT: ${{ needs.generate-product-configurations.outputs.name-short }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Update product configurations
-        run: |
-          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo "VSCODE_ARCH=universal" >>"$GITHUB_ENV"
-          echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
-          echo "GITHUB_REPOSITORY=${{ github.repository }}" >>"$GITHUB_ENV"
-          echo "AGENT_BUILDDIRECTORY=$(cd .. && pwd)" >>"$GITHUB_ENV"
+
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
@@ -721,6 +726,7 @@ jobs:
 
       - name: Create Universal App
         run: |
+          AGENT_BUILDDIRECTORY="$(cd .. && pwd)"
           DOWNLOAD_URL_PREFIX="https://github.com/$GITHUB_REPOSITORY/releases/download/$PUBLISH_TAG_NAME"
           curl -L -O -s "$DOWNLOAD_URL_PREFIX/$NAME_SHORT-darwin-arm64.tar.xz"
           curl -L -O -s "$DOWNLOAD_URL_PREFIX/$NAME_SHORT-darwin-x64.tar.xz"
@@ -742,10 +748,9 @@ jobs:
 
       - name: Generate SHA512 checksum files
         run: |
-          npm install -g checksum@1.0.0
-          gensha512() { (checksum -a sha512 "$1" | awk '{print $1}' >"$1".sha512); }
+          gensha512() { (shasum -a 512 "$1" | awk '{print $1}' >"$1".sha512); }
           [ -f "$XZ_TARBALL_NAME" ] && gensha512 "$XZ_TARBALL_NAME"
-          ([ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME") || echo >/dev/null
+          [ -f "$ZIP_NAME" ] && gensha512 "$ZIP_NAME"
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -753,7 +758,6 @@ jobs:
           echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
-        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -781,6 +785,12 @@ jobs:
           - arch: ia32
             rust-host-triple-arch: i686
     env:
+      VSCODE_ARCH: ${{ matrix.arch }}
+      APPLICATION_NAME: ${{ needs.generate-product-configurations.outputs.application-name }}
+      CLI_APP_NAME: ${{ needs.generate-product-configurations.outputs.tunnel-application-name }}
+      NAME_SHORT: ${{ needs.generate-product-configurations.outputs.name-short }}
+      VERSION: ${{ needs.generate-product-configurations.outputs.version }}
+      RUST_HOST_TRIPLE: ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
       RUSTFLAGS: "-C target-feature=+crt-static"
 
     steps:
@@ -794,21 +804,12 @@ jobs:
       - uses: ATiltedTree/setup-rust@v1.0.5
         with:
           rust-version: ${{ env.RUST_VERSION }}
-          targets: ${{ matrix.rust-host-triple-arch }}-pc-windows-msvc
+          targets: ${{ env.RUST_HOST_TRIPLE }}
 
-      - name: Update product configurations
-        run: |
-          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          WIN32_VEM_XML_PATH=resources/win32/VisualElementsManifest.xml
-          echo '${{ needs.generate-product-configurations.outputs.win32vem-xml }}' >$WIN32_VEM_XML_PATH
-          base64 -d $WIN32_VEM_XML_PATH >tmpfile && mv tmpfile $WIN32_VEM_XML_PATH
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
-          echo "VSCODE_ARCH=${{ matrix.arch }}" >>"$GITHUB_ENV"
-          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
-          echo "CLI_APP_NAME=${{ needs.generate-product-configurations.outputs.tunnel-application-name }}" >>"$GITHUB_ENV"
-          echo "NAME_SHORT=${{ needs.generate-product-configurations.outputs.name-short }}" >>"$GITHUB_ENV"
-          echo "VERSION=${{ needs.generate-product-configurations.outputs.version }}" >>"$GITHUB_ENV"
-          echo "RUST_HOST_TRIPLE=${{ matrix.rust-host-triple-arch }}-pc-windows-msvc" >>"$GITHUB_ENV"
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -882,7 +883,7 @@ jobs:
           mv ../$XZ_TARBALL_NAME .
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           ZIP_NAME=$BUILD-$VERSION.zip
-          (cd .. && 7z a $ZIP_NAME $BUILD -r -mx9)
+          (cd .. && 7z a -tzip $ZIP_NAME -x!CodeSignSummary*.md $BUILD -r)
           mv ../$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
           echo "::endgroup::"
@@ -911,7 +912,7 @@ jobs:
           SERVER_BUILD_NAME="$APPLICATION_NAME-server-win32-${VSCODE_ARCH}"
           SERVER_ZIP_NAME="$SERVER_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-win32-${VSCODE_ARCH} $SERVER_BUILD_NAME)
-          (cd .. && 7z a $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r -mx9)
+          (cd .. && 7z a -tzip $SERVER_ZIP_NAME $SERVER_BUILD_NAME -r)
           mv ../$SERVER_ZIP_NAME .
           echo "SERVER_ZIP_NAME=$SERVER_ZIP_NAME" >>"$GITHUB_ENV"
 
@@ -919,7 +920,7 @@ jobs:
           SERVER_WEB_BUILD_NAME="$APPLICATION_NAME-server-win32-${VSCODE_ARCH}-web"
           SERVER_WEB_ZIP_NAME="$SERVER_WEB_BUILD_NAME.zip"
           (cd .. && cp -r vscode-reh-web-win32-${VSCODE_ARCH} $SERVER_WEB_BUILD_NAME)
-          (cd .. && 7z a $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r -mx9)
+          (cd .. && 7z a -tzip $SERVER_WEB_ZIP_NAME $SERVER_WEB_BUILD_NAME -r)
           mv ../$SERVER_WEB_ZIP_NAME .
           echo "SERVER_WEB_ZIP_NAME=$SERVER_WEB_ZIP_NAME" >>"$GITHUB_ENV"
 
@@ -931,7 +932,7 @@ jobs:
           [ -f "$SYSTEM_SETUP_NAME" ] && gensha512 "$SYSTEM_SETUP_NAME"
           [ -f "$USER_SETUP_NAME" ] && gensha512 "$USER_SETUP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
-          ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
+          [ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME"
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -939,7 +940,6 @@ jobs:
           echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
-        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
@@ -965,17 +965,20 @@ jobs:
     name: Build for Web
     runs-on: ubuntu-20.04
     needs: [generate-product-configurations, compile]
+    env:
+      VSCODE_ARCH: x64
+      APPLICATION_NAME: ${{ needs.generate-product-configurations.outputs.application-name }}
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Update product configurations
-        run: |
-          echo '${{ needs.generate-product-configurations.outputs.product-json }}' >product.json
-          echo '${{ needs.generate-product-configurations.outputs.manifest-json }}' >resources/server/manifest.json
-          echo "APPLICATION_NAME=${{ needs.generate-product-configurations.outputs.application-name }}" >>"$GITHUB_ENV"
+
+      - name: Download product configurations
+        uses: actions/download-artifact@v3
+        with:
+          name: Product configurations
 
       - name: Download compilation output
         uses: actions/download-artifact@v3
@@ -987,25 +990,31 @@ jobs:
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
-        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js $VSCODE_ARCH $CACHE_VERSION)" >>"$GITHUB_OUTPUT"
+        run: echo "key=$(node build/azure-pipelines/common/computeNodeModulesCacheKey.js web)" >>"$GITHUB_OUTPUT"
 
       - name: Cache node modules
         id: cache-node-modules
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}"
+          key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+
+      - name: Install build dependencies
+        if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libkrb5-dev
 
       - name: Install dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
         run: |
-          for i in {1..3}; do
-          	yarn --frozen-lockfile --check-files && break
-          	if [ "$i" -eq 3 ]; then
-          		echo "Yarn failed too many times" >&2
-          		exit 1
-          	fi
-          	echo "Yarn failed $i, trying again..."
+          for i in {1..5}; do # try 5 times
+            yarn --frozen-lockfile --check-files && break
+            if [ $i -eq 3 ]; then
+              echo "Yarn failed too many times" >&2
+              exit 1
+            fi
+            echo "Yarn failed $i, trying again..."
           done
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
@@ -1031,7 +1040,7 @@ jobs:
       - name: Generate SHA512 checksum file
         run: |
           gensha512() { (sha512sum "$1" | awk '{print $1}' >"$1".sha512); }
-          ([ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME") || echo >/dev/null
+          [ -f "$WEB_TARBALL_FILENAME" ] && gensha512 "$WEB_TARBALL_FILENAME"
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -1039,7 +1048,6 @@ jobs:
           echo "PUBLISH_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PUBLISH_TAG_NAME=${{ github.ref }}" >>"$GITHUB_ENV"
           echo "PRE_RELEASE=false" >>"$GITHUB_ENV"
-        shell: bash
 
       - name: Publish artifacts
         uses: softprops/action-gh-release@v1
