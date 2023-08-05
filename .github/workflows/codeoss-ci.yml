@@ -20,9 +20,9 @@ env:
   RUST_VERSION: 1.65.0
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691227766
-  PUBLISH_NAME: dev_test_part29
-  PUBLISH_TAG_NAME: dev_test_part29
+  CACHE_VERSION: 1691242495
+  PUBLISH_NAME: dev_test_part30
+  PUBLISH_TAG_NAME: dev_test_part30
   PRE_RELEASE: true
 
 defaults:
@@ -99,7 +99,7 @@ jobs:
           echo "application-name=$(node -p "require('./product.json')['applicationName']")" >>"$GITHUB_OUTPUT"
           echo "tunnel-application-name=$(node -p "require('./product.json')['tunnelApplicationName']")" >>"$GITHUB_OUTPUT"
           echo "name-short=$(node -p "require('./product.json')['nameShort']")" >>"$GITHUB_OUTPUT"
-          echo "vscode-quality=$(node -p "require('./product.json')['quality']||''")" >>"$GITHUB_OUTPUT"
+          echo "vscode-quality=$(node -p "require('./product.json')['quality']||'oss'")" >>"$GITHUB_OUTPUT"
           echo "version=$VERSION" >>"$GITHUB_OUTPUT"
 
   compile:
@@ -171,7 +171,10 @@ jobs:
 
       - name: Compile & Hygiene
         timeout-minutes: 90
-        run: yarn npm-run-all -lp core-ci extensions-ci hygiene eslint valid-layers-check vscode-dts-compile-check tsec-compile-check
+        run: |
+          yarn npm-run-all -lp core-ci extensions-ci hygiene
+          yarn npm-run-all -lp eslint
+          yarn npm-run-all -lp valid-layers-check vscode-dts-compile-check tsec-compile-check
 
       - name: Compile test suites
         if: ${{ env.VSCODE_STEP_ON_IT == 'false' }}
