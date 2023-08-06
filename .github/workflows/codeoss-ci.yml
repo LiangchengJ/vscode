@@ -21,9 +21,9 @@ env:
   CARGO_TERM_COLOR: always
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691330620
-  PUBLISH_NAME: dev_test_part37
-  PUBLISH_TAG_NAME: dev_test_part37
+  CACHE_VERSION: 1691339502
+  PUBLISH_NAME: dev_test_part38
+  PUBLISH_TAG_NAME: dev_test_part38
   PRE_RELEASE: true
 
 defaults:
@@ -38,6 +38,7 @@ jobs:
       application-name: ${{ steps.write-job-variables.outputs.application-name }}
       tunnel-application-name: ${{ steps.write-job-variables.outputs.tunnel-application-name }}
       name-short: ${{ steps.write-job-variables.outputs.name-short }}
+      name-long: ${{ steps.write-job-variables.outputs.name-long }}
       vscode-quality: ${{ steps.write-job-variables.outputs.vscode-quality }}
       version: ${{ steps.write-job-variables.outputs.version }}
     steps:
@@ -100,6 +101,7 @@ jobs:
           echo "application-name=$(node -p "require('./product.json')['applicationName']")" >>"$GITHUB_OUTPUT"
           echo "tunnel-application-name=$(node -p "require('./product.json')['tunnelApplicationName']")" >>"$GITHUB_OUTPUT"
           echo "name-short=$(node -p "require('./product.json')['nameShort']")" >>"$GITHUB_OUTPUT"
+          echo "name-long=$(node -p "require('./product.json')['nameLong']")" >>"$GITHUB_OUTPUT"
           echo "vscode-quality=$(node -p "require('./product.json')['quality']||'oss'")" >>"$GITHUB_OUTPUT"
           echo "version=$VERSION" >>"$GITHUB_OUTPUT"
 
@@ -176,10 +178,10 @@ jobs:
           yarn --cwd test/smoke compile
           yarn --cwd test/integration/browser compile
 
-      - name: Extract Telemetry
-        run: |
-          export BUILD_STAGINGDIRECTORY="$PWD"
-          ./build/azure-pipelines/common/extract-telemetry.sh
+      # - name: Extract Telemetry
+      #   run: |
+      #     export BUILD_STAGINGDIRECTORY="$PWD"
+      #     ./build/azure-pipelines/common/extract-telemetry.sh
 
       - name: Compute openssl prebuilt cache key
         id: compute-openssl-prebuilt-cache-key
@@ -535,7 +537,7 @@ jobs:
 
   build-for-macos:
     name: Build for macOS
-    runs-on: macos-11
+    runs-on: macos-13
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
@@ -549,6 +551,7 @@ jobs:
       APPLICATION_NAME: ${{ needs.generate-product-configurations.outputs.application-name }}
       CLI_APP_NAME: ${{ needs.generate-product-configurations.outputs.tunnel-application-name }}
       NAME_SHORT: ${{ needs.generate-product-configurations.outputs.name-short }}
+      NAME_LONG: ${{ needs.generate-product-configurations.outputs.name-long }}
       RUST_HOST_TRIPLE: ${{ matrix.rust-host-triple-arch }}-apple-darwin
 
     steps:
@@ -626,19 +629,19 @@ jobs:
         run: |
           yarn gulp vscode-darwin-${VSCODE_ARCH}-min-ci
           BUILD=$NAME_SHORT-darwin-${VSCODE_ARCH}
-          (cd .. && cp -r VSCode-darwin-${VSCODE_ARCH} $BUILD)
+          (cd .. && mv VSCode-darwin-${VSCODE_ARCH} $BUILD)
           export OPENSSL_LIB_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/lib"
           export OPENSSL_INCLUDE_DIR="$PWD/openssl/${VSCODE_ARCH}-osx/include"
           (cd cli && cargo build --release --target "$RUST_HOST_TRIPLE" --bin=code)
-          APP_NAME="$(cd ../$BUILD && ls . | head -n 1)"
+          APP_NAME="${NAME_LONG}.app"
           mv cli/target/"$RUST_HOST_TRIPLE"/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
-          (cd ../$BUILD && tar -cJf ../$XZ_TARBALL_NAME ./*.app)
-          mv ../$XZ_TARBALL_NAME .
+          (cd ../$BUILD && tar -cJf $XZ_TARBALL_NAME $APP_NAME)
+          mv ../$BUILD/$XZ_TARBALL_NAME .
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           ZIP_NAME=$BUILD.zip
-          (cd ../$BUILD && zip -Xry -q ../$ZIP_NAME ./*.app)
-          mv ../$ZIP_NAME .
+          (cd ../$BUILD && zip -Xry -q $ZIP_NAME $APP_NAME)
+          mv ../$BUILD/$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
 
       - name: Build server artifacts
@@ -692,7 +695,7 @@ jobs:
 
   build-universal-application:
     name: Build universal application
-    runs-on: macos-11
+    runs-on: macos-13
     needs: [generate-product-configurations, build-for-macos]
     env:
       VSCODE_ARCH: universal
