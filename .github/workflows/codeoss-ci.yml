@@ -495,7 +495,7 @@ jobs:
           [ -f "$RPM_FILENAME" ] && gensha512 "$RPM_FILENAME"
           [ -f "$DEB_FILENAME" ] && gensha512 "$DEB_FILENAME"
           [ -f "$SNAP_FILENAME" ] && gensha512 "$SNAP_FILENAME"
-          [ -f "$APPIMAGE_FILENAME" ] && gensha512 "$APPIMAGE_FILENAME"
+          ([ -f "$APPIMAGE_FILENAME" ] && gensha512 "$APPIMAGE_FILENAME") || echo >/dev/null
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
@@ -928,7 +928,7 @@ jobs:
           [ -f "$SYSTEM_SETUP_NAME" ] && gensha512 "$SYSTEM_SETUP_NAME"
           [ -f "$USER_SETUP_NAME" ] && gensha512 "$USER_SETUP_NAME"
           [ -f "$SERVER_ZIP_NAME" ] && gensha512 "$SERVER_ZIP_NAME"
-          [ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME"
+          ([ -f "$SERVER_WEB_ZIP_NAME" ] && gensha512 "$SERVER_WEB_ZIP_NAME") || echo >/dev/null
 
       - name: Switch to tag name
         if: startsWith(github.ref, 'refs/tags/v')
