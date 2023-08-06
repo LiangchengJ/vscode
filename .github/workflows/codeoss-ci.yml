@@ -21,9 +21,9 @@ env:
   CARGO_TERM_COLOR: always
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691258443
-  PUBLISH_NAME: dev_test_part34
-  PUBLISH_TAG_NAME: dev_test_part34
+  CACHE_VERSION: 1691301139
+  PUBLISH_NAME: dev_test_part35
+  PUBLISH_TAG_NAME: dev_test_part35
   PRE_RELEASE: true
 
 defaults:
@@ -72,7 +72,7 @@ jobs:
             resources/win32/VisualElementsManifest.xml
             resources/server/manifest.json
             resources/linux/AppImage.yml
-          key: "${{ runner.os }}${{ steps.compute-product-configurations-cache-key.outputs.key }}"
+          key: ${{ steps.compute-product-configurations-cache-key.outputs.key }}
 
       - name: Do generating ...
         if: ${{ steps.cache-product-configurations.outputs.cache-hit != 'true' }}
@@ -106,21 +106,14 @@ jobs:
   compile:
     name: Compile
     runs-on: ubuntu-20.04
-    needs: generate-product-configurations
     env:
       VSCODE_ARCH: x64
-      VSCODE_QUALITY: ${{ needs.generate-product-configurations.outputs.vscode-quality }}
 
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Download product configurations
-        uses: actions/download-artifact@v3
-        with:
-          name: Product configurations
 
       - name: Compute node modules cache key
         id: compute-node-modules-cache-key
@@ -131,7 +124,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}GenericNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -192,7 +185,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: openssl
-          key: "${{ runner.os }}${{ steps.compute-openssl-prebuilt-cache-key.outputs.key }}"
+          key: ${{ steps.compute-openssl-prebuilt-cache-key.outputs.key }}
 
       - name: Download & Extract openssl prebuilt
         if: ${{ steps.cache-openssl-prebuilt.outputs.cache-hit != 'true' }}
@@ -293,7 +286,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -370,7 +363,7 @@ jobs:
         run: |
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
+          tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
       - name: Install built-in extensions
         uses: ./.github/workflows/install-builtin-extensions
@@ -585,7 +578,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -617,7 +610,7 @@ jobs:
         run: |
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
+          tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
       - name: Install built-in extensions
         uses: ./.github/workflows/install-builtin-extensions
@@ -721,7 +714,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -831,7 +824,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "${{ runner.os }}NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Extract node modules archive
         if: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' }}
@@ -862,7 +855,7 @@ jobs:
         run: |
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
+          tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
       - name: Install built-in extensions
         uses: ./.github/workflows/install-builtin-extensions
@@ -1000,7 +993,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Install build dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
@@ -1028,7 +1021,7 @@ jobs:
         run: |
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
-          tar -cJf .build/node_modules_cache/cache.tar.xz --files-from .build/node_modules_list.txt
+          tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
 
       - name: Build artifact
         run: |
