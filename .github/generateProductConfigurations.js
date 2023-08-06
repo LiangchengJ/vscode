@@ -15,11 +15,11 @@ const productJsonFileName = "product.json";
 const productJson = require(`../${productJsonFileName}`);
 const vsProductJson = require(`../vs-${productJsonFileName}`);
 
-const getCommitHash = () =>
-	childProcess.execSync("git log -1 --format='%H'")
-		.toString()
-		.replace(/\r/g, "")
-		.replace(/\n/g, "");
+// const getCommitHash = () =>
+// 	childProcess.execSync("git log -1 --format=%H")
+// 		.toString()
+// 		.replace(/\r/g, "")
+// 		.replace(/\n/g, "");
 
 function generateProductJson() {
 	// @ts-ignore
@@ -104,9 +104,6 @@ function generateProductJson() {
 	productJson["configurationSync.store"] = vsProductJson["configurationSync.store"];
 	productJson["editSessions.store"] = vsProductJson["editSessions.store"];
 	productJson["builtInExtensions"] = vsProductJson["builtInExtensions"];
-
-	productJson["commit"] = `${getCommitHash()}`;
-	productJson["date"] = new Date().toJSON();
 
 	const writeStream = fs.createWriteStream(productJsonFileName);
 	writeStream.write(JSON.stringify(productJson));

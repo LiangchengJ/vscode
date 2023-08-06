@@ -21,9 +21,9 @@ env:
   CARGO_TERM_COLOR: always
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691301139
-  PUBLISH_NAME: dev_test_part35
-  PUBLISH_TAG_NAME: dev_test_part35
+  CACHE_VERSION: 1691330620
+  PUBLISH_NAME: dev_test_part37
+  PUBLISH_TAG_NAME: dev_test_part37
   PRE_RELEASE: true
 
 defaults:
@@ -175,6 +175,11 @@ jobs:
         run: |
           yarn --cwd test/smoke compile
           yarn --cwd test/integration/browser compile
+
+      - name: Extract Telemetry
+        run: |
+          export BUILD_STAGINGDIRECTORY="$PWD"
+          ./build/azure-pipelines/common/extract-telemetry.sh
 
       - name: Compute openssl prebuilt cache key
         id: compute-openssl-prebuilt-cache-key
@@ -1022,6 +1027,11 @@ jobs:
           mkdir -p .build/node_modules_cache
           node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
           tar -cJf .build/node_modules_cache/cache.tar.xz -T .build/node_modules_list.txt
+
+      - name: Install built-in extensions
+        uses: ./.github/workflows/install-builtin-extensions
+        with:
+          cache-version: ${{ env.CACHE_VERSION }}
 
       - name: Build artifact
         run: |
