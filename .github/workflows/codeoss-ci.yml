@@ -636,11 +636,11 @@ jobs:
           APP_NAME="${NAME_LONG}.app"
           mv cli/target/"$RUST_HOST_TRIPLE"/release/code ../$BUILD/"$APP_NAME"/Contents/Resources/app/bin/"$CLI_APP_NAME"
           XZ_TARBALL_NAME=$BUILD.tar.xz
-          (cd ../$BUILD && tar -cJf $XZ_TARBALL_NAME $APP_NAME)
+          (cd ../$BUILD && tar -cJf $XZ_TARBALL_NAME "$APP_NAME")
           mv ../$BUILD/$XZ_TARBALL_NAME .
           echo "XZ_TARBALL_NAME=$XZ_TARBALL_NAME" >>"$GITHUB_ENV"
           ZIP_NAME=$BUILD.zip
-          (cd ../$BUILD && zip -Xry -q $ZIP_NAME $APP_NAME)
+          (cd ../$BUILD && zip -Xry -q $ZIP_NAME "$APP_NAME")
           mv ../$BUILD/$ZIP_NAME .
           echo "ZIP_NAME=$ZIP_NAME" >>"$GITHUB_ENV"
 
