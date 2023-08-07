@@ -21,9 +21,9 @@ env:
   CARGO_TERM_COLOR: always
   CODE_ICO_URL: https://github.com/LcJuves/vscode/raw/94cba4eb314f52fd18b47b72459954fda65302d0/resources/win32/code.ico
   VSCODE_STEP_ON_IT: false
-  CACHE_VERSION: 1691339502
-  PUBLISH_NAME: dev_test_part38
-  PUBLISH_TAG_NAME: dev_test_part38
+  CACHE_VERSION: 1691385606
+  PUBLISH_NAME: dev_test_part39
+  PUBLISH_TAG_NAME: dev_test_part39
   PRE_RELEASE: true
 
 defaults:
@@ -537,7 +537,7 @@ jobs:
 
   build-for-macos:
     name: Build for macOS
-    runs-on: macos-13
+    runs-on: macos-11
     needs: [generate-product-configurations, compile]
     strategy:
       matrix:
@@ -695,7 +695,7 @@ jobs:
 
   build-universal-application:
     name: Build universal application
-    runs-on: macos-13
+    runs-on: macos-11
     needs: [generate-product-configurations, build-for-macos]
     env:
       VSCODE_ARCH: universal
@@ -1001,7 +1001,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ".build/node_modules_cache"
-          key: "NodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
+          key: "WebNodeModules${{ steps.compute-node-modules-cache-key.outputs.key }}${{ env.CACHE_VERSION }}"
 
       - name: Install build dependencies
         if: ${{ steps.cache-node-modules.outputs.cache-hit != 'true' }}
